@@ -30,6 +30,14 @@ except ImportError:
     ADVANCED_SIGNATURE_RECOVERY_AVAILABLE = False
     AdvancedFunctionSignatureRecovery = None
 
+# Import advanced data type inference
+try:
+    from .advanced_data_type_inference import AdvancedDataTypeInference
+    ADVANCED_TYPE_INFERENCE_AVAILABLE = True
+except ImportError:
+    ADVANCED_TYPE_INFERENCE_AVAILABLE = False
+    AdvancedDataTypeInference = None
+
 
 class DataType(Enum):
     """Semantic data types for reconstruction"""
@@ -117,6 +125,14 @@ class SemanticDecompiler:
             self.advanced_signature_recovery = None
             self.logger.warning("Advanced function signature recovery not available")
         
+        # Initialize advanced data type inference if available
+        if ADVANCED_TYPE_INFERENCE_AVAILABLE:
+            self.advanced_type_inference = AdvancedDataTypeInference(config_manager)
+            self.logger.info("Advanced data type inference enabled")
+        else:
+            self.advanced_type_inference = None
+            self.logger.warning("Advanced data type inference not available")
+        
     def decompile_semantically(self, ghidra_results: Dict[str, Any], 
                              binary_metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -157,7 +173,8 @@ class SemanticDecompiler:
             reconstructed_code, ghidra_results
         )
         
-        return {
+        # Include advanced type information if available
+        result = {
             'semantic_functions': semantic_functions,
             'inferred_types': inferred_types,
             'semantic_variables': semantic_variables,
@@ -167,6 +184,17 @@ class SemanticDecompiler:
             'decompilation_quality': self._calculate_semantic_quality(validation_results),
             'is_true_decompilation': validation_results.get('is_semantic', False)
         }
+        
+        # Add advanced type analysis results if available
+        if hasattr(self, 'advanced_type_results') and self.advanced_type_results:
+            result['advanced_type_analysis'] = {
+                'type_inference_report': self.advanced_type_inference.generate_type_report() if self.advanced_type_inference else {},
+                'detailed_types': self.advanced_type_results,
+                'type_reconstruction_confidence': self._calculate_avg_confidence(self.advanced_type_results)
+            }
+            self.logger.info("Enhanced results with advanced data type analysis")
+        
+        return result
     
     def _analyze_functions_semantically(self, ghidra_results: Dict[str, Any]) -> List[SemanticFunction]:
         """Analyze functions for semantic meaning with advanced signature recovery"""
@@ -437,7 +465,44 @@ class SemanticDecompiler:
     
     def _infer_data_types(self, ghidra_results: Dict[str, Any], 
                          semantic_functions: List[SemanticFunction]) -> Dict[str, DataType]:
-        """Infer data types across the entire program"""
+        """Infer data types across the entire program using advanced inference"""
+        # Use advanced type inference if available
+        if self.advanced_type_inference:
+            self.logger.info("Using advanced data type inference engine")
+            
+            # Get advanced signatures if available
+            advanced_signatures = ghidra_results.get('advanced_signatures', {})
+            
+            # Run advanced type inference
+            advanced_types = self.advanced_type_inference.infer_program_types(
+                ghidra_results, semantic_functions, advanced_signatures
+            )
+            
+            # Convert advanced types to DataType enum format for compatibility
+            inferred_types = {}
+            for var_key, advanced_type in advanced_types.items():
+                datatype_enum = self._convert_advanced_type_to_datatype_enum(advanced_type)
+                inferred_types[var_key] = datatype_enum
+                
+            # Store advanced type information for later use
+            self.advanced_type_results = advanced_types
+            
+            self.logger.info(f"Advanced inference: {len(inferred_types)} types with avg confidence {self._calculate_avg_confidence(advanced_types):.2f}")
+            
+        else:
+            # Fallback to basic type inference
+            self.logger.info("Using basic data type inference (advanced engine not available)")
+            inferred_types = self._basic_type_inference(ghidra_results, semantic_functions)
+        
+        # Cross-reference type consistency
+        self._validate_type_consistency(inferred_types)
+        
+        self.logger.info(f"Inferred {len(inferred_types)} data types")
+        return inferred_types
+    
+    def _basic_type_inference(self, ghidra_results: Dict[str, Any], 
+                            semantic_functions: List[SemanticFunction]) -> Dict[str, DataType]:
+        """Basic type inference fallback when advanced engine not available"""
         inferred_types = {}
         
         # Analyze type usage patterns across functions
@@ -452,11 +517,99 @@ class SemanticDecompiler:
                 type_key = f"{func.name}::{local_var.name}"
                 inferred_types[type_key] = local_var.data_type
         
-        # Cross-reference type consistency
-        self._validate_type_consistency(inferred_types)
-        
-        self.logger.info(f"Inferred {len(inferred_types)} data types")
         return inferred_types
+    
+    def _convert_advanced_type_to_datatype_enum(self, advanced_type) -> DataType:
+        """Convert advanced type to DataType enum for compatibility"""
+        if not advanced_type:
+            return DataType.UNKNOWN
+            
+        type_class = advanced_type.type_class.value if hasattr(advanced_type.type_class, 'value') else str(advanced_type.type_class)
+        base_type = advanced_type.base_type.lower()
+        
+        # Map based on type class
+        if type_class == 'pointer':
+            return DataType.POINTER
+        elif type_class == 'array':
+            return DataType.ARRAY
+        elif type_class == 'struct':
+            return DataType.STRUCT
+        elif type_class == 'union':
+            return DataType.UNION
+        elif type_class == 'function_pointer':
+            return DataType.FUNCTION
+        elif type_class == 'primitive':
+            # Map primitive types
+            if base_type in ['void']:
+                return DataType.VOID
+            elif base_type in ['char', 'unsigned char', 'signed char']:
+                return DataType.CHAR
+            elif base_type in ['short', 'unsigned short']:
+                return DataType.SHORT
+            elif base_type in ['int', 'unsigned int', 'signed int']:
+                return DataType.INT
+            elif base_type in ['long', 'unsigned long', 'long long', 'unsigned long long']:
+                return DataType.LONG
+            elif base_type in ['float']:
+                return DataType.FLOAT
+            elif base_type in ['double', 'long double']:
+                return DataType.DOUBLE
+        
+        return DataType.UNKNOWN
+    
+    def _calculate_avg_confidence(self, advanced_types: Dict[str, Any]) -> float:
+        """Calculate average confidence of advanced types"""
+        if not advanced_types:
+            return 0.0
+        
+        confidences = [t.confidence for t in advanced_types.values() if hasattr(t, 'confidence')]
+        return sum(confidences) / len(confidences) if confidences else 0.0
+    
+    def _calculate_function_confidence(self, decompiled_code: str, semantic_purpose: str,
+                                     parameters: List[Any], local_variables: List[Any]) -> float:
+        """Calculate confidence score for semantic function analysis"""
+        confidence_factors = []
+        
+        # Code quality factor (30%)
+        if decompiled_code and len(decompiled_code) > 50:
+            # Has substantial code
+            confidence_factors.append(0.3)
+        elif decompiled_code and len(decompiled_code) > 20:
+            # Has minimal code
+            confidence_factors.append(0.15)
+        
+        # Semantic purpose factor (25%)
+        if semantic_purpose and semantic_purpose != 'utility_function':
+            # Has specific purpose identified
+            confidence_factors.append(0.25)
+        elif semantic_purpose:
+            # Has some purpose
+            confidence_factors.append(0.1)
+        
+        # Parameter analysis factor (25%)
+        if parameters:
+            # Has identified parameters
+            param_confidence = min(len(parameters) * 0.05, 0.25)
+            confidence_factors.append(param_confidence)
+        
+        # Local variable analysis factor (20%)
+        if local_variables:
+            # Has identified local variables
+            var_confidence = min(len(local_variables) * 0.04, 0.20)
+            confidence_factors.append(var_confidence)
+        
+        # Code structure indicators
+        if decompiled_code:
+            structure_indicators = 0
+            if 'return' in decompiled_code:
+                structure_indicators += 0.05
+            if any(keyword in decompiled_code for keyword in ['if', 'for', 'while']):
+                structure_indicators += 0.05
+            if any(call in decompiled_code for call in ['(', 'malloc', 'free']):
+                structure_indicators += 0.05
+            confidence_factors.append(min(structure_indicators, 0.15))
+        
+        return min(sum(confidence_factors), 1.0)
     
     def _analyze_variables_semantically(self, ghidra_results: Dict[str, Any],
                                       semantic_functions: List[SemanticFunction],
