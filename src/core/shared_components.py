@@ -399,6 +399,15 @@ class SharedValidationTools:
     """Shared validation tools for Matrix agents"""
     
     @staticmethod
+    def validate_context_keys(context: Dict[str, Any], required_keys: List[str]) -> List[str]:
+        """Validate that all required context keys are present"""
+        missing_keys = []
+        for key in required_keys:
+            if key not in context:
+                missing_keys.append(key)
+        return missing_keys
+    
+    @staticmethod
     def validate_pe_structure(binary_path: Path) -> Dict[str, Any]:
         """Validate PE file structure"""
         try:

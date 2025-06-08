@@ -191,13 +191,12 @@ class Agent10_TheMachine(BaseAgent):
                 elif isinstance(arch_info, str):
                     analysis['architecture'] = arch_info
         
-        # Set compiler requirements based on analysis
-        if analysis['target_platform'] == 'windows':
-            analysis['compiler_requirements'] = ['msvc', 'gcc-mingw']
-            if analysis['architecture'] == 'x64':
-                analysis['compilation_flags'].extend(['/MACHINE:X64', '-m64'])
-            else:
-                analysis['compilation_flags'].extend(['/MACHINE:X86', '-m32'])
+        # Set compiler requirements for Windows only
+        analysis['compiler_requirements'] = ['msvc']
+        if analysis['architecture'] == 'x64':
+            analysis['compilation_flags'].extend(['/MACHINE:X64'])
+        else:
+            analysis['compilation_flags'].extend(['/MACHINE:X86'])
         
         # Determine build complexity
         num_files = len(source_files) + len(header_files)
@@ -212,7 +211,7 @@ class Agent10_TheMachine(BaseAgent):
         """Generate comprehensive build system configuration"""
         build_system = {
             'detected_systems': [],
-            'primary_system': 'cmake',
+            'primary_system': 'msbuild',
             'build_files': {},
             'build_configurations': {},
             'compilation_commands': {},
@@ -221,21 +220,14 @@ class Agent10_TheMachine(BaseAgent):
             'automated_build': {}
         }
         
-        # Generate CMakeLists.txt
-        cmake_content = self._generate_cmake_file(analysis)
-        build_system['build_files']['CMakeLists.txt'] = cmake_content
-        build_system['detected_systems'].append('cmake')
+        # Generate Visual Studio project files (Windows only)
+        vcxproj_content = self._generate_vcxproj_file(analysis)
+        build_system['build_files']['project.vcxproj'] = vcxproj_content
+        build_system['detected_systems'].append('msbuild')
         
-        # Generate Makefile
-        makefile_content = self._generate_makefile(analysis)
-        build_system['build_files']['Makefile'] = makefile_content
-        build_system['detected_systems'].append('make')
-        
-        # Generate Visual Studio project files
-        if analysis['target_platform'] == 'windows':
-            vcxproj_content = self._generate_vcxproj_file(analysis)
-            build_system['build_files']['project.vcxproj'] = vcxproj_content
-            build_system['detected_systems'].append('msbuild')
+        # Generate solution file for Visual Studio
+        sln_content = self._generate_solution_file(analysis)
+        build_system['build_files']['project.sln'] = sln_content
         
         # Generate build configurations
         build_system['build_configurations'] = {
@@ -677,8 +669,8 @@ echo "Build complete!"
             'binary_outputs': {}
         }
         
-        # Try different build systems
-        build_systems_to_try = ['cmake', 'make', 'msbuild']
+        # Try MSBuild only (Windows)
+        build_systems_to_try = ['msbuild']
         
         for build_system_name in build_systems_to_try:
             if build_system_name in build_system['detected_systems']:
@@ -719,11 +711,7 @@ echo "Build complete!"
             import time
             start_time = time.time()
             
-            if build_system == 'cmake':
-                result = self._build_with_cmake(output_dir, build_config)
-            elif build_system == 'make':
-                result = self._build_with_make(output_dir, build_config)
-            elif build_system == 'msbuild':
+            if build_system == 'msbuild':
                 result = self._build_with_msbuild(output_dir, build_config)
             
             result['time'] = time.time() - start_time

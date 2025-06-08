@@ -668,7 +668,15 @@ class Agent8_Keymaker_ResourceReconstruction(BaseAgent):
         """Apply AI enhancement to resource analysis"""
         
         if not self.ai_enabled:
-            return {}
+            return {
+                'ai_analysis_available': False,
+                'enhanced_reconstruction_method': 'basic_extraction',
+                'resource_pattern_insights': 'AI enhancement not available',
+                'structural_understanding': 'Manual analysis required',
+                'reconstruction_quality': 'Basic extraction only',
+                'confidence_score': 0.0,
+                'recommendations': 'Enable AI enhancement for advanced resource reconstruction'
+            }
         
         try:
             ai_insights = {
@@ -697,7 +705,14 @@ class Agent8_Keymaker_ResourceReconstruction(BaseAgent):
             
         except Exception as e:
             self.logger.warning(f"AI enhanced analysis failed: {e}")
-            return {}
+            return {
+                'ai_analysis_available': False,
+                'enhanced_reconstruction_method': 'failed',
+                'error_message': str(e),
+                'fallback_analysis': 'Basic resource extraction performed',
+                'confidence_score': 0.0,
+                'recommendations': 'Check AI configuration and retry enhanced reconstruction'
+            }
 
     def _create_keymaker_doors(
         self,

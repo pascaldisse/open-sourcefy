@@ -201,10 +201,28 @@ class MatrixPipelineOrchestrator:
             
             master_agent = DeusExMachinaAgent()
             
+            # Setup output directory structure
+            output_path = Path(output_dir)
+            output_paths = {
+                'base': output_path,
+                'agents': output_path / 'agents',
+                'ghidra': output_path / 'ghidra',
+                'compilation': output_path / 'compilation',
+                'reports': output_path / 'reports',
+                'logs': output_path / 'logs',
+                'temp': output_path / 'temp',
+                'tests': output_path / 'tests'
+            }
+            
+            # Create output directories
+            for path in output_paths.values():
+                path.mkdir(parents=True, exist_ok=True)
+            
             # Prepare master context
             master_context = {
                 'binary_path': binary_path,
                 'output_dir': output_dir,
+                'output_paths': output_paths,
                 'pipeline_config': self.config,
                 'selected_agents': self.selected_agents,
                 'execution_mode': self.config.execution_mode.value
@@ -271,24 +289,9 @@ class MatrixPipelineOrchestrator:
     async def _execute_single_agent(self, agent_id: int):
         """Execute a single agent with context"""
         try:
-            # Import agent dynamically
-            agent_module = __import__(f'core.agents.agent{agent_id:02d}', fromlist=[''])
-            
-            # Find agent class (assumes naming convention)
-            agent_class = None
-            for attr_name in dir(agent_module):
-                attr = getattr(agent_module, attr_name)
-                if (isinstance(attr, type) and 
-                    hasattr(attr, 'execute_async') and 
-                    attr_name.endswith('Agent')):
-                    agent_class = attr
-                    break
-            
-            if not agent_class:
-                raise ValueError(f"No agent class found in agent{agent_id:02d}")
-            
-            # Create and execute agent
-            agent = agent_class()
+            # Get agent from agents registry
+            from .agents import get_agent_by_id
+            agent = get_agent_by_id(agent_id)
             
             # Prepare agent context
             agent_context = {
@@ -298,7 +301,7 @@ class MatrixPipelineOrchestrator:
                 'pipeline_config': self.config
             }
             
-            return await agent.execute_async(agent_context)
+            return agent.execute(agent_context)
             
         except Exception as e:
             self.logger.error(f"Agent {agent_id} execution failed: {e}")
@@ -306,34 +309,42 @@ class MatrixPipelineOrchestrator:
     
     def _create_timeout_result(self, agent_id: int):
         """Create timeout result for agent"""
-        from .agent_base import AgentResult
+        from .matrix_agents_v2 import AgentResult, AgentStatus
         return AgentResult(
-            success=False,
             agent_id=agent_id,
-            error=f"Agent {agent_id} execution timed out",
+            agent_name=f"Agent{agent_id:02d}",
+            matrix_character=f"agent_{agent_id:02d}",
+            status=AgentStatus.FAILED,
+            error_message=f"Agent {agent_id} execution timed out",
             execution_time=self.config.resource_limits.timeout_agent
         )
     
     def _create_error_result(self, agent_id: int, error_msg: str):
         """Create error result for agent"""
-        from .agent_base import AgentResult
+        from .matrix_agents_v2 import AgentResult, AgentStatus
         return AgentResult(
-            success=False,
             agent_id=agent_id,
-            error=error_msg,
+            agent_name=f"Agent{agent_id:02d}",
+            matrix_character=f"agent_{agent_id:02d}",
+            status=AgentStatus.FAILED,
+            error_message=error_msg,
             execution_time=0.0
         )
     
     def _generate_pipeline_result(self, agent_results: Dict[int, Any]) -> MatrixPipelineResult:
         """Generate final pipeline result"""
-        successful_count = sum(1 for result in agent_results.values() if result.success)
+        from .matrix_agents_v2 import AgentStatus
+        
+        successful_count = sum(1 for result in agent_results.values() 
+                             if result.status == AgentStatus.SUCCESS)
         failed_count = len(agent_results) - successful_count
         
         # Collect error messages
         error_messages = []
         for agent_id, result in agent_results.items():
-            if not result.success:
-                error_messages.append(f"Agent {agent_id}: {result.error}")
+            if result.status != AgentStatus.SUCCESS:
+                error_msg = result.error_message or f"Agent {agent_id} failed"
+                error_messages.append(f"Agent {agent_id}: {error_msg}")
         
         # Calculate performance metrics
         execution_time = time.time() - self.execution_start_time

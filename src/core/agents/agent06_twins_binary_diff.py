@@ -614,7 +614,15 @@ class Agent6_Twins_BinaryDiff(BaseAgent):
         """Apply AI interpretation to the comparison results"""
         
         if not self.ai_enabled:
-            return {}
+            return {
+                'ai_analysis_available': False,
+                'interpretation_method': 'heuristic_only',
+                'optimization_interpretation': 'AI interpretation not available',
+                'structural_interpretation': 'Basic pattern matching only',
+                'significance_ranking': 'Manual assessment required',
+                'recommendations': 'Install AI enhancement modules for detailed interpretation',
+                'confidence_score': 0.0
+            }
         
         try:
             ai_insights = {
@@ -645,7 +653,14 @@ class Agent6_Twins_BinaryDiff(BaseAgent):
             
         except Exception as e:
             self.logger.warning(f"AI interpretation failed: {e}")
-            return {}
+            return {
+                'ai_analysis_available': False,
+                'interpretation_method': 'failed',
+                'error_message': str(e),
+                'fallback_analysis': 'Basic heuristic comparison performed',
+                'confidence_score': 0.0,
+                'recommendations': 'Check AI configuration and retry analysis'
+            }
 
     def _synchronize_twin_perspectives(
         self,

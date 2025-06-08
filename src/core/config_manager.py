@@ -248,10 +248,9 @@ class ConfigManager:
         """Auto-detect Ghidra installation"""
         possible_locations = [
             self.project_root / "ghidra",
-            Path.home() / "ghidra",
-            Path("/opt/ghidra"),
-            Path("/usr/local/ghidra"),
-            Path("C:\\ghidra") if os.name == 'nt' else None
+            Path("C:\\ghidra"),
+            Path("C:\\Program Files\\ghidra"),
+            Path("C:\\Program Files (x86)\\ghidra")
         ]
         
         for location in possible_locations:

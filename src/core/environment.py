@@ -122,9 +122,9 @@ class EnhancedEnvironmentManager:
         value = os.environ.get(env_var)
         if value:
             path = Path(value)
-            # Convert WSL paths to Windows paths if needed
-            if platform.system() == "Linux" and str(path).startswith("/mnt/c/"):
-                return path
+            # Ensure Windows paths only
+            if platform.system() != "Windows":
+                raise ValueError("Only Windows environment is supported")
             return path
         return default
     
@@ -300,13 +300,14 @@ class EnhancedEnvironmentManager:
                            fix_suggestion="Install Java 17 or higher")
     
     def _validate_compiler_environment(self):
-        """Validate compiler environment for Windows/MSVC"""
-        if platform.system() != "Linux":
-            self._add_result("Compiler Environment", EnvironmentStatus.WARNING,
-                           "Non-Linux environment detected - compiler validation skipped")
+        """Validate compiler environment for Windows/MSVC only"""
+        if platform.system() != "Windows":
+            self._add_result("Compiler Environment", EnvironmentStatus.CRITICAL,
+                           "Non-Windows environment detected - only Windows with VS MSBuild is supported",
+                           fix_suggestion="Use Windows environment with Visual Studio installed")
             return
         
-        # Check for MSVC paths (WSL environment)
+        # Check for MSVC paths (Windows environment only)
         if self.config.vs_base:
             vs_path = self.config.vs_base
             if vs_path.exists():

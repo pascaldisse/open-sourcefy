@@ -116,7 +116,7 @@ class Agent5_Neo_AdvancedDecompiler(BaseAgent):
         # Initialize Ghidra integration
         try:
             self.ghidra_analyzer = GhidraHeadless(
-                ghidra_home=str(self.config.get_path('tools.ghidra.home')),
+                ghidra_home=str(self.config.get_path('ghidra_home')),
                 enable_accuracy_optimizations=True
             )
             self.ghidra_available = True

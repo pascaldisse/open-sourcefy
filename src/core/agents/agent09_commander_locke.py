@@ -67,13 +67,8 @@ class CommanderLockeAgent:
         # Core components
         self.logger = self._setup_logging()
         if HAS_MATRIX_FRAMEWORK:
-            # Provide default output paths for instantiation
-            default_output_paths = {
-                'agents': Path('./output/agents'),
-                'temp': Path('./output/temp'),
-                'reports': Path('./output/reports')
-            }
-            self.file_manager = MatrixFileManager(default_output_paths)
+            # File manager will be initialized with proper output paths from context in execute()
+            self.file_manager = None
         else:
             self.file_manager = None
         self.validator = MatrixValidator() if HAS_MATRIX_FRAMEWORK else None
@@ -119,6 +114,10 @@ class CommanderLockeAgent:
     def execute(self, context: Dict[str, Any]) -> AgentResult:
         """Execute global reconstruction orchestration"""
         self.logger.info("🎖️ Commander Locke initiating global reconstruction protocol...")
+        
+        # Initialize file manager with proper output paths from context
+        if HAS_MATRIX_FRAMEWORK and 'output_paths' in context:
+            self.file_manager = MatrixFileManager(context['output_paths'])
         
         start_time = time.time()
         

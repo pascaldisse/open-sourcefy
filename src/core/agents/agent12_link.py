@@ -81,13 +81,8 @@ class Agent12_Link:
         # Core components
         self.logger = self._setup_logging()
         if HAS_MATRIX_FRAMEWORK:
-            # Provide default output paths for instantiation
-            default_output_paths = {
-                'agents': Path('./output/agents'),
-                'temp': Path('./output/temp'),
-                'reports': Path('./output/reports')
-            }
-            self.file_manager = MatrixFileManager(default_output_paths)
+            # File manager will be initialized with proper output paths from context in execute()
+            self.file_manager = None
         else:
             self.file_manager = None
         self.validator = MatrixValidator() if HAS_MATRIX_FRAMEWORK else None
@@ -131,6 +126,10 @@ class Agent12_Link:
     def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute communications bridge and integration control"""
         self.logger.info("🔗 Link establishing communication bridges...")
+        
+        # Initialize file manager with proper output paths from context
+        if HAS_MATRIX_FRAMEWORK and 'output_paths' in context:
+            self.file_manager = MatrixFileManager(context['output_paths'])
         
         start_time = time.time()
         

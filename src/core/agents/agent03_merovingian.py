@@ -461,7 +461,7 @@ class MerovingianAgent(DecompilerAgent):
     def _perform_basic_disassembly(self, analysis_context: Dict[str, Any]) -> Dict[str, Any]:
         """Perform basic disassembly of code sections"""
         if not self.has_disassembler:
-            return self._perform_heuristic_analysis(analysis_context)
+            raise RuntimeError("Capstone disassembler is required for Merovingian's decompilation. No fallback analysis allowed.")
         
         binary_path = analysis_context['binary_path']
         code_sections = analysis_context['code_sections']
@@ -527,64 +527,6 @@ class MerovingianAgent(DecompilerAgent):
             'analysis_method': 'capstone_disassembly'
         }
     
-    def _perform_heuristic_analysis(self, analysis_context: Dict[str, Any]) -> Dict[str, Any]:
-        """Perform heuristic analysis when disassembler is not available"""
-        binary_path = analysis_context['binary_path']
-        code_sections = analysis_context['code_sections']
-        
-        # Read binary and perform pattern-based analysis
-        with open(binary_path, 'rb') as f:
-            binary_content = f.read()
-        
-        total_patterns = 0
-        heuristic_sections = []
-        
-        for section in code_sections:
-            start_offset = section['offset']
-            size = min(section['size'], 64 * 1024)
-            end_offset = start_offset + size
-            
-            if end_offset > len(binary_content):
-                continue
-            
-            code_data = binary_content[start_offset:end_offset]
-            
-            # Count instruction-like patterns
-            pattern_count = self._count_instruction_patterns(code_data)
-            total_patterns += pattern_count
-            
-            heuristic_sections.append({
-                'section_name': section['name'],
-                'base_address': section['virtual_address'],
-                'pattern_count': pattern_count,
-                'estimated_instructions': pattern_count * 0.8  # Rough estimate
-            })
-        
-        return {
-            'total_instructions': int(total_patterns * 0.8),
-            'disassembled_sections': heuristic_sections,
-            'disassembly_quality': 0.5,  # Lower quality for heuristic analysis
-            'analysis_method': 'heuristic_pattern_matching'
-        }
-    
-    def _count_instruction_patterns(self, code_data: bytes) -> int:
-        """Count instruction-like patterns in binary data"""
-        # Simple heuristic: count potential x86 instruction starts
-        patterns = [
-            b'\x55',        # push ebp
-            b'\x89',        # mov
-            b'\x8b',        # mov
-            b'\xff',        # call/jmp
-            b'\xe8',        # call
-            b'\x83',        # arithmetic
-            b'\xc3',        # ret
-        ]
-        
-        count = 0
-        for pattern in patterns:
-            count += code_data.count(pattern)
-        
-        return count
     
     def _detect_functions(self, analysis_context: Dict[str, Any], disassembly_results: Dict[str, Any]) -> Dict[str, Any]:
         """Detect function boundaries using multiple heuristics"""
@@ -595,10 +537,11 @@ class MerovingianAgent(DecompilerAgent):
         prologues = self.FUNCTION_PROLOGUES.get(architecture, self.FUNCTION_PROLOGUES['x86'])
         epilogues = self.FUNCTION_EPILOGUES.get(architecture, self.FUNCTION_EPILOGUES['x86'])
         
-        if disassembly_results['analysis_method'] == 'capstone_disassembly':
-            functions = self._detect_functions_from_disassembly(disassembly_results, prologues, epilogues)
-        else:
-            functions = self._detect_functions_heuristic(analysis_context, prologues, epilogues)
+        # Only capstone disassembly is supported - no fallbacks
+        if disassembly_results['analysis_method'] != 'capstone_disassembly':
+            raise RuntimeError(f"Unsupported analysis method: {disassembly_results['analysis_method']}. Only capstone_disassembly is allowed.")
+        
+        functions = self._detect_functions_from_disassembly(disassembly_results, prologues, epilogues)
         
         # Limit number of functions analyzed
         functions = functions[:self.constants.MAX_FUNCTIONS_TO_ANALYZE]
@@ -644,43 +587,6 @@ class MerovingianAgent(DecompilerAgent):
         
         return functions
     
-    def _detect_functions_heuristic(self, analysis_context: Dict[str, Any], prologues: List[bytes], epilogues: List[bytes]) -> List[Function]:
-        """Detect functions using heuristic pattern matching"""
-        functions = []
-        binary_path = analysis_context['binary_path']
-        code_sections = analysis_context['code_sections']
-        
-        with open(binary_path, 'rb') as f:
-            binary_content = f.read()
-        
-        for section in code_sections:
-            start_offset = section['offset']
-            size = min(section['size'], 64 * 1024)
-            code_data = binary_content[start_offset:start_offset + size]
-            base_address = section['virtual_address']
-            
-            # Search for function prologues
-            for prologue in prologues:
-                offset = 0
-                while True:
-                    pos = code_data.find(prologue, offset)
-                    if pos == -1:
-                        break
-                    
-                    # Estimate function size (simplified)
-                    func_size = self._estimate_function_size(code_data, pos, epilogues)
-                    
-                    if func_size >= self.constants.MIN_FUNCTION_SIZE:
-                        func = Function(
-                            address=base_address + pos,
-                            size=func_size,
-                            name=f"sub_{base_address + pos:08x}"
-                        )
-                        functions.append(func)
-                    
-                    offset = pos + 1
-        
-        return functions
     
     def _find_function_end(self, instructions: List[Dict], start_idx: int) -> int:
         """Find the end of a function from disassembled instructions"""
@@ -826,7 +732,15 @@ class MerovingianAgent(DecompilerAgent):
     def _execute_ai_analysis(self, core_results: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute AI-enhanced analysis using LangChain"""
         if not self.agent_executor:
-            return {}
+            return {
+                'ai_analysis_available': False,
+                'decompilation_insights': 'AI analysis not available - LangChain not initialized',
+                'function_purpose_analysis': 'Manual analysis required',
+                'optimization_reversal_suggestions': 'Basic heuristics only',
+                'code_quality_assessment': 'Not available',
+                'confidence_score': 0.0,
+                'ai_enhancement_recommendations': 'Install and configure LangChain for enhanced decompilation analysis'
+            }
         
         try:
             function_analysis = core_results.get('function_analysis', {})

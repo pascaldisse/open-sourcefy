@@ -693,7 +693,15 @@ class Agent7_Trainman_AssemblyAnalysis(BaseAgent):
         """Apply AI enhancement to assembly analysis"""
         
         if not self.ai_enabled:
-            return {}
+            return {
+                'ai_analysis_available': False,
+                'enhanced_analysis_method': 'basic_heuristics',
+                'assembly_pattern_insights': 'AI enhancement not available',
+                'code_flow_understanding': 'Manual analysis required',
+                'optimization_detection': 'Basic pattern matching only',
+                'confidence_score': 0.0,
+                'recommendations': 'Enable AI enhancement for advanced assembly analysis'
+            }
         
         try:
             ai_insights = {
@@ -724,7 +732,14 @@ class Agent7_Trainman_AssemblyAnalysis(BaseAgent):
             
         except Exception as e:
             self.logger.warning(f"AI enhanced analysis failed: {e}")
-            return {}
+            return {
+                'ai_analysis_available': False,
+                'enhanced_analysis_method': 'failed',
+                'error_message': str(e),
+                'fallback_analysis': 'Basic assembly analysis performed',
+                'confidence_score': 0.0,
+                'recommendations': 'Check AI configuration and retry enhanced analysis'
+            }
 
     def _generate_trainman_insights(
         self,

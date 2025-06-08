@@ -750,7 +750,14 @@ class ArchitectAgent(AnalysisAgent):
     def _execute_ai_analysis(self, core_results: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute AI-enhanced analysis using LangChain"""
         if not self.agent_executor:
-            return {}
+            return {
+                'ai_analysis_available': False,
+                'architectural_insights': 'AI analysis not available - LangChain not initialized',
+                'compiler_recommendations': 'Basic heuristics only',
+                'optimization_patterns': 'Manual analysis required',
+                'confidence_score': 0.0,
+                'ai_enhancement_suggestions': 'Install and configure LangChain for enhanced architectural analysis'
+            }
         
         try:
             compiler_analysis = core_results.get('compiler_analysis')

@@ -440,17 +440,44 @@ class SentinelAgent(AnalysisAgent):
         }
     
     def _detect_binary_format(self, header: bytes) -> Dict[str, Any]:
-        """Detect binary format from file header"""
+        """Detect binary format from file header with dynamic confidence calculation"""
+        if len(header) < 4:
+            return {'format': 'Unknown', 'subtype': 'Insufficient Data', 'confidence': 0.0}
+            
+        # PE format detection with confidence based on header validation
         if header.startswith(b'MZ'):
-            return {'format': 'PE', 'subtype': 'Windows Executable', 'confidence': 0.95}
+            confidence = 0.85  # Base confidence for MZ header
+            # Validate PE signature at offset 0x3c if header is long enough
+            if len(header) >= 64:
+                try:
+                    pe_offset = struct.unpack('<L', header[60:64])[0]
+                    if len(header) > pe_offset + 4 and header[pe_offset:pe_offset+4] == b'PE\x00\x00':
+                        confidence = 0.98  # High confidence with valid PE signature
+                except (struct.error, IndexError):
+                    confidence = 0.75  # Lower confidence if PE validation fails
+            return {'format': 'PE', 'subtype': 'Windows Executable', 'confidence': confidence}
+        
+        # ELF format detection with confidence based on class and data encoding
         elif header.startswith(b'\x7fELF'):
-            return {'format': 'ELF', 'subtype': 'Unix/Linux Executable', 'confidence': 0.95}
+            confidence = 0.85  # Base confidence for ELF magic
+            if len(header) >= 16:
+                ei_class = header[4]  # 32/64-bit indicator
+                ei_data = header[5]   # Endianness indicator
+                if ei_class in [1, 2] and ei_data in [1, 2]:  # Valid class and data values
+                    confidence = 0.96
+            return {'format': 'ELF', 'subtype': 'Unix/Linux Executable', 'confidence': confidence}
+        
+        # Mach-O format detection with confidence based on magic number validation
         elif header.startswith(b'\xfe\xed\xfa\xce') or header.startswith(b'\xce\xfa\xed\xfe'):
-            return {'format': 'Mach-O', 'subtype': 'macOS Executable (32-bit)', 'confidence': 0.95}
+            return {'format': 'Mach-O', 'subtype': 'macOS Executable (32-bit)', 'confidence': 0.94}
         elif header.startswith(b'\xcf\xfa\xed\xfe') or header.startswith(b'\xfe\xed\xfa\xcf'):
-            return {'format': 'Mach-O', 'subtype': 'macOS Executable (64-bit)', 'confidence': 0.95}
+            return {'format': 'Mach-O', 'subtype': 'macOS Executable (64-bit)', 'confidence': 0.94}
+        
+        # Unknown format - calculate confidence based on entropy and patterns
         else:
-            return {'format': 'Unknown', 'subtype': 'Unknown Binary Format', 'confidence': 0.1}
+            # Simple heuristic: if header has some structure, give it low confidence
+            confidence = 0.1 if any(b in header[:16] for b in [b'\x00', b'\xFF']) else 0.05
+            return {'format': 'Unknown', 'subtype': 'Unknown Binary Format', 'confidence': confidence}
     
     def _detect_architecture(self, header: bytes, binary_path: Path) -> Dict[str, Any]:
         """Detect target architecture from binary header"""
@@ -770,7 +797,14 @@ class SentinelAgent(AnalysisAgent):
     def _execute_ai_analysis(self, core_results: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute AI-enhanced analysis using LangChain"""
         if not self.agent_executor:
-            return {}
+            # Return empty analysis with clear indication that AI is not available
+            return {
+                'ai_analysis_available': False,
+                'threat_assessment': 'AI analysis not available - LangChain not initialized',
+                'behavioral_insights': 'Basic heuristics only',
+                'confidence_score': 0.0,
+                'ai_recommendations': 'Install and configure LangChain for enhanced analysis'
+            }
         
         try:
             # Prepare context for AI analysis

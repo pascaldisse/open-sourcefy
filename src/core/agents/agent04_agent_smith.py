@@ -862,7 +862,15 @@ class AgentSmithAgent(AnalysisAgent):
     def _execute_ai_analysis(self, core_results: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute AI-enhanced analysis using LangChain"""
         if not self.agent_executor:
-            return {}
+            return {
+                'ai_analysis_available': False,
+                'structural_insights': 'AI analysis not available - LangChain not initialized',
+                'data_pattern_analysis': 'Manual analysis required',
+                'dynamic_bridge_suggestions': 'Basic heuristics only',
+                'replication_assessment': 'Not available',
+                'confidence_score': 0.0,
+                'ai_enhancement_recommendations': 'Install and configure LangChain for enhanced structural analysis'
+            }
         
         try:
             data_structure_analysis = core_results.get('data_structure_analysis', {})

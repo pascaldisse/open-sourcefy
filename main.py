@@ -284,7 +284,7 @@ class MatrixCLI:
         # Agent selection
         if args.agents:
             config.custom_agents = self._parse_agent_list(args.agents)
-            config.pipeline_mode = PipelineMode.CUSTOM
+            config.pipeline_mode = PipelineMode.CUSTOM_AGENTS
         if args.exclude_agents:
             config.exclude_agents = self._parse_agent_list(args.exclude_agents)
         
@@ -545,7 +545,7 @@ Usage Examples:
             execution_time = time.time() - start_time
             self._report_results(final_state, execution_time, config.verbose)
             
-            return final_state.is_successful
+            return final_state.success
             
         except Exception as e:
             self.logger.error(f"Matrix pipeline execution failed: {e}")
@@ -629,26 +629,30 @@ Usage Examples:
         print("=" * 60)
         
         print(f"Execution Time: {execution_time:.2f} seconds")
-        print(f"Final Phase: {final_state.phase.value}")
         print(f"Total Agents: {final_state.total_agents}")
-        print(f"Completed: {final_state.completed_agents}")
+        print(f"Successful: {final_state.successful_agents}")
         print(f"Failed: {final_state.failed_agents}")
-        print(f"Success Rate: {final_state.success_rate:.1%}")
-        print(f"Status: {'SUCCESS' if final_state.is_successful else 'FAILED'}")
+        if final_state.total_agents > 0:
+            success_rate = final_state.successful_agents / final_state.total_agents
+            print(f"Success Rate: {success_rate:.1%}")
+        print(f"Status: {'SUCCESS' if final_state.success else 'FAILED'}")
         
-        if final_state.error_log:
-            print(f"\nErrors ({len(final_state.error_log)}):")
-            for i, error in enumerate(final_state.error_log[:5], 1):
+        if final_state.error_messages:
+            print(f"\nErrors ({len(final_state.error_messages)}):")
+            for i, error in enumerate(final_state.error_messages[:5], 1):
                 print(f"  {i}. {error}")
-            if len(final_state.error_log) > 5:
-                print(f"  ... and {len(final_state.error_log) - 5} more errors")
+            if len(final_state.error_messages) > 5:
+                print(f"  ... and {len(final_state.error_messages) - 5} more errors")
         
         if verbose and final_state.agent_results:
             print("\nAgent Results:")
             for agent_id, result in final_state.agent_results.items():
-                status = result.status.value
-                time_taken = getattr(result, 'execution_time', 0)
-                print(f"  Agent {agent_id:2d}: {status:12} ({time_taken:.2f}s)")
+                if hasattr(result, 'status'):
+                    status = result.status.value if hasattr(result.status, 'value') else str(result.status)
+                    time_taken = getattr(result, 'execution_time', 0)
+                    print(f"  Agent {agent_id:2d}: {status:12} ({time_taken:.2f}s)")
+                else:
+                    print(f"  Agent {agent_id:2d}: {str(result)}")
         
         print("=" * 60)
 
