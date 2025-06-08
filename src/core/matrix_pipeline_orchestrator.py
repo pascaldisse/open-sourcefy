@@ -139,7 +139,7 @@ class MatrixPipelineOrchestrator:
             
         mode_agents = {
             PipelineMode.FULL_PIPELINE: list(range(1, 17)),  # All agents 1-16
-            PipelineMode.DECOMPILE_ONLY: [1, 2, 5, 7, 14],
+            PipelineMode.DECOMPILE_ONLY: [1, 2, 3, 5, 7, 14],
             PipelineMode.ANALYZE_ONLY: [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 15],
             PipelineMode.COMPILE_ONLY: [1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12],
             PipelineMode.VALIDATE_ONLY: [1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],

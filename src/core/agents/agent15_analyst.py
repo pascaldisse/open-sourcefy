@@ -26,22 +26,8 @@ from ..config_manager import ConfigManager
 from ..shared_utils import PerformanceMonitor
 from ..shared_utils import ErrorHandler as MatrixErrorHandler
 
-# AI enhancement imports
-try:
-    from langchain.agents import Tool, AgentExecutor
-    from langchain.agents.react.base import ReActDocstoreAgent
-    from langchain.llms import LlamaCpp
-    from langchain.memory import ConversationBufferMemory
-    AI_AVAILABLE = True
-except ImportError:
-    AI_AVAILABLE = False
-    # Create dummy types for type annotations when LangChain isn't available
-    Tool = Any
-    ReActDocstoreAgent = Any
-    LlamaCpp = Any
-    ConversationBufferMemory = Any
-    # Create dummy types for type annotations when LangChain isnt available
-    AgentExecutor = Any
+# Centralized AI system imports
+from ..ai_system import ai_available, ai_analyze_code, ai_enhance_code, ai_request_safe
 
 
 @dataclass
@@ -103,7 +89,7 @@ class Agent15_Analyst(ReconstructionAgent):
         self.error_handler = MatrixErrorHandler()
         
         # Initialize AI components if available
-        self.ai_enabled = AI_AVAILABLE and self.config.get_value('ai.enabled', True)
+        self.ai_enabled = ai_available()
         if self.ai_enabled:
             try:
                 self._setup_analyst_ai_agent()

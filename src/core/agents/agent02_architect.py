@@ -21,21 +21,26 @@ from ..shared_components import (
 )
 from ..exceptions import MatrixAgentError, ValidationError, ConfigurationError
 
-# LangChain imports for AI-enhanced analysis (optional)
+# AI system integration
+from ..ai_system import ai_available, ai_analyze_code, ai_request_safe
+
+# LangChain imports (conditional)
 try:
-    from langchain.agents import Tool, AgentExecutor
-    from langchain.agents.react.base import ReActDocstoreAgent
-    from langchain.llms import LlamaCpp
+    from langchain.agents import AgentExecutor, ReActDocstoreAgent
     from langchain.memory import ConversationBufferMemory
-    AI_AVAILABLE = True
+    from langchain.tools import Tool
+    LANGCHAIN_AVAILABLE = True
 except ImportError:
-    AI_AVAILABLE = False
-    # Create dummy types for type annotations when LangChain isn't available
-    Tool = Any
-    AgentExecutor = Any
-    ReActDocstoreAgent = Any
-    LlamaCpp = Any
-    ConversationBufferMemory = Any
+    LANGCHAIN_AVAILABLE = False
+    # Create dummy classes for type hints when LangChain not available
+    class AgentExecutor:
+        pass
+    class ConversationBufferMemory:
+        pass
+    class ReActDocstoreAgent:
+        pass
+    class Tool:
+        pass
 
 
 # Configuration constants - NO MAGIC NUMBERS
@@ -201,16 +206,8 @@ class ArchitectAgent(AnalysisAgent):
         self.error_handler = MatrixErrorHandler(self.agent_name, self.constants.MAX_RETRY_ATTEMPTS)
         self.metrics = MatrixMetrics(self.agent_id, self.matrix_character.value)
         
-        # Initialize AI enhancement using centralized AI setup
-        from ..ai_setup import get_ai_setup, is_ai_enabled
-        self.ai_setup = get_ai_setup(self.config)
-        self.ai_enabled = is_ai_enabled()
-        if self.ai_enabled:
-            self.ai_interface = self.ai_setup.get_ai_interface()
-            self.agent_executor = self._setup_ai_agent()
-        else:
-            self.ai_interface = None
-            self.agent_executor = None
+        # Initialize AI system - simple reference
+        self.ai_enabled = ai_available()
         
         # Validate configuration
         self._validate_configuration()
@@ -246,28 +243,11 @@ class ArchitectAgent(AnalysisAgent):
         if missing_paths:
             raise ConfigurationError(f"Invalid configuration paths: {missing_paths}")
     
-    def _setup_ai_agent(self):
-        """Setup AI agent using centralized AI interface"""
-        if not self.ai_enabled or not self.ai_interface:
-            return None
-            
-        try:
-            from ..ai_setup import create_ai_tools, AIAgentExecutor
-            
-            # Create AI tools for backward compatibility with existing code
-            tools = create_ai_tools(self.ai_interface)
-            
-            # Create agent executor that uses the centralized AI interface
-            return AIAgentExecutor(self.ai_interface, tools)
-            
-        except Exception as e:
-            self.logger.warning(f"Failed to setup AI agent: {e}, disabling AI features")
-            self.ai_enabled = False
-            return None
+    # AI setup methods no longer needed - using centralized system
     
     def _setup_langchain_agent(self) -> Optional[AgentExecutor]:
         """Setup LangChain agent with Architect-specific tools"""
-        if not self.ai_enabled or not self.llm:
+        if not self.ai_enabled or not self.llm or not LANGCHAIN_AVAILABLE:
             return None
             
         try:
@@ -291,25 +271,7 @@ class ArchitectAgent(AnalysisAgent):
             self.logger.warning(f"Failed to setup LangChain agent: {e}")
             return None
     
-    def _create_agent_tools(self) -> List[Tool]:
-        """Create LangChain tools specific to Architect's capabilities"""
-        return [
-            Tool(
-                name="analyze_compiler_patterns",
-                description="Analyze binary patterns to identify MSVC compiler version",
-                func=self._ai_compiler_analysis_tool
-            ),
-            Tool(
-                name="detect_optimizations",
-                description="Detect optimization patterns and levels in binary",
-                func=self._ai_optimization_detection_tool
-            ),
-            Tool(
-                name="assess_build_quality",
-                description="Assess build quality and development practices",
-                func=self._ai_build_quality_tool
-            )
-        ]
+    # Tool creation methods removed - using centralized AI system
     
     def get_matrix_description(self) -> str:
         """The Architect's role in the Matrix"""
@@ -360,7 +322,7 @@ class ArchitectAgent(AnalysisAgent):
             }
             
             # Step 6: AI enhancement (if enabled)
-            if self.ai_enabled and self.agent_executor:
+            if self.ai_enabled:
                 progress.step("Applying AI-enhanced architectural insights")
                 with self.error_handler.handle_matrix_operation("ai_enhancement"):
                     ai_results = self._execute_ai_analysis(core_results, context)
@@ -763,8 +725,8 @@ class ArchitectAgent(AnalysisAgent):
         return format_platform_map.get(format_type, 'Unknown')
     
     def _execute_ai_analysis(self, core_results: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute AI-enhanced analysis using LangChain"""
-        if not self.agent_executor:
+        """Execute AI-enhanced analysis using centralized AI system"""
+        if not self.ai_enabled:
             return {
                 'ai_analysis_available': False,
                 'architectural_insights': 'AI analysis not available - LangChain not initialized',
@@ -941,15 +903,4 @@ class ArchitectAgent(AnalysisAgent):
             'architect_confidence': results['architect_metadata']['quality_score']
         }
     
-    # AI tool implementations
-    def _ai_compiler_analysis_tool(self, input_data: str) -> str:
-        """AI tool for compiler analysis"""
-        return f"Compiler pattern analysis completed for: {input_data}"
-    
-    def _ai_optimization_detection_tool(self, input_data: str) -> str:
-        """AI tool for optimization detection"""
-        return f"Optimization level analysis completed for: {input_data}"
-    
-    def _ai_build_quality_tool(self, input_data: str) -> str:
-        """AI tool for build quality assessment"""
-        return f"Build quality assessment completed for: {input_data}"
+    # AI tool methods removed - using centralized AI system

@@ -33,21 +33,8 @@ from ..matrix_agents import AnalysisAgent, AgentResult, AgentStatus, MatrixChara
 from ..config_manager import ConfigManager
 from ..shared_components import MatrixErrorHandler
 
-# AI enhancement imports
-try:
-    from langchain.agents import Tool, AgentExecutor
-    from langchain.agents.react.base import ReActDocstoreAgent
-    from langchain.llms import LlamaCpp
-    from langchain.memory import ConversationBufferMemory
-    AI_AVAILABLE = True
-except ImportError:
-    AI_AVAILABLE = False
-    # Create dummy types for type annotations when LangChain isn't available
-    Tool = Any
-    AgentExecutor = Any
-    ReActDocstoreAgent = Any
-    LlamaCpp = Any
-    ConversationBufferMemory = Any
+# Centralized AI system imports
+from ..ai_system import ai_available, ai_analyze_code, ai_enhance_code, ai_request_safe
 
 
 @dataclass
@@ -117,14 +104,8 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
         # Initialize components
         self.error_handler = MatrixErrorHandler("Twins", max_retries=2)
         
-        # Initialize AI components if available
-        self.ai_enabled = AI_AVAILABLE and self.config.get_value('ai.enabled', True)
-        if self.ai_enabled:
-            try:
-                self._setup_twins_ai_agent()
-            except Exception as e:
-                self.logger.warning(f"AI setup failed: {e}")
-                self.ai_enabled = False
+        # Initialize centralized AI system
+        self.ai_enabled = ai_available()
         
         # Twins' Matrix abilities - dual-state analysis
         self.twins_abilities = {
@@ -144,65 +125,6 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
             'optimization_level': self._compare_optimization_level
         }
 
-    def _setup_twins_ai_agent(self) -> None:
-        """Setup The Twins' AI-enhanced comparison capabilities"""
-        try:
-            model_path = self.config.get_path('ai.model.path')
-            if not model_path.exists():
-                self.ai_enabled = False
-                return
-            
-            # Setup LLM for difference analysis
-            self.llm = LlamaCpp(
-                model_path=str(model_path),
-                temperature=self.config.get_value('ai.model.temperature', 0.1),
-                max_tokens=self.config.get_value('ai.model.max_tokens', 2048),
-                verbose=self.config.get_value('debug.enabled', False)
-            )
-            
-            # Create Twins-specific AI tools
-            tools = [
-                Tool(
-                    name="analyze_optimization_patterns",
-                    description="Analyze compiler optimization patterns in binary differences",
-                    func=self._ai_analyze_optimization_patterns
-                ),
-                Tool(
-                    name="interpret_structural_changes",
-                    description="Interpret significance of structural changes between binaries",
-                    func=self._ai_interpret_structural_changes
-                ),
-                Tool(
-                    name="detect_refactoring_patterns",
-                    description="Detect code refactoring patterns in differences",
-                    func=self._ai_detect_refactoring_patterns
-                ),
-                Tool(
-                    name="rank_difference_significance",
-                    description="Rank the significance of detected differences",
-                    func=self._ai_rank_difference_significance
-                )
-            ]
-            
-            # Create agent executor
-            memory = ConversationBufferMemory()
-            agent = ReActDocstoreAgent.from_llm_and_tools(
-                llm=self.llm,
-                tools=tools,
-                verbose=self.config.get_value('debug.enabled', False)
-            )
-            
-            self.ai_agent = AgentExecutor.from_agent_and_tools(
-                agent=agent,
-                tools=tools,
-                memory=memory,
-                verbose=self.config.get_value('debug.enabled', False),
-                max_iterations=self.config.get_value('ai.max_iterations', 3)
-            )
-            
-        except Exception as e:
-            self.logger.error(f"Failed to setup Twins AI agent: {e}")
-            self.ai_enabled = False
 
     def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """

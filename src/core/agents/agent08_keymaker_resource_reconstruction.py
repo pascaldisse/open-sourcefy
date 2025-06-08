@@ -36,21 +36,23 @@ from ..matrix_agents import ReconstructionAgent, AgentResult, AgentStatus, Matri
 from ..config_manager import ConfigManager
 from ..shared_components import MatrixErrorHandler
 
-# AI enhancement imports
+# Centralized AI system imports
+from ..ai_system import ai_available, ai_analyze_code, ai_enhance_code, ai_request_safe
+
+# Optional imports with fallbacks for missing dependencies
 try:
-    from langchain.agents import Tool, AgentExecutor
-    from langchain.agents.react.base import ReActDocstoreAgent
+    from langchain.agents import ReActDocstoreAgent, AgentExecutor
     from langchain.llms import LlamaCpp
     from langchain.memory import ConversationBufferMemory
-    AI_AVAILABLE = True
+    from langchain.tools import Tool
+    LANGCHAIN_AVAILABLE = True
 except ImportError:
-    AI_AVAILABLE = False
-    # Create dummy types for type annotations when LangChain isn't available
-    Tool = Any
-    AgentExecutor = Any
+    LANGCHAIN_AVAILABLE = False
     ReActDocstoreAgent = Any
     LlamaCpp = Any
     ConversationBufferMemory = Any
+    AgentExecutor = Any
+    Tool = Any
 
 
 @dataclass
@@ -138,7 +140,7 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
         self.error_handler = MatrixErrorHandler("Keymaker", max_retries=2)
         
         # Initialize AI components if available
-        self.ai_enabled = AI_AVAILABLE and self.config.get_value('ai.enabled', True)
+        self.ai_enabled = ai_available()
         if self.ai_enabled:
             try:
                 self._setup_keymaker_ai_agent()

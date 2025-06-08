@@ -33,21 +33,8 @@ from ..matrix_agents import AnalysisAgent, AgentResult, AgentStatus, MatrixChara
 from ..config_manager import ConfigManager
 from ..shared_components import MatrixErrorHandler
 
-# AI enhancement imports
-try:
-    from langchain.agents import Tool, AgentExecutor
-    from langchain.agents.react.base import ReActDocstoreAgent
-    from langchain.llms import LlamaCpp
-    from langchain.memory import ConversationBufferMemory
-    AI_AVAILABLE = True
-except ImportError:
-    AI_AVAILABLE = False
-    # Create dummy types for type annotations when LangChain isn't available
-    Tool = Any
-    AgentExecutor = Any
-    ReActDocstoreAgent = Any
-    LlamaCpp = Any
-    ConversationBufferMemory = Any
+# Centralized AI system imports
+from ..ai_system import ai_available, ai_analyze_code, ai_enhance_code, ai_request_safe
 
 
 @dataclass
@@ -129,14 +116,8 @@ class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
         # Initialize components
         self.error_handler = MatrixErrorHandler("Trainman", max_retries=2)
         
-        # Initialize AI components if available
-        self.ai_enabled = AI_AVAILABLE and self.config.get_value('ai.enabled', True)
-        if self.ai_enabled:
-            try:
-                self._setup_trainman_ai_agent()
-            except Exception as e:
-                self.logger.warning(f"AI setup failed: {e}")
-                self.ai_enabled = False
+        # Initialize centralized AI system
+        self.ai_enabled = ai_available()
         
         # Trainman's station abilities - assembly mastery
         self.station_abilities = {

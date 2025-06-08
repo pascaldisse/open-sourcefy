@@ -20,21 +20,26 @@ from ..shared_components import (
 )
 from ..exceptions import MatrixAgentError, ValidationError, ConfigurationError
 
-# LangChain imports for AI-enhanced analysis (optional)
+# AI system integration
+from ..ai_system import ai_available, ai_enhance_code, ai_request_safe
+
+# LangChain imports (conditional)
 try:
-    from langchain.agents import Tool, AgentExecutor
-    from langchain.agents.react.base import ReActDocstoreAgent
-    from langchain.llms import LlamaCpp
+    from langchain.agents import AgentExecutor, ReActDocstoreAgent
     from langchain.memory import ConversationBufferMemory
-    AI_AVAILABLE = True
+    from langchain.tools import Tool
+    LANGCHAIN_AVAILABLE = True
 except ImportError:
-    AI_AVAILABLE = False
-    # Create dummy types for type annotations when LangChain isn't available
-    Tool = Any
-    AgentExecutor = Any
-    ReActDocstoreAgent = Any
-    LlamaCpp = Any
-    ConversationBufferMemory = Any
+    LANGCHAIN_AVAILABLE = False
+    # Create dummy classes for type hints when LangChain not available
+    class AgentExecutor:
+        pass
+    class ConversationBufferMemory:
+        pass
+    class ReActDocstoreAgent:
+        pass
+    class Tool:
+        pass
 
 # Disassembly engine
 try:
@@ -165,11 +170,8 @@ class MerovingianAgent(DecompilerAgent):
         if not self.has_disassembler:
             self.logger.warning("Capstone disassembler not available - limited analysis")
         
-        # Initialize LangChain components for AI enhancement
-        self.ai_enabled = self.config.get_value('ai.enabled', True)
-        if self.ai_enabled:
-            self.llm = self._setup_llm()
-            self.agent_executor = self._setup_langchain_agent()
+        # Initialize AI system - simple reference
+        self.ai_enabled = ai_available()
         
         # Validate configuration
         self._validate_configuration()
@@ -206,20 +208,17 @@ class MerovingianAgent(DecompilerAgent):
             raise ConfigurationError(f"Invalid configuration paths: {missing_paths}")
     
     def _setup_llm(self):
-        """Setup LangChain language model from configuration"""
+        """Setup LangChain language model from centralized AI system"""
         try:
-            model_path = self.config.get_path('ai.model.path')
-            if not model_path or not model_path.exists():
-                self.logger.warning(f"AI model not found at {model_path}, disabling AI features")
+            # Use centralized AI system instead of local model
+            if ai_available():
+                self.ai_enabled = True
+                self.logger.info("AI enabled via centralized AI system")
+                return None  # Centralized system handles the model
+            else:
+                self.logger.info("AI system not available, proceeding without AI enhancement")
                 self.ai_enabled = False
                 return None
-                
-            return LlamaCpp(
-                model_path=str(model_path),
-                temperature=self.config.get_value('ai.model.temperature', 0.1),
-                max_tokens=self.config.get_value('ai.model.max_tokens', 2048),
-                verbose=self.config.get_value('debug.enabled', False)
-            )
         except Exception as e:
             self.logger.warning(f"Failed to setup LLM: {e}, disabling AI features")
             self.ai_enabled = False
@@ -227,7 +226,8 @@ class MerovingianAgent(DecompilerAgent):
     
     def _setup_langchain_agent(self) -> Optional[AgentExecutor]:
         """Setup LangChain agent with Merovingian-specific tools"""
-        if not self.ai_enabled or not self.llm:
+        # LangChain setup methods removed - using centralized AI system
+        if not LANGCHAIN_AVAILABLE:  # Disabled when not available
             return None
             
         try:
@@ -328,7 +328,7 @@ class MerovingianAgent(DecompilerAgent):
             }
             
             # Step 7: AI enhancement (if enabled)
-            if self.ai_enabled and self.agent_executor:
+            if self.ai_enabled:
                 progress.step("Applying AI-enhanced decompilation insights")
                 with self.error_handler.handle_matrix_operation("ai_enhancement"):
                     ai_results = self._execute_ai_analysis(core_results, context)
@@ -923,41 +923,50 @@ class MerovingianAgent(DecompilerAgent):
         }
     
     def _execute_ai_analysis(self, core_results: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute AI-enhanced analysis using LangChain"""
-        if not self.agent_executor:
+        """Execute AI-enhanced analysis using centralized AI system"""
+        if not self.ai_enabled:
             return {
                 'ai_analysis_available': False,
-                'decompilation_insights': 'AI analysis not available - LangChain not initialized',
+                'decompilation_insights': 'AI analysis not available',
                 'function_purpose_analysis': 'Manual analysis required',
                 'optimization_reversal_suggestions': 'Basic heuristics only',
                 'code_quality_assessment': 'Not available',
-                'confidence_score': 0.0,
-                'ai_enhancement_recommendations': 'Install and configure LangChain for enhanced decompilation analysis'
+                'confidence_score': 0.0
             }
         
         try:
             function_analysis = core_results.get('function_analysis', {})
             optimization_analysis = core_results.get('optimization_analysis', {})
             
-            # Create AI analysis prompt
-            prompt = f"""
-            Analyze this decompiled binary code:
+            # Get sample decompiled code if available
+            decompiled_samples = core_results.get('decompiled_functions', {})
+            sample_code = ""
+            if decompiled_samples:
+                # Take first available sample
+                sample_code = next(iter(decompiled_samples.values()), "")[:1000]  # Limit size
             
-            Functions Detected: {function_analysis.get('functions_detected', 0)}
-            Optimization Level: {optimization_analysis.get('optimization_level', 'Unknown')}
-            Detected Optimizations: {', '.join(optimization_analysis.get('detected_optimizations', []))}
-            
-            Provide insights about code structure, algorithms, and development practices.
-            """
-            
-            # Execute AI analysis
-            ai_result = self.agent_executor.run(prompt)
-            
-            return {
-                'ai_insights': ai_result,
-                'ai_confidence': self.config.get_value('ai.confidence_threshold', 0.7),
-                'ai_enabled': True
+            # Create enhancement context
+            enhancement_context = {
+                'function_name': 'decompiled_function',
+                'architecture': context.get('binary_info', {}).get('architecture', 'unknown'),
+                'optimization_level': optimization_analysis.get('optimization_level', 'unknown'),
+                'function_count': function_analysis.get('functions_detected', 0)
             }
+            
+            # Use centralized AI system for code enhancement
+            ai_response = ai_enhance_code(sample_code, enhancement_context)
+            
+            if ai_response.success:
+                return {
+                    'ai_insights': ai_response.content,
+                    'ai_confidence': 0.8,  # Default confidence
+                    'ai_enabled': True
+                }
+            else:
+                return {
+                    'ai_enabled': False,
+                    'ai_error': ai_response.error or 'AI analysis failed'
+                }
         except Exception as e:
             self.logger.warning(f"AI analysis failed: {e}")
             return {'ai_enabled': False, 'ai_error': str(e)}

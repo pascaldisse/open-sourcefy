@@ -26,6 +26,24 @@ from ..exceptions import MatrixAgentError, ValidationError, ConfigurationError, 
 # AI imports using centralized AI setup
 from ..ai_setup import get_ai_setup, is_ai_enabled, create_ai_tools, AIAgentExecutor
 
+# LangChain imports (conditional)
+try:
+    from langchain.agents import AgentExecutor, ReActDocstoreAgent
+    from langchain.memory import ConversationBufferMemory
+    from langchain.tools import Tool
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    LANGCHAIN_AVAILABLE = False
+    # Create dummy classes for type hints when LangChain not available
+    class AgentExecutor:
+        pass
+    class ConversationBufferMemory:
+        pass
+    class ReActDocstoreAgent:
+        pass
+    class Tool:
+        pass
+
 # Binary analysis libraries with error handling
 try:
     import pefile
@@ -36,6 +54,14 @@ except ImportError:
 # ELF and Mach-O support removed - Windows PE only
 HAS_ELFTOOLS = False
 HAS_MACHOLIB = False
+
+# Phase 1 Enhanced Deobfuscation modules
+try:
+    from ..deobfuscation.phase1_enhanced_integration import create_phase1_enhanced_integrator, enhance_agent1_with_phase1_advanced
+    HAS_PHASE1_ENHANCED = True
+except ImportError:
+    HAS_PHASE1_ENHANCED = False
+    logging.warning("Phase 1 enhanced deobfuscation modules not available")
 
 
 # Configuration constants - NO MAGIC NUMBERS
@@ -351,6 +377,32 @@ class SentinelAgent(AnalysisAgent):
         
         # Perform format-specific analysis
         format_analysis = self._perform_format_specific_analysis(binary_path, format_info['format'])
+        
+        # Phase 1 Enhanced Deobfuscation Integration
+        if HAS_PHASE1_ENHANCED:
+            try:
+                self.logger.info("Applying Phase 1 advanced deobfuscation enhancements...")
+                
+                # Create basic analysis result for enhancement
+                basic_analysis = {
+                    'binary_metadata': binary_metadata,
+                    'format_analysis': format_analysis,
+                    'format_info': format_info,
+                    'architecture_info': arch_info
+                }
+                
+                # Apply Phase 1 enhancements
+                enhanced_analysis = enhance_agent1_with_phase1_advanced(
+                    binary_path, basic_analysis, self.config
+                )
+                
+                self.logger.info(f"Phase 1 enhanced analysis completed with enhancement level: {enhanced_analysis.get('phase1_enhanced', {}).get('enhancement_level', 'standard')}")
+                
+                return enhanced_analysis
+                
+            except Exception as e:
+                self.logger.warning(f"Phase 1 enhancement failed: {e}, using basic analysis")
+                # Fall back to basic analysis if enhancement fails
         
         return {
             'binary_metadata': binary_metadata,

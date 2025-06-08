@@ -42,7 +42,7 @@ class GhidraHeadless:
     
     def __init__(self, ghidra_home: str = None, enable_accuracy_optimizations: bool = True, output_base_dir: str = None):
         """
-        Initialize Ghidra headless automation
+        Initialize Ghidra headless automation with enhanced process management
         
         Args:
             ghidra_home: Path to Ghidra installation directory
@@ -56,6 +56,9 @@ class GhidraHeadless:
         self.enable_accuracy_optimizations = enable_accuracy_optimizations
         self.output_base_dir = output_base_dir
         self.community_scripts_dir = self._setup_community_scripts()
+        
+        # Process management for timeout handling
+        self.active_processes = []
         
         if not self.ghidra_home or not os.path.exists(self.ghidra_home):
             raise GhidraHeadlessError(f"Ghidra installation not found at: {self.ghidra_home}")
@@ -362,14 +365,80 @@ public class EnhancedDecompiler extends GhidraScript {
         logger.info(f"Created Ghidra project directory: {self.project_dir}")
         return self.project_dir
 
+    def _terminate_process_safely(self, process):
+        """
+        Safely terminate a Ghidra process with proper cleanup
+        """
+        if not process or process.poll() is not None:
+            return  # Process already terminated
+            
+        try:
+            if os.name == 'nt':
+                # Windows: terminate process tree
+                logger.info(f"Terminating Ghidra process {process.pid} on Windows")
+                process.terminate()
+                import time
+                time.sleep(2)  # Give it time to cleanup
+                if process.poll() is None:
+                    logger.warning(f"Force killing Ghidra process {process.pid}")
+                    process.kill()
+                    process.wait(timeout=5)
+            else:
+                # Unix: kill process group
+                import signal
+                logger.info(f"Terminating Ghidra process group {process.pid} on Unix")
+                try:
+                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                    import time
+                    time.sleep(2)
+                    # Check if still running
+                    if process.poll() is None:
+                        logger.warning(f"Force killing Ghidra process group {process.pid}")
+                        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                        process.wait(timeout=5)
+                except ProcessLookupError:
+                    # Process already terminated
+                    pass
+        except Exception as kill_error:
+            logger.error(f"Failed to terminate Ghidra process {process.pid}: {kill_error}")
+            # Last resort - try basic kill
+            try:
+                process.kill()
+                process.wait(timeout=2)
+            except:
+                pass
+
     def cleanup_project(self):
         """
-        Clean up temporary project directory
+        Clean up temporary project directory and terminate any active processes
         """
+        # Terminate any active processes
+        processes_to_cleanup = list(self.active_processes)  # Create copy to avoid modification during iteration
+        for process in processes_to_cleanup:
+            try:
+                if process.poll() is None:  # Process is still running
+                    logger.warning(f"Terminating active Ghidra process {process.pid} during cleanup")
+                    self._terminate_process_safely(process)
+            except Exception as e:
+                logger.error(f"Error terminating process during cleanup: {e}")
+        
+        self.active_processes.clear()
+        
+        # Clean up project directory
         if self.project_dir and os.path.exists(self.project_dir):
             shutil.rmtree(self.project_dir)
             logger.info(f"Cleaned up project directory: {self.project_dir}")
             self.project_dir = None
+            
+    def __enter__(self):
+        """Context manager entry - create project if needed"""
+        if not self.project_dir:
+            self.create_project()
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - cleanup everything"""
+        self.cleanup_project()
 
     def run_ghidra_analysis(
         self, 
@@ -444,34 +513,61 @@ public class EnhancedDecompiler extends GhidraScript {
         
         logger.info(f"Running Ghidra analysis: {' '.join(cmd)}")
         
+        process = None
         try:
-            result = subprocess.run(
+            # Start the process with proper subprocess management
+            process = subprocess.Popen(
                 cmd,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=timeout,
-                cwd=self.ghidra_home
+                cwd=self.ghidra_home,
+                preexec_fn=None if os.name == 'nt' else os.setsid  # Process group for Unix
             )
             
-            success = result.returncode == 0
-            output = result.stdout + result.stderr
+            # Track active process for cleanup
+            self.active_processes.append(process)
             
-            if success:
-                logger.info("Ghidra analysis completed successfully")
-            else:
-                logger.error(f"Ghidra analysis failed with return code: {result.returncode}")
-                logger.error(f"Output: {output}")
+            # Wait for completion with timeout
+            try:
+                stdout, stderr = process.communicate(timeout=timeout)
+                return_code = process.returncode
                 
-            return success, output
-            
-        except subprocess.TimeoutExpired:
-            error_msg = f"Ghidra analysis timed out after {timeout} seconds"
-            logger.error(error_msg)
-            return False, error_msg
-            
+                success = return_code == 0
+                output = stdout + stderr
+                
+                if success:
+                    logger.info("Ghidra analysis completed successfully")
+                else:
+                    logger.error(f"Ghidra analysis failed with return code: {return_code}")
+                    logger.error(f"Output: {output}")
+                    
+                return success, output
+                
+            except subprocess.TimeoutExpired:
+                logger.warning(f"Ghidra analysis timed out after {timeout} seconds - terminating process")
+                
+                # Use robust process termination
+                self._terminate_process_safely(process)
+                
+                error_msg = f"Ghidra analysis timed out after {timeout} seconds"
+                return False, error_msg
+                
+            finally:
+                # Remove from active processes list
+                if process in self.active_processes:
+                    self.active_processes.remove(process)
+                
         except Exception as e:
             error_msg = f"Ghidra analysis failed: {str(e)}"
             logger.error(error_msg)
+            
+            # Cleanup any running process
+            if process:
+                self._terminate_process_safely(process)
+                if process in self.active_processes:
+                    self.active_processes.remove(process)
+            
             return False, error_msg
 
     def extract_functions(self, binary_path: str, output_dir: str) -> Dict[str, str]:

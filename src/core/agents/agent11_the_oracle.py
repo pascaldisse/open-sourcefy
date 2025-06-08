@@ -180,7 +180,7 @@ class Agent11_TheOracle(ValidationAgent):
             if agent_id in all_results:
                 result = all_results[agent_id]
                 if hasattr(result, 'status'):
-                    validation['successful'] = (result.status == AgentStatus.COMPLETED)
+                    validation['successful'] = (result.status == AgentStatus.SUCCESS)
                     
                     if validation['successful']:
                         # Calculate component-specific score

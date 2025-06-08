@@ -140,7 +140,7 @@ class MatrixCLI:
         mode_group.add_argument(
             "--decompile-only", 
             action="store_const", const=PipelineMode.DECOMPILE_ONLY, dest="pipeline_mode",
-            help="Decompilation only (agents 1,2,5,7)"
+            help="Decompilation only (agents 1,2,3,5,7,14)"
         )
         mode_group.add_argument(
             "--analyze-only", 
@@ -753,10 +753,15 @@ Usage Examples:
                         raise ValueError(f"Absolute path not in allowed directories: {path}")
                     return path if path.exists() else None
                 else:
-                    # Check relative to project root only
+                    # Check relative to project root first
                     project_path = project_root / path
                     if project_path.exists() and str(project_path).startswith(str(project_root)):
                         return project_path
+                    
+                    # Check in input directory
+                    input_path = project_root / "input" / path
+                    if input_path.exists() and str(input_path).startswith(str(project_root)):
+                        return input_path
             else:
                 # Default to launcher.exe in input directory
                 default_path = project_root / "input" / "launcher.exe"

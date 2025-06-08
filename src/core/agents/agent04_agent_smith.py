@@ -21,21 +21,8 @@ from ..shared_components import (
 )
 from ..exceptions import MatrixAgentError, ValidationError, ConfigurationError
 
-# LangChain imports for AI-enhanced analysis (optional)
-try:
-    from langchain.agents import Tool, AgentExecutor
-    from langchain.agents.react.base import ReActDocstoreAgent
-    from langchain.llms import LlamaCpp
-    from langchain.memory import ConversationBufferMemory
-    AI_AVAILABLE = True
-except ImportError:
-    AI_AVAILABLE = False
-    # Create dummy types for type annotations when LangChain isn't available
-    Tool = Any
-    AgentExecutor = Any
-    ReActDocstoreAgent = Any
-    LlamaCpp = Any
-    ConversationBufferMemory = Any
+# Centralized AI system imports
+from ..ai_system import ai_available, ai_analyze_code, ai_enhance_code, ai_request_safe
 
 
 # Configuration constants - NO MAGIC NUMBERS
@@ -178,11 +165,8 @@ class AgentSmithAgent(AnalysisAgent):
         self.error_handler = MatrixErrorHandler(self.agent_name, self.constants.MAX_RETRY_ATTEMPTS)
         self.metrics = MatrixMetrics(self.agent_id, self.matrix_character.value)
         
-        # Initialize LangChain components for AI enhancement
-        self.ai_enabled = self.config.get_value('ai.enabled', True)
-        if self.ai_enabled:
-            self.llm = self._setup_llm()
-            self.agent_executor = self._setup_langchain_agent()
+        # Initialize centralized AI system
+        self.ai_enabled = ai_available()
         
         # Validate configuration
         self._validate_configuration()
@@ -221,71 +205,6 @@ class AgentSmithAgent(AnalysisAgent):
         if missing_paths:
             raise ConfigurationError(f"Invalid configuration paths: {missing_paths}")
     
-    def _setup_llm(self):
-        """Setup LangChain language model from configuration"""
-        try:
-            model_path = self.config.get_path('ai.model.path')
-            if not model_path or not model_path.exists():
-                self.logger.warning(f"AI model not found at {model_path}, disabling AI features")
-                self.ai_enabled = False
-                return None
-                
-            return LlamaCpp(
-                model_path=str(model_path),
-                temperature=self.config.get_value('ai.model.temperature', 0.1),
-                max_tokens=self.config.get_value('ai.model.max_tokens', 2048),
-                verbose=self.config.get_value('debug.enabled', False)
-            )
-        except Exception as e:
-            self.logger.warning(f"Failed to setup LLM: {e}, disabling AI features")
-            self.ai_enabled = False
-            return None
-    
-    def _setup_langchain_agent(self) -> Optional[AgentExecutor]:
-        """Setup LangChain agent with Agent Smith-specific tools"""
-        if not self.ai_enabled or not self.llm:
-            return None
-            
-        try:
-            tools = self._create_agent_tools()
-            memory = ConversationBufferMemory()
-            
-            agent = ReActDocstoreAgent.from_llm_and_tools(
-                llm=self.llm,
-                tools=tools,
-                verbose=self.config.get_value('debug.enabled', False)
-            )
-            
-            return AgentExecutor.from_agent_and_tools(
-                agent=agent,
-                tools=tools,
-                memory=memory,
-                verbose=self.config.get_value('debug.enabled', False),
-                max_iterations=self.config.get_value('ai.max_iterations', 5)
-            )
-        except Exception as e:
-            self.logger.warning(f"Failed to setup LangChain agent: {e}")
-            return None
-    
-    def _create_agent_tools(self) -> List[Tool]:
-        """Create LangChain tools specific to Agent Smith's capabilities"""
-        return [
-            Tool(
-                name="analyze_data_structures",
-                description="Analyze and classify data structures in binary",
-                func=self._ai_data_structure_analysis_tool
-            ),
-            Tool(
-                name="assess_resource_significance",
-                description="Assess the significance and purpose of extracted resources",
-                func=self._ai_resource_assessment_tool
-            ),
-            Tool(
-                name="plan_dynamic_analysis",
-                description="Plan dynamic analysis strategy based on static structure",
-                func=self._ai_dynamic_analysis_planning_tool
-            )
-        ]
     
     def get_matrix_description(self) -> str:
         """Agent Smith's role in the Matrix"""
@@ -342,7 +261,7 @@ class AgentSmithAgent(AnalysisAgent):
             }
             
             # Step 7: AI enhancement (if enabled)
-            if self.ai_enabled and self.agent_executor:
+            if self.ai_enabled:
                 progress.step("Applying AI-enhanced structural insights")
                 with self.error_handler.handle_matrix_operation("ai_enhancement"):
                     ai_results = self._execute_ai_analysis(core_results, context)
@@ -919,16 +838,16 @@ class AgentSmithAgent(AnalysisAgent):
         }
     
     def _execute_ai_analysis(self, core_results: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute AI-enhanced analysis using LangChain"""
-        if not self.agent_executor:
+        """Execute AI-enhanced analysis using centralized AI system"""
+        if not self.ai_enabled:
             return {
                 'ai_analysis_available': False,
-                'structural_insights': 'AI analysis not available - LangChain not initialized',
+                'structural_insights': 'AI analysis not available',
                 'data_pattern_analysis': 'Manual analysis required',
                 'dynamic_bridge_suggestions': 'Basic heuristics only',
                 'replication_assessment': 'Not available',
                 'confidence_score': 0.0,
-                'ai_enhancement_recommendations': 'Install and configure LangChain for enhanced structural analysis'
+                'ai_enhancement_recommendations': 'Enable AI system for enhanced structural analysis'
             }
         
         try:
@@ -948,12 +867,12 @@ class AgentSmithAgent(AnalysisAgent):
             Provide insights about the binary's complexity, purpose, and recommended analysis approach.
             """
             
-            # Execute AI analysis
-            ai_result = self.agent_executor.run(prompt)
+            # Execute AI analysis using centralized system
+            ai_result = ai_request_safe(prompt, "structural_analysis")
             
             return {
                 'ai_insights': ai_result,
-                'ai_confidence': self.config.get_value('ai.confidence_threshold', 0.7),
+                'ai_confidence': 0.7,
                 'ai_enabled': True
             }
         except Exception as e:
@@ -1066,18 +985,6 @@ class AgentSmithAgent(AnalysisAgent):
             'smith_confidence': results['agent_smith_metadata']['quality_score']
         }
     
-    # AI tool implementations
-    def _ai_data_structure_analysis_tool(self, input_data: str) -> str:
-        """AI tool for data structure analysis"""
-        return f"Data structure analysis completed for: {input_data}"
-    
-    def _ai_resource_assessment_tool(self, input_data: str) -> str:
-        """AI tool for resource assessment"""
-        return f"Resource significance assessment completed for: {input_data}"
-    
-    def _ai_dynamic_analysis_planning_tool(self, input_data: str) -> str:
-        """AI tool for dynamic analysis planning"""
-        return f"Dynamic analysis strategy planned for: {input_data}"
     
     def _calculate_string_table_confidence(self, strings: List[str]) -> float:
         """Calculate confidence for string table analysis"""

@@ -210,7 +210,7 @@ class CommanderLockeAgent(ReconstructionAgent):
         }
         
         # Extract data from each agent
-        for agent_id in self.get_dependencies():
+        for agent_id in self.dependencies:
             if agent_id in agent_results:
                 result = agent_results[agent_id]
                 self._extract_agent_data(agent_id, result, integration_data)
