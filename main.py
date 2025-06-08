@@ -12,7 +12,7 @@ import argparse
 import asyncio
 import logging
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional, Tuple, Union
 from dataclasses import dataclass
 
 # Add project src to path
@@ -59,7 +59,7 @@ class MatrixCLIConfig:
     # Pipeline configuration
     pipeline_mode: str = "full_pipeline" if not MATRIX_AVAILABLE else PipelineMode.FULL_PIPELINE
     execution_mode: str = "master_first_parallel" if not MATRIX_AVAILABLE else MatrixExecutionMode.MASTER_FIRST_PARALLEL
-    resource_profile: str = "standard" if not MATRIX_AVAILABLE else MatrixResourceLimits.STANDARD
+    resource_profile: Union[str, MatrixResourceLimits] = "standard"
     
     # Agent selection
     custom_agents: Optional[List[int]] = None
@@ -171,8 +171,8 @@ class MatrixCLI:
         )
         exec_group.add_argument(
             "--resource-profile", 
-            choices=[profile.value for profile in MatrixResourceLimits],
-            default=MatrixResourceLimits.STANDARD.value,
+            choices=["standard", "high_performance", "conservative"],
+            default="standard",
             help="Resource usage profile"
         )
         exec_group.add_argument(
@@ -263,11 +263,19 @@ class MatrixCLI:
         config.output_dir = args.output_dir
         
         # Pipeline mode
-        config.pipeline_mode = getattr(args, 'pipeline_mode', PipelineMode.FULL_PIPELINE)
+        config.pipeline_mode = getattr(args, 'pipeline_mode', None) or PipelineMode.FULL_PIPELINE
         
         # Execution configuration
         config.execution_mode = MatrixExecutionMode(args.execution_mode)
-        config.resource_profile = MatrixResourceLimits(args.resource_profile)
+        # Convert resource profile string to MatrixResourceLimits instance
+        if args.resource_profile == "standard":
+            config.resource_profile = MatrixResourceLimits.STANDARD()
+        elif args.resource_profile == "high_performance":
+            config.resource_profile = MatrixResourceLimits.HIGH_PERFORMANCE()
+        elif args.resource_profile == "conservative":
+            config.resource_profile = MatrixResourceLimits.CONSERVATIVE()
+        else:
+            config.resource_profile = MatrixResourceLimits.STANDARD()
         config.max_parallel_agents = args.parallel_agents
         config.timeout_agent = args.timeout_agent
         config.timeout_master = args.timeout_master
@@ -460,24 +468,26 @@ Usage Examples:
             # Create Matrix configuration
             matrix_config = MatrixExecutionConfig(
                 execution_mode=config.execution_mode,
-                max_parallel_agents=config.max_parallel_agents,
-                master_timeout=config.timeout_master,
-                agent_timeout=config.timeout_agent,
-                resource_profile=config.resource_profile,
-                enable_retries=True,
+                resource_limits=config.resource_profile,
                 max_retries=config.max_retries,
-                async_execution=True
+                continue_on_failure=config.continue_on_failure
             )
             
             # Create Pipeline configuration
             pipeline_config = PipelineConfig(
-                mode=config.pipeline_mode,
+                pipeline_mode=config.pipeline_mode,
+                execution_mode=config.execution_mode,
+                resource_limits=config.resource_profile,
                 custom_agents=config.custom_agents,
-                matrix_config=matrix_config,
-                validate_results=config.validate_results,
-                save_reports=config.save_reports,
+                exclude_agents=config.exclude_agents,
+                max_retries=config.max_retries,
                 continue_on_failure=config.continue_on_failure,
-                output_dir=output_dir
+                validate_results=config.validate_results,
+                verbose=config.verbose,
+                debug=config.debug,
+                save_reports=config.save_reports,
+                dry_run=config.dry_run,
+                profile_performance=config.profile_performance
             )
             
             # Create agents
@@ -521,9 +531,9 @@ Usage Examples:
                 pr.enable()
             
             final_state = await execute_matrix_pipeline_orchestrated(
-                agents=agents,
-                config=pipeline_config,
-                context=context
+                binary_path=str(binary_path),
+                output_dir=str(output_dir),
+                config=pipeline_config
             )
             
             if config.profile_performance:
