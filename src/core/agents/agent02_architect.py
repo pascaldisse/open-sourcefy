@@ -201,11 +201,16 @@ class ArchitectAgent(AnalysisAgent):
         self.error_handler = MatrixErrorHandler(self.agent_name, self.constants.MAX_RETRY_ATTEMPTS)
         self.metrics = MatrixMetrics(self.agent_id, self.matrix_character.value)
         
-        # Initialize LangChain components for AI enhancement
-        self.ai_enabled = self.config.get_value('ai.enabled', True)
+        # Initialize AI enhancement using centralized AI setup
+        from ..ai_setup import get_ai_setup, is_ai_enabled
+        self.ai_setup = get_ai_setup(self.config)
+        self.ai_enabled = is_ai_enabled()
         if self.ai_enabled:
-            self.llm = self._setup_llm()
-            self.agent_executor = self._setup_langchain_agent()
+            self.ai_interface = self.ai_setup.get_ai_interface()
+            self.agent_executor = self._setup_ai_agent()
+        else:
+            self.ai_interface = None
+            self.agent_executor = None
         
         # Validate configuration
         self._validate_configuration()
@@ -241,23 +246,22 @@ class ArchitectAgent(AnalysisAgent):
         if missing_paths:
             raise ConfigurationError(f"Invalid configuration paths: {missing_paths}")
     
-    def _setup_llm(self):
-        """Setup LangChain language model from configuration"""
+    def _setup_ai_agent(self):
+        """Setup AI agent using centralized AI interface"""
+        if not self.ai_enabled or not self.ai_interface:
+            return None
+            
         try:
-            model_path = self.config.get_path('ai.model.path')
-            if not model_path or not model_path.exists():
-                self.logger.warning(f"AI model not found at {model_path}, disabling AI features")
-                self.ai_enabled = False
-                return None
-                
-            return LlamaCpp(
-                model_path=str(model_path),
-                temperature=self.config.get_value('ai.model.temperature', 0.1),
-                max_tokens=self.config.get_value('ai.model.max_tokens', 2048),
-                verbose=self.config.get_value('debug.enabled', False)
-            )
+            from ..ai_setup import create_ai_tools, AIAgentExecutor
+            
+            # Create AI tools for backward compatibility with existing code
+            tools = create_ai_tools(self.ai_interface)
+            
+            # Create agent executor that uses the centralized AI interface
+            return AIAgentExecutor(self.ai_interface, tools)
+            
         except Exception as e:
-            self.logger.warning(f"Failed to setup LLM: {e}, disabling AI features")
+            self.logger.warning(f"Failed to setup AI agent: {e}, disabling AI features")
             self.ai_enabled = False
             return None
     

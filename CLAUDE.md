@@ -344,7 +344,7 @@ python3 main.py --decompile-only
 **Quality**: Assessment and confidence scoring
 **Management**: Temporary project creation and cleanup
 
-**Custom Scripts**: Located in agent implementations for enhanced accuracy
+**Custom Scripts**: Located in ghidra/ directory (e.g., CompleteDecompiler.java)
 **Integration Points**: Agents 3, 5, 7, 14 leverage Ghidra for decompilation tasks
 
 ## Code Quality Standards & Style Guidelines
@@ -379,15 +379,26 @@ This project enforces **NSA-level security and production standards** with zero 
 
 **Project Structure**:
 ```
-src/
-├── core/                    # Core framework components
-│   ├── agents/             # Matrix agent implementations
-│   ├── config_manager.py   # Configuration management
-│   ├── agent_base.py       # Base classes and interfaces
-│   └── shared_utils.py     # Shared utilities
-├── interfaces/             # External service interfaces
-├── utils/                  # Pure utility functions
-└── exceptions/             # Custom exception classes
+open-sourcefy/
+├── input/                   # Input binary files for analysis
+├── output/                  # Pipeline execution results and artifacts
+├── src/                     # Source code and core system
+│   ├── core/               # Core framework components
+│   │   ├── agents/         # Matrix agent implementations (0-16)
+│   │   ├── config_manager.py # Configuration management
+│   │   ├── agent_base.py   # Base classes and interfaces
+│   │   └── shared_utils.py # Shared utilities and components
+│   ├── ml/                 # Machine learning components
+│   └── utils/              # Pure utility functions
+├── tests/                  # Test suites and validation scripts
+├── docs/                   # Project documentation and analysis reports
+├── ghidra/                 # Ghidra installation and custom scripts
+├── temp/                   # Temporary files and development artifacts
+├── prompts/                # AI prompts and pipeline instructions
+├── venv/                   # Python virtual environment
+├── main.py                 # Primary CLI entry point
+├── requirements.txt        # Python dependencies
+└── config.yaml             # Main configuration file
 ```
 
 **Separation of Concerns**:
@@ -395,6 +406,8 @@ src/
 - **Business Logic**: Core functionality in src/core/
 - **Data Access**: Configuration and file operations isolated
 - **External Services**: Ghidra, AI engines in separate modules
+- **Test Infrastructure**: Comprehensive testing in tests/
+- **Documentation**: Project docs and analysis reports in docs/
 
 #### Coding Standards
 

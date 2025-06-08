@@ -116,27 +116,80 @@ class AISetup:
             self.ai_interface = None
     
     def _setup_claude_code(self):
-        """Setup Claude Code CLI interface"""
+        """Setup Claude Code CLI interface - WSL/Linux compatible"""
         import subprocess
         import shutil
+        import os
         
-        # Check if claude-code CLI is available
-        if not shutil.which('claude-code'):
-            raise ImportError("Claude Code CLI not found. Install with: npm install -g @anthropic-ai/claude-code")
+        # Determine the correct command for the environment
+        claude_cmd = self._get_claude_command()
         
-        # Test claude-code accessibility
+        # Test claude command accessibility with shorter timeout
         try:
-            result = subprocess.run(['claude-code', '--version'], 
-                                  capture_output=True, text=True, timeout=10)
+            result = subprocess.run([claude_cmd, '--version'], 
+                                  capture_output=True, text=True, timeout=5)
             if result.returncode != 0:
-                raise RuntimeError("Claude Code CLI not working properly")
+                self.logger.warning(f"Claude CLI ({claude_cmd}) returned non-zero exit code")
+                # Try to continue anyway - some versions might still work
         except subprocess.TimeoutExpired:
-            raise RuntimeError("Claude Code CLI timeout - may not be properly authenticated")
+            self.logger.warning(f"Claude CLI ({claude_cmd}) version check timed out - continuing anyway")
+            # Don't raise error - the CLI might still work for actual requests
         except FileNotFoundError:
-            raise ImportError("Claude Code CLI not found in PATH")
+            raise ImportError(f"Claude CLI not found. Available commands tried: {claude_cmd}")
         
-        self.logger.info(f"Claude Code CLI initialized using subscription model")
-        return ClaudeCodeInterface(self.ai_config)
+        self.logger.info(f"Claude CLI initialized using command: {claude_cmd}")
+        return ClaudeCodeInterface(self.ai_config, claude_cmd)
+    
+    def _get_claude_command(self):
+        """Get the appropriate Claude command for the current environment"""
+        import shutil
+        import platform
+        import os
+        
+        # Priority order of commands to try
+        commands_to_try = []
+        
+        # Check if we're in WSL
+        if self._is_wsl():
+            self.logger.info("WSL environment detected, using claude-skip")
+            commands_to_try = ['claude-skip', 'claude-code', 'claude']
+        else:
+            # Regular Linux/Windows/macOS
+            commands_to_try = ['claude-code', 'claude', 'claude-skip']
+        
+        # Try each command
+        for cmd in commands_to_try:
+            if shutil.which(cmd):
+                self.logger.info(f"Found Claude CLI command: {cmd}")
+                return cmd
+        
+        # If no command found, provide helpful error message
+        system = platform.system()
+        if self._is_wsl():
+            raise ImportError(
+                "Claude CLI not found. For WSL, install with:\n"
+                "npm install -g @anthropic-ai/claude-code-skip\n"
+                "OR: npm install -g @anthropic-ai/claude-code"
+            )
+        elif system == "Windows":
+            raise ImportError(
+                "Claude CLI not found. Install with:\n"
+                "npm install -g @anthropic-ai/claude-code"
+            )
+        else:
+            raise ImportError(
+                "Claude CLI not found. Install with:\n"
+                "npm install -g @anthropic-ai/claude-code\n"
+                "OR for WSL: npm install -g @anthropic-ai/claude-code-skip"
+            )
+    
+    def _is_wsl(self):
+        """Check if running in WSL"""
+        try:
+            with open('/proc/version', 'r') as f:
+                return 'microsoft' in f.read().lower()
+        except:
+            return False
     
     def _setup_anthropic(self):
         """Setup Anthropic Claude interface"""
@@ -325,7 +378,12 @@ class AIInterface:
 
 
 class ClaudeCodeInterface(AIInterface):
-    """Claude Code CLI interface using Max subscription"""
+    """Claude Code CLI interface using Max subscription - WSL compatible"""
+    
+    def __init__(self, config: AIConfig, claude_cmd: str = 'claude-code'):
+        super().__init__(None, config)  # No client needed for CLI
+        self.claude_cmd = claude_cmd
+        self.logger.info(f"Claude CLI interface initialized with command: {claude_cmd}")
     
     def generate_response(self, prompt: str, system_prompt: Optional[str] = None) -> AIResponse:
         """Generate response using Claude Code CLI"""
@@ -345,9 +403,9 @@ class ClaudeCodeInterface(AIInterface):
                 tmp_file_path = tmp_file.name
             
             try:
-                # Call claude-code CLI with the prompt file
+                # Call Claude CLI with the prompt file
                 cmd = [
-                    'claude-code', 
+                    self.claude_cmd, 
                     '--prompt-file', tmp_file_path,
                     '--max-tokens', str(self.config.max_tokens),
                     '--temperature', str(self.config.temperature),
@@ -362,7 +420,7 @@ class ClaudeCodeInterface(AIInterface):
                 )
                 
                 if result.returncode != 0:
-                    error_msg = result.stderr or "Claude Code CLI failed"
+                    error_msg = result.stderr or f"Claude CLI ({self.claude_cmd}) failed"
                     return AIResponse(
                         content="", model=self.config.model, usage={}, success=False,
                         error=error_msg, provider="claude_code"
@@ -397,7 +455,7 @@ class ClaudeCodeInterface(AIInterface):
         except subprocess.TimeoutExpired:
             return AIResponse(
                 content="", model=self.config.model, usage={}, success=False,
-                error="Claude Code CLI timeout", provider="claude_code"
+                error=f"Claude CLI ({self.claude_cmd}) timeout", provider="claude_code"
             )
         except Exception as e:
             self.logger.error(f"Claude Code CLI call failed: {e}")
