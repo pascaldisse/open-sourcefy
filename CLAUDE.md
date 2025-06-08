@@ -1,95 +1,183 @@
-# Open-Sourcefy Development Status
+# CLAUDE.md
 
-## Current Reality Check
-- **Overall Quality**: 66.5% (+20% from Phase 3 completion)
-- **Code Quality**: 30% (Phase 2 target)
-- **Analysis Accuracy**: 60% (+20% from Phase 3 completion)
-- **Agent Success Rate**: 16/16 agents working (Phase 3 completed)
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Active Development Plan
-See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for the current 4-phase parallel execution strategy targeting 95%+ quality.
+## Project Overview
 
----
+Open-Sourcefy is an AI-powered binary decompilation system that reconstructs compilable C source code from Windows PE executables using a 16-agent pipeline with Ghidra integration. The primary test target is the Matrix Online launcher.exe binary.
 
-# Output Directory Structure Configuration
+## Development Commands
 
-## Summary of Changes
+### Environment Setup
+```bash
+# Install dependencies
+pip install -r requirements.txt
 
-All output from open-sourcefy will now be organized in structured subdirectories under `output/` (or whatever directory is specified via `--output-dir`).
+# Verify environment and dependencies
+python main.py --verify-env
 
-## Directory Structure
+# Clean up temporary files and reset output
+python main.py --cleanup
+```
 
+### Running the Pipeline
+```bash
+# Full pipeline (auto-detects binary from input/ directory)
+python main.py
+
+# Specific binary
+python main.py launcher.exe
+
+# Pipeline components
+python main.py launcher.exe --decompile-only     # Agents 1,2,5,7,14
+python main.py launcher.exe --analyze-only       # Agents 1,2,3,4,5,6,7,8,9,14,15
+python main.py launcher.exe --compile-only       # Agents 1,2,4,5,6,7,8,9,10,11,12,18
+python main.py launcher.exe --validate-only      # Agents 1,2,4,5,6,7,8,9,10,11,12,13,19
+
+# Specific agents
+python main.py launcher.exe --agent 7            # Single agent
+python main.py launcher.exe --agents 1,3,7       # Multiple agents
+python main.py launcher.exe --agents 1-5         # Agent ranges
+
+# Parallel execution
+python main.py launcher.exe --batch-size 6 --parallel-mode process --timeout 600
+```
+
+### Testing and Validation
+```bash
+# Environment validation with detailed output
+python main.py --verify-env
+
+# List available components and agents
+python main.py --list-components
+python main.py --list-agents
+
+# Phase status check
+python main.py --phase-status
+```
+
+## Architecture Overview
+
+### Agent-Based Pipeline System
+
+The system uses a **16-agent pipeline** with dependency-based execution:
+
+**Core Agents (1-15)**:
+- **Discovery & Analysis** (1-5): Binary format detection, architecture analysis, structure parsing
+- **Decompilation** (6-7, 14): Optimization matching, Ghidra decompilation, enhanced analysis  
+- **Processing** (8-10): Binary diff analysis, assembly analysis, resource reconstruction
+- **Reconstruction** (11): Global code reconstruction with AI enhancement
+- **Compilation & Validation** (12-13): MSBuild orchestration, final validation
+- **Metadata** (15): Comprehensive metadata extraction
+
+**Extension Agents** (18-20):
+- **Advanced Build Systems** (18): Extended compilation support
+- **Binary Comparison** (19): Binary difference analysis
+- **Automated Testing** (20): Test framework generation
+
+### Execution Pipeline
+
+1. **Dependency Resolution**: Agents organized into batches based on dependencies
+2. **Parallel Execution**: Configurable parallel processing within batches  
+3. **Context Sharing**: Global execution context passed between agents
+4. **Validation Checkpoints**: Pipeline-level validation at critical stages
+5. **Quality Assessment**: Built-in quality scoring and validation thresholds
+
+### Configuration System
+
+- **Centralized Config**: `core/config_manager.py` manages all configuration
+- **Environment Detection**: Auto-discovery of Ghidra, Visual Studio, compilers
+- **Agent-Specific Settings**: Individual timeout, memory, retry configurations
+- **Output Structure**: Organized subdirectories (agents/, ghidra/, compilation/, reports/, logs/, temp/, tests/)
+
+### Key Components
+
+**Agent Framework** (`core/agent_base.py`):
+- Base class for all agents with standardized interfaces
+- Dependency management and execution ordering
+- Result objects with status, data, and metadata
+
+**Parallel Executor** (`core/parallel_executor.py`):
+- Manages concurrent agent execution
+- Configurable execution modes (thread/process)
+- Resource management and timeout handling
+
+**Ghidra Integration** (`core/ghidra_headless.py`):
+- Automated headless decompilation
+- Custom script management for enhanced accuracy
+- Quality assessment and confidence scoring
+
+**Pipeline Orchestrator** (`main.py` - `OpenSourcefyPipeline`):
+- Main execution controller
+- Component-based pipeline modes
+- Comprehensive reporting and validation
+
+### Output Organization
+
+All output is organized under `output/[timestamp]/`:
 ```
 output/
-├── agents/          # Agent-specific analysis outputs  
-├── ghidra/          # Ghidra decompilation results and projects
-├── compilation/     # Compilation artifacts and generated source
-├── reports/         # Pipeline execution reports and summaries
+├── agents/          # Agent-specific analysis outputs
+├── ghidra/          # Ghidra decompilation results
+├── compilation/     # MSBuild artifacts and generated source
+├── reports/         # Pipeline execution reports
 ├── logs/            # Execution logs and debug information
-└── temp/            # Temporary files (auto-cleaned)
+├── temp/            # Temporary files (auto-cleaned)
+└── tests/           # Generated test files
 ```
 
-## Key Changes Made
+## Development Guidelines
 
-### 1. Fixed Hardcoded Paths
-- **Before**: Ghidra path was hardcoded to `/mnt/c/Users/pascaldisse/Downloads/open-sourcefy/ghidra`
-- **After**: Uses relative path resolution from project root (`Path(__file__).parent.parent.parent / "ghidra"`)
+### Agent Development
 
-### 2. Added Output Structure Configuration
-- New `OUTPUT_STRUCTURE` configuration dict defines subdirectory organization
-- New `ensure_output_structure()` function creates organized directories
-- Pipeline now uses structured paths via `output_paths` context variable
+When creating or modifying agents:
 
-### 3. Updated Pipeline Behavior
-- Reports are now saved to `output/reports/pipeline_report.json` instead of root output directory
-- Agent context includes `output_paths` for organized file placement
-- All temporary and working directories respect the output structure
+1. **Inherit from BaseAgent** (`core/agent_base.py`)
+2. **Implement required methods**: `execute()`, `get_description()`, `get_dependencies()`
+3. **Use AgentResult objects** for standardized return values
+4. **Access context data** via `context.get('agent_results', {})` for previous agent outputs
+5. **Use output_paths** from context for organized file placement
 
-### 4. Enhanced CLI
-- Updated help text clarifies that results are organized in subdirectories
-- Default output directory remains `"output"` but with better organization
+### Configuration
 
-## Usage Examples
+- **Environment variables**: Check `core/config_manager.py` for available settings
+- **Tool paths**: Use relative path resolution from project root
+- **Output structure**: Always use `context['output_paths']` for file placement
 
-```bash
-# Default structured output to output/
-python3 main.py launcher.exe
+### Quality Validation
 
-# Custom output directory with same structure
-python3 main.py launcher.exe --output-dir my_analysis
+The system implements strict validation thresholds:
+- **Code Quality**: 75% threshold for meaningful code structure
+- **Implementation Score**: 75% threshold for real vs placeholder code  
+- **Completeness**: 70% threshold for project completeness
 
-# Results will be organized as:
-# my_analysis/
-# ├── agents/
-# ├── ghidra/  
-# ├── compilation/
-# ├── reports/
-# ├── logs/
-# └── temp/
-```
+### Dependencies
 
-## Benefits
+**Required**:
+- Python 3.8+
+- Java 17+ (for Ghidra)
+- Ghidra (included in ghidra/ directory)
 
-1. **Organization**: Clear separation of different types of output
-2. **Scalability**: Easy to add new output categories
-3. **Portability**: No hardcoded absolute paths
-4. **Cleanliness**: Prevents output file clutter in root directory
-5. **Compatibility**: Works with existing agent system and Ghidra integration
+**Optional**:
+- Microsoft Visual C++ Build Tools (for compilation testing)
+- WSL/Linux environment (for optimal performance)
 
-## Backward Compatibility
+### Current Development Status
 
-- Existing scripts that expect output files in the root output directory should be updated to look in the appropriate subdirectory (mainly `reports/` for pipeline reports)
-- Agent implementations should use the `output_paths` from context rather than creating their own subdirectories
+- **Overall Quality**: 66.5% (Phase 3 completion)
+- **Agent Success Rate**: 16/16 agents functional
+- **Primary Target**: Matrix Online launcher.exe (5.3MB, x86 PE32, MSVC .NET 2003)
 
-## Implementation Notes
+### Testing Approach
 
-The output structure is created automatically when any pipeline operation runs. Individual agents can access structured paths via the execution context:
+- The system includes built-in validation at multiple stages
+- Agent results are validated for quality and completeness
+- Pipeline can terminate early if validation thresholds are not met
+- Use `--verify-env` to check environment setup before running
 
-```python
-# In agent implementations:
-output_paths = context.get('output_paths', {})
-agent_dir = output_paths.get('agents', context['output_dir'])
-ghidra_dir = output_paths.get('ghidra', context['output_dir'])
-```
+### Ghidra Integration
 
-This ensures all output remains properly organized under the main output directory structure.
+- Ghidra path resolution: Uses relative path from project root (`ghidra/`)
+- Custom scripts located in agent implementations
+- Headless analysis with quality assessment
+- Temporary project management and cleanup

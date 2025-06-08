@@ -6,12 +6,12 @@ Open-Sourcefy is a sophisticated reverse engineering framework designed to recon
 
 ## Overview
 
-This project implements a **15-agent AI-enhanced pipeline** with **Ghidra integration** and **machine learning capabilities** to transform binary executables back into readable, compilable C source code. The system is currently in active development with a focus on the **Matrix Online launcher.exe** binary as a primary test case.
+This project implements a **16-agent Matrix-themed AI pipeline** with **Ghidra integration** and **LangChain-based agent framework** to transform binary executables back into readable, compilable C source code. The system follows a master-first parallel execution model with the **Matrix Online launcher.exe** binary as a primary test case.
 
 ### Key Features
 
-- **🤖 15-Agent AI Pipeline**: Specialized agents for comprehensive binary analysis and reconstruction
-- **🧠 Machine Learning Framework**: Pattern recognition, function classification, and code quality assessment
+- **🤖 16-Agent Matrix Pipeline**: Matrix-themed agents with master-first parallel execution model
+- **🧠 LangChain Agent Framework**: Advanced AI agent orchestration with conversation management
 - **🔍 Ghidra Integration**: Automated headless decompilation with custom script support
 - **⚡ Parallel Processing**: Multi-threaded and multi-process execution modes
 - **🔄 Error Recovery**: Retry mechanisms and robust error handling
@@ -22,32 +22,34 @@ This project implements a **15-agent AI-enhanced pipeline** with **Ghidra integr
 
 ### Pipeline Stages
 
-The system operates through a structured multi-agent pipeline:
+The system operates through a Matrix-themed master-first parallel execution model:
 
-1. **Discovery & Analysis** (Agents 1-5): Binary format detection, architecture analysis, structure parsing, and optimization detection
-2. **Decompilation & Processing** (Agents 6-10): Ghidra-based decompilation, pattern matching, and resource reconstruction
-3. **Enhancement & Integration** (Agents 11-15): Code enhancement, build system generation, and comprehensive validation
-4. **Extended Capabilities** (Agents 16-20): Advanced build systems, binary comparison, and automated testing
+1. **Master Orchestrator** (Agent 0): Deus Ex Machina - Central coordination and task distribution
+2. **Parallel Execution Phase** (Agents 1-16): 16 specialized Matrix characters executing in parallel
+3. **Result Aggregation**: Master agent collects and synthesizes results from all parallel agents
+4. **Quality Assessment**: Comprehensive validation and optimization of final output
 
-### Agent System
+### Matrix Agent System
 
-| Agent | Name | Purpose | Status |
-|-------|------|---------|--------|
-| 1 | Binary Discovery | Initial binary analysis and metadata extraction | 🔄 Active Development |
-| 2 | Architecture Analysis | x86/x64 architecture and calling convention analysis | 🔄 Active Development |
-| 3 | Smart Error Pattern Matching | ML-based error detection and pattern matching | 🔄 Active Development |
-| 4 | Basic Decompiler | Initial decompilation and function identification | 🔄 Active Development |
-| 5 | Binary Structure Analyzer | PE/ELF/Mach-O structure parsing and analysis | 🔄 Active Development |
-| 6 | Optimization Matcher | Compiler optimization pattern detection and reversal | 🔄 Active Development |
-| 7 | Advanced Decompiler | Ghidra-based comprehensive decompilation | ✅ Recently Enhanced |
-| 8 | Binary Diff Analyzer | Binary difference analysis and validation | 🔄 Active Development |
-| 9 | Advanced Assembly Analyzer | Deep assembly instruction analysis | 🔄 Active Development |
-| 10 | Resource Reconstructor | Resource section extraction and reconstruction | 🔄 Active Development |
-| 11 | Global Reconstructor | Code organization and structure reconstruction | ✅ Recently Enhanced |
-| 12 | Compilation Orchestrator | Build system generation and compilation testing | 🔄 Active Development |
-| 13 | Final Validator | Quality assurance and binary reproduction validation | 🔄 Active Development |
-| 14 | Advanced Ghidra | Enhanced Ghidra capabilities and script integration | ✅ Recently Enhanced |
-| 15 | Metadata Analysis | Comprehensive metadata extraction and analysis | ✅ Recently Enhanced |
+| Agent | Matrix Character | Purpose | Status |
+|-------|-----------------|---------|--------|
+| 0 | Deus Ex Machina | Master orchestrator and task coordinator | ✅ Implemented |
+| 1 | Sentinel | Binary discovery and metadata analysis | 📋 Planned (Phase B) |
+| 2 | The Architect | Architecture analysis and error pattern matching | 📋 Planned (Phase B) |
+| 3 | The Merovingian | Basic decompilation and optimization detection | 📋 Planned (Phase B) |
+| 4 | Agent Smith | Binary structure analysis and dynamic bridge | 📋 Planned (Phase B) |
+| 5 | Neo (Glitch) | Advanced decompilation and Ghidra integration | 📋 Planned (Phase B) |
+| 6 | The Twins | Binary diff analysis and comparison engine | 📋 Planned (Phase B) |
+| 7 | The Trainman | Advanced assembly analysis | 📋 Planned (Phase B) |
+| 8 | The Keymaker | Resource reconstruction | 📋 Planned (Phase B) |
+| 9 | Commander Locke | Global reconstruction and AI enhancement | 📋 Planned (Phase C) |
+| 10 | The Machine | Compilation orchestration and build systems | 📋 Planned (Phase C) |
+| 11 | The Oracle | Final validation and truth verification | 📋 Planned (Phase C) |
+| 12 | Link | Cross-reference and linking analysis | 📋 Planned (Phase C) |
+| 13 | Agent Johnson | Security analysis and vulnerability detection | 📋 Planned (Phase C) |
+| 14 | The Cleaner | Code cleanup and optimization | 📋 Planned (Phase C) |
+| 15 | The Analyst | Quality assessment and prediction | 📋 Planned (Phase C) |
+| 16 | Agent Brown | Automated testing and verification | 📋 Planned (Phase C) |
 
 ## Installation
 
@@ -82,20 +84,18 @@ The system operates through a structured multi-agent pipeline:
 ### Basic Usage
 
 ```bash
-# Full AI-enhanced pipeline with all 13 agents
+# Full Matrix pipeline with master-first execution
 python main.py launcher.exe
 
-# Specific pipeline stages with AI enhancements
-python main.py launcher.exe --decompile-only    # Agents 1,2,5,7
-python main.py launcher.exe --analyze-only      # Agents 1,2,3,4,5,8,9
-python main.py launcher.exe --compile-only      # Agents 6,11,12
+# Master agent only (coordination and planning)
+python main.py launcher.exe --agent 0
 
-# Individual agent execution
-python main.py launcher.exe --agent 7           # Ghidra decompilation
-python main.py launcher.exe --agents 1,3,7      # Multiple agents
+# Specific Matrix agents (when implemented)
+python main.py launcher.exe --agent 1           # Sentinel
+python main.py launcher.exe --agents 1-5        # Phase B agents
 
-# Enhanced parallel execution with AI monitoring
-python main.py launcher.exe --batch-size 6 --parallel-mode process
+# Parallel execution with batch processing
+python main.py launcher.exe --batch-size 8 --parallel-mode process
 ```
 
 ### Advanced Options
@@ -104,17 +104,18 @@ python main.py launcher.exe --batch-size 6 --parallel-mode process
 # Enhanced timeout and retry configuration
 python main.py launcher.exe --timeout 1800 --max-retries 5
 
-# Advanced parallel processing modes
-python main.py launcher.exe --parallel-mode process --batch-size 8
+# Master-first parallel processing with Matrix agents
+python main.py launcher.exe --parallel-mode process --batch-size 16
 
-# AI enhancement configuration
-python main.py launcher.exe --enable-ai-naming --enable-quality-assessment
+# LangChain agent configuration
+python main.py launcher.exe --enable-langchain --conversation-mode
 
 # Environment validation and health monitoring
 python main.py --verify-env --detailed
 
-# Agent range execution
-python main.py launcher.exe --agents 1-5  # Execute agents 1 through 5
+# Phase-based execution (when agents are implemented)
+python main.py launcher.exe --agents 1-8   # Phase B agents
+python main.py launcher.exe --agents 9-16  # Phase C agents
 ```
 
 ## Target: Matrix Online Launcher
@@ -129,10 +130,10 @@ The system is being developed and tested with the **Matrix Online launcher.exe**
 
 ### Current Development Status
 
-**Overall Quality**: 66.5% (Phase 3 - Active Development)
-- **Code Quality**: 30% (needs improvement)
-- **Analysis Accuracy**: 60%
-- **Agent Success Rate**: 16/16 agents functional (see CLAUDE.md for details)
+**Overall Quality**: 66.5% (Phase A - Infrastructure Complete)
+- **Code Quality**: 30% (Phase A infrastructure in place)
+- **Analysis Accuracy**: 60% (master agent implemented)
+- **Agent Success Rate**: 1/17 agents implemented (Deus Ex Machina master agent)
 
 ## Documentation
 
@@ -145,53 +146,49 @@ The system is being developed and tested with the **Matrix Online launcher.exe**
 - **[CLAUDE.md](CLAUDE.md)** - Development instructions and project configuration
 - **[requirements.txt](docs/requirements.txt)** - Python package dependencies
 
-### Agent System Reference
-The system includes 15 core agents plus extension agents (16-20) for comprehensive binary analysis:
+### Matrix Agent System Reference
+The system includes 17 Matrix-themed agents (1 master + 16 parallel agents):
 
-**Discovery & Analysis (Agents 1-5)**
-- Agent 1: Binary Discovery and metadata extraction
-- Agent 2: Architecture analysis (x86/x64 focus)
-- Agent 3: Smart error pattern matching with ML
-- Agent 4: Basic decompilation and function identification
-- Agent 5: Binary structure analysis (PE/ELF/Mach-O)
+**Master Orchestrator**
+- Agent 0: Deus Ex Machina - Central coordination and task distribution
 
-**Processing & Decompilation (Agents 6-10)**
-- Agent 6: Optimization pattern matching and reversal
-- Agent 7: Advanced Ghidra decompilation
-- Agent 8: Binary difference analysis
-- Agent 9: Advanced assembly instruction analysis
-- Agent 10: Resource section reconstruction
+**Phase B Agents (Basic Analysis - Agents 1-8)**
+- Agent 1: Sentinel - Binary discovery and metadata analysis
+- Agent 2: The Architect - Architecture analysis and error pattern matching  
+- Agent 3: The Merovingian - Basic decompilation and optimization detection
+- Agent 4: Agent Smith - Binary structure analysis and dynamic bridge
+- Agent 5: Neo (Glitch) - Advanced decompilation and Ghidra integration
+- Agent 6: The Twins - Binary diff analysis and comparison engine
+- Agent 7: The Trainman - Advanced assembly analysis
+- Agent 8: The Keymaker - Resource reconstruction
 
-**Enhancement & Validation (Agents 11-15)**
-- Agent 11: Global code reconstruction and organization
-- Agent 12: Compilation orchestration and build systems
-- Agent 13: Final validation and quality assurance
-- Agent 14: Advanced Ghidra capabilities and scripting
-- Agent 15: Comprehensive metadata analysis
-
-**Extension Agents (16-20)**
-- Agent 16: Dynamic analysis bridge
-- Agent 18: Advanced build system support
-- Agent 19: Binary comparison and analysis
-- Agent 20: Automated testing frameworks
+**Phase C Agents (Advanced Analysis - Agents 9-16)**
+- Agent 9: Commander Locke - Global reconstruction and AI enhancement
+- Agent 10: The Machine - Compilation orchestration and build systems
+- Agent 11: The Oracle - Final validation and truth verification
+- Agent 12: Link - Cross-reference and linking analysis
+- Agent 13: Agent Johnson - Security analysis and vulnerability detection
+- Agent 14: The Cleaner - Code cleanup and optimization
+- Agent 15: The Analyst - Quality assessment and prediction
+- Agent 16: Agent Brown - Automated testing and verification
 
 ## Project Status
 
 ### Current Development Phase
 
-- ✅ **Phase 1**: Basic pipeline infrastructure and agent framework (Complete)
-- ✅ **Phase 2**: Core agent implementations with basic functionality (Complete)
-- 🔄 **Phase 3**: Dummy code removal and error handling improvement (In Progress)
-- 📋 **Phase 4**: Full feature implementation and production readiness (Planned)
+- ✅ **Phase A**: Matrix infrastructure and master agent (Complete)
+- 📋 **Phase B**: Basic analysis agents (Agents 1-8) - Planned
+- 📋 **Phase C**: Advanced analysis agents (Agents 9-16) - Planned
+- 📋 **Phase D**: Full integration and production readiness - Planned
 
 ### Development Progress
 
-- ✅ **Agent Framework**: 15 core agents + 5 extension agents implemented
-- ✅ **Pipeline System**: Multi-stage execution with dependency management
-- ✅ **CLI Interface**: Comprehensive command-line interface
-- 🔄 **Code Quality**: Active cleanup of dummy implementations
-- 🔄 **ML Integration**: Pattern recognition and quality assessment framework
-- 📋 **Advanced Features**: Planned for Phase 4 implementation
+- ✅ **Matrix Architecture**: Master-first parallel execution model implemented
+- ✅ **Phase A Infrastructure**: Configuration, utilities, and AI engine interface
+- ✅ **Master Agent**: Deus Ex Machina orchestrator implemented
+- ✅ **LangChain Integration**: Agent framework and conversation management
+- 📋 **Matrix Agents**: 16 parallel agents planned for Phase B and C
+- 📋 **Full Pipeline**: Complete integration planned for Phase D
 
 ### Current Quality Metrics
 

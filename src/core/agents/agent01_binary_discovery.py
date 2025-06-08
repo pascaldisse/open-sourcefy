@@ -1,13 +1,16 @@
 """
-Agent 1: Binary Discovery
-Analyzes binary file format, detects architecture, and extracts basic metadata.
+Agent 1: The Sentinel - Binary Discovery
+Matrix agent responsible for detecting and analyzing binary file structures.
+Serves as the first line of defense in the digital realm.
 """
 
 import os
 import struct
 import hashlib
 from typing import Dict, Any, Optional, List
-from ..agent_base import BaseAgent, AgentResult, AgentStatus
+from ..matrix_agent_base import MatrixAgentBase, AgentResult, AgentStatus, AgentType
+from ..binary_utils import BinaryAnalyzer, BinaryInfo
+from ..config_manager import get_config_manager
 
 # Import binary analysis libraries with error handling
 try:
@@ -31,57 +34,165 @@ except ImportError:
     HAS_MACHOLIB = False
 
 
-class Agent1_BinaryDiscovery(BaseAgent):
-    """Agent 1: Binary file discovery and basic analysis"""
+class SentinelAgent(MatrixAgentBase):
+    """The Sentinel - First line of defense for binary analysis"""
     
     def __init__(self):
         super().__init__(
             agent_id=1,
-            name="BinaryDiscovery",
-            dependencies=[]
+            agent_name="SentinelAgent",
+            matrix_character="The Sentinel",
+            agent_type=AgentType.MACHINE
         )
+        
+        # Initialize enhanced binary analyzer
+        self.binary_analyzer = BinaryAnalyzer()
+        
+    def get_description(self) -> str:
+        """Get agent description"""
+        return ("The Sentinel stands guard at the gates of the Matrix, detecting and analyzing "
+                "binary file structures. It serves as the first line of defense, identifying "
+                "file formats, architectures, and extracting critical metadata.")
+    
+    def get_dependencies(self) -> List[int]:
+        """The Sentinel has no dependencies - it is the beginning"""
+        return []
+    
+    def get_prerequisites(self) -> List[str]:
+        """Prerequisites for binary discovery"""
+        return ["binary_file"]
 
     def execute(self, context: Dict[str, Any]) -> AgentResult:
-        """Execute binary discovery analysis"""
-        binary_path = context['global_data'].get('binary_path')
+        """Execute binary discovery analysis with Matrix precision"""
+        self.logger.info("🔍 The Sentinel awakens to scan the binary landscape...")
+        
+        # Get binary path from context
+        binary_path = context.get('binary_path')
         if not binary_path:
+            error_msg = "No binary path provided in Matrix context"
+            self.logger.error(error_msg)
             return AgentResult(
                 agent_id=self.agent_id,
+                agent_name=self.agent_name,
                 status=AgentStatus.FAILED,
-                data={},
-                error_message="No binary path provided in context"
+                error_message=error_msg,
+                metadata={'matrix_character': self.matrix_character}
             )
 
         if not os.path.exists(binary_path):
+            error_msg = f"Binary file not found in the Matrix: {binary_path}"
+            self.logger.error(error_msg)
             return AgentResult(
                 agent_id=self.agent_id,
+                agent_name=self.agent_name,
                 status=AgentStatus.FAILED,
-                data={},
-                error_message=f"Binary file not found: {binary_path}"
+                error_message=error_msg,
+                metadata={'matrix_character': self.matrix_character}
             )
 
         try:
-            discovery_data = self._analyze_binary(binary_path)
+            # Use enhanced binary analyzer
+            self.logger.info(f"Analyzing binary matrix at: {binary_path}")
+            binary_info = self.binary_analyzer.analyze_file(binary_path)
+            
+            # Additional legacy analysis for compatibility
+            legacy_data = self._analyze_binary_legacy(binary_path)
+            
+            # Combine enhanced and legacy analysis
+            discovery_data = {
+                'binary_info': self._binary_info_to_dict(binary_info),
+                'enhanced_analysis': True,
+                'legacy_analysis': legacy_data,
+                'sentinel_insights': self._generate_sentinel_insights(binary_info)
+            }
+            
+            # Store in shared memory for other agents
+            if 'shared_memory' in context:
+                context['shared_memory']['binary_metadata']['discovery'] = discovery_data
+                context['shared_memory']['binary_metadata']['binary_info'] = binary_info
+            
+            self.logger.info(f"✅ The Sentinel has catalogued the binary: {binary_info.format.value} {binary_info.architecture.value}")
             
             return AgentResult(
                 agent_id=self.agent_id,
-                status=AgentStatus.COMPLETED,
+                agent_name=self.agent_name,
+                status=AgentStatus.SUCCESS,
                 data=discovery_data,
                 metadata={
+                    'matrix_character': self.matrix_character,
                     'binary_path': binary_path,
-                    'analysis_type': 'binary_discovery'
+                    'analysis_type': 'enhanced_binary_discovery',
+                    'file_format': binary_info.format.value,
+                    'architecture': binary_info.architecture.value,
+                    'file_size': binary_info.file_size,
+                    'sentinel_confidence': 0.95
                 }
             )
             
         except Exception as e:
+            error_msg = f"The Sentinel's analysis failed: {str(e)}"
+            self.logger.error(error_msg)
             return AgentResult(
                 agent_id=self.agent_id,
+                agent_name=self.agent_name,
                 status=AgentStatus.FAILED,
-                data={},
-                error_message=f"Binary analysis failed: {str(e)}"
+                error_message=error_msg,
+                metadata={'matrix_character': self.matrix_character}
             )
 
-    def _analyze_binary(self, binary_path: str) -> Dict[str, Any]:
+    def _binary_info_to_dict(self, binary_info: BinaryInfo) -> Dict[str, Any]:
+        """Convert BinaryInfo to dictionary for serialization"""
+        return {
+            'file_path': str(binary_info.file_path),
+            'file_size': binary_info.file_size,
+            'format': binary_info.format.value,
+            'architecture': binary_info.architecture.value,
+            'is_64bit': binary_info.is_64bit,
+            'is_packed': binary_info.is_packed,
+            'entry_point': binary_info.entry_point,
+            'base_address': binary_info.base_address,
+            'section_count': len(binary_info.sections),
+            'import_count': len(binary_info.imports),
+            'export_count': len(binary_info.exports),
+            'string_count': len(binary_info.strings),
+            'compiler_info': binary_info.compiler_info,
+            'hashes': binary_info.hashes
+        }
+    
+    def _generate_sentinel_insights(self, binary_info: BinaryInfo) -> Dict[str, Any]:
+        """Generate Sentinel-specific insights about the binary"""
+        insights = {
+            'threat_level': 'low',
+            'complexity_score': 0.5,
+            'analysis_confidence': 0.95,
+            'recommendations': []
+        }
+        
+        # Assess threat level based on characteristics
+        if binary_info.is_packed:
+            insights['threat_level'] = 'medium'
+            insights['recommendations'].append("Binary appears packed - deeper analysis required")
+        
+        if binary_info.format.value == 'unknown':
+            insights['threat_level'] = 'high'
+            insights['recommendations'].append("Unknown format detected - exercise caution")
+        
+        # Calculate complexity score
+        complexity_factors = [
+            len(binary_info.sections) / 10.0,
+            len(binary_info.imports) / 100.0,
+            len(binary_info.exports) / 50.0,
+            binary_info.file_size / (10 * 1024 * 1024)  # 10MB baseline
+        ]
+        insights['complexity_score'] = min(sum(complexity_factors) / len(complexity_factors), 1.0)
+        
+        # Architecture-specific insights
+        if binary_info.is_64bit:
+            insights['recommendations'].append("64-bit architecture - use advanced analysis techniques")
+        
+        return insights
+    
+    def _analyze_binary_legacy(self, binary_path: str) -> Dict[str, Any]:
         """Perform detailed binary analysis"""
         file_info = self._get_file_info(binary_path)
         format_info = self._detect_format(binary_path)
@@ -578,3 +689,8 @@ class Agent1_BinaryDiscovery(BaseAgent):
                 segments.append(segment_info)
         
         return segments
+
+
+# Register The Sentinel agent in the Matrix
+from ..matrix_agent_base import register_matrix_agent
+register_matrix_agent(1, SentinelAgent)
