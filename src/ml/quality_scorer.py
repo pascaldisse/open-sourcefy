@@ -238,7 +238,8 @@ class CodeAnalyzer:
                 complexities.append(func_analysis['cyclomatic_complexity'])
             
             analysis['total_functions'] = len(functions)
-            analysis['average_function_length'] = np.mean(function_lengths) if function_lengths else 0
+            analysis['average_function_length'] = (np.mean(function_lengths) if NUMPY_AVAILABLE and function_lengths 
+                                                      else (sum(function_lengths) / len(function_lengths) if function_lengths else 0))
             analysis['max_function_length'] = max(function_lengths) if function_lengths else 0
             
             # Complexity distribution
@@ -552,7 +553,9 @@ class QualityScorer:
         # Comment density
         functions = structure_analysis.get('functions', [])
         if functions:
-            avg_comment_density = np.mean([f.get('comment_density', 0) for f in functions])
+            densities = [f.get('comment_density', 0) for f in functions]
+            avg_comment_density = (np.mean(densities) if NUMPY_AVAILABLE 
+                                  else (sum(densities) / len(densities) if densities else 0))
             if 0.1 <= avg_comment_density <= 0.3:  # Optimal comment density
                 score += 0.2
             elif avg_comment_density > 0.3:
@@ -611,7 +614,8 @@ class QualityScorer:
         
         # Analyze complexity metrics
         complexities = [f.get('cyclomatic_complexity', 1) for f in functions]
-        avg_complexity = np.mean(complexities)
+        avg_complexity = (np.mean(complexities) if NUMPY_AVAILABLE and complexities 
+                         else (sum(complexities) / len(complexities) if complexities else 1))
         max_complexity = max(complexities)
         
         # Penalty for high complexity

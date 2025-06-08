@@ -94,19 +94,13 @@ class Agent18_AdvancedBuildSystems(BaseAgent):
             # Detect available compilers
             result['detected_compilers'] = self._detect_compilers()
             
-            # Generate different build systems
-            result['cmake_generated'] = self._generate_cmake_files(
-                global_reconstruction, compilation_dir
-            )
-            result['makefile_generated'] = self._generate_makefile(
-                global_reconstruction, compilation_dir
-            )
-            result['ninja_generated'] = self._generate_ninja_build(
-                global_reconstruction, compilation_dir
-            )
+            # Generate Visual Studio solution only (Windows-only build process)
             result['vs_solution_generated'] = self._generate_vs_solution(
                 global_reconstruction, compilation_dir
             )
+            result['cmake_generated'] = False  # Disabled - Windows MSBuild only
+            result['makefile_generated'] = False  # Disabled - Windows MSBuild only
+            result['ninja_generated'] = False  # Disabled - Windows MSBuild only
             
             # Attempt compilation with each available compiler
             result['compilation_attempts'] = self._attempt_multi_compiler_build(
@@ -134,28 +128,13 @@ class Agent18_AdvancedBuildSystems(BaseAgent):
         return result
 
     def _detect_compilers(self) -> Dict[str, Dict[str, Any]]:
-        """Detect available compilers on the system"""
+        """Detect Visual Studio MSBuild only (Windows-only build process)"""
         compilers = {}
         
-        # Check for MSVC (Visual Studio)
+        # Only check for MSVC (Visual Studio) - Windows MSBuild only
         msvc_info = self._detect_msvc()
         if msvc_info['available']:
             compilers['msvc'] = msvc_info
-        
-        # Check for MinGW
-        mingw_info = self._detect_mingw()
-        if mingw_info['available']:
-            compilers['mingw'] = mingw_info
-        
-        # Check for Clang
-        clang_info = self._detect_clang()
-        if clang_info['available']:
-            compilers['clang'] = clang_info
-        
-        # Check for GCC (if on WSL or Linux)
-        gcc_info = self._detect_gcc()
-        if gcc_info['available']:
-            compilers['gcc'] = gcc_info
         
         return compilers
 
@@ -210,285 +189,11 @@ class Agent18_AdvancedBuildSystems(BaseAgent):
         
         return info
 
-    def _detect_mingw(self) -> Dict[str, Any]:
-        """Detect MinGW compiler"""
-        info = {
-            'available': False,
-            'version': None,
-            'path': None,
-            'gcc_path': None,
-            'priority': 2
-        }
-        
-        try:
-            # Try to run gcc --version
-            result = subprocess.run(['gcc', '--version'], 
-                                  capture_output=True, text=True, timeout=10)
-            if result.returncode == 0 and 'mingw' in result.stdout.lower():
-                info['available'] = True
-                info['version'] = result.stdout.split('\n')[0]
-                
-                # Try to find gcc path
-                which_result = subprocess.run(['where', 'gcc'], 
-                                            capture_output=True, text=True, timeout=10)
-                if which_result.returncode == 0:
-                    info['gcc_path'] = which_result.stdout.strip().split('\n')[0]
-                    info['path'] = os.path.dirname(info['gcc_path'])
-                    
-        except Exception:
-            pass
-        
-        return info
 
-    def _detect_clang(self) -> Dict[str, Any]:
-        """Detect Clang compiler"""
-        info = {
-            'available': False,
-            'version': None,
-            'path': None,
-            'clang_path': None,
-            'priority': 3
-        }
-        
-        try:
-            # Try to run clang --version
-            result = subprocess.run(['clang', '--version'], 
-                                  capture_output=True, text=True, timeout=10)
-            if result.returncode == 0:
-                info['available'] = True
-                info['version'] = result.stdout.split('\n')[0]
-                
-                # Try to find clang path
-                which_result = subprocess.run(['where', 'clang'], 
-                                            capture_output=True, text=True, timeout=10)
-                if which_result.returncode == 0:
-                    info['clang_path'] = which_result.stdout.strip().split('\n')[0]
-                    info['path'] = os.path.dirname(info['clang_path'])
-                    
-        except Exception:
-            pass
-        
-        return info
 
-    def _detect_gcc(self) -> Dict[str, Any]:
-        """Detect GCC compiler (for WSL/Linux)"""
-        info = {
-            'available': False,
-            'version': None,
-            'path': None,
-            'gcc_path': None,
-            'priority': 4
-        }
-        
-        try:
-            # Try to run gcc --version (but not MinGW)
-            result = subprocess.run(['gcc', '--version'], 
-                                  capture_output=True, text=True, timeout=10)
-            if result.returncode == 0 and 'mingw' not in result.stdout.lower():
-                info['available'] = True
-                info['version'] = result.stdout.split('\n')[0]
-                
-                # Try to find gcc path
-                which_result = subprocess.run(['which', 'gcc'], 
-                                            capture_output=True, text=True, timeout=10)
-                if which_result.returncode == 0:
-                    info['gcc_path'] = which_result.stdout.strip()
-                    info['path'] = os.path.dirname(info['gcc_path'])
-                    
-        except Exception:
-            pass
-        
-        return info
 
-    def _generate_cmake_files(self, global_reconstruction: Dict[str, Any], 
-                            output_dir: str) -> bool:
-        """Generate CMakeLists.txt file"""
-        try:
-            cmake_content = self._create_cmake_content(global_reconstruction)
-            cmake_path = os.path.join(output_dir, 'CMakeLists.txt')
-            
-            with open(cmake_path, 'w') as f:
-                f.write(cmake_content)
-            
-            return True
-        except Exception:
-            return False
 
-    def _create_cmake_content(self, global_reconstruction: Dict[str, Any]) -> str:
-        """Create CMakeLists.txt content"""
-        project_name = "launcher-new"
-        
-        # Find source files
-        source_files = []
-        reconstructed_source = global_reconstruction.get('reconstructed_source', {})
-        src_files = reconstructed_source.get('source_files', {})
-        
-        for filename in src_files.keys():
-            if filename.endswith('.c'):
-                source_files.append(f"src/{filename}")
-        
-        if not source_files:
-            source_files = ["src/main.c"]
-        
-        cmake_content = f"""cmake_minimum_required(VERSION 3.10)
-project({project_name})
 
-# Set C standard
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-
-# Include directories
-include_directories(include)
-
-# Source files
-set(SOURCES
-{chr(10).join(f'    {src}' for src in source_files)}
-)
-
-# Create executable
-add_executable({project_name} ${{SOURCES}})
-
-# Compiler-specific settings
-if(MSVC)
-    target_compile_options({project_name} PRIVATE /W3)
-    target_compile_definitions({project_name} PRIVATE _CRT_SECURE_NO_WARNINGS)
-elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options({project_name} PRIVATE -Wall -Wextra)
-endif()
-
-# Windows-specific settings
-if(WIN32)
-    set_target_properties({project_name} PROPERTIES
-        WIN32_EXECUTABLE TRUE
-    )
-endif()
-
-# Installation
-install(TARGETS {project_name} DESTINATION bin)
-"""
-        return cmake_content
-
-    def _generate_makefile(self, global_reconstruction: Dict[str, Any], 
-                         output_dir: str) -> bool:
-        """Generate Makefile"""
-        try:
-            makefile_content = self._create_makefile_content(global_reconstruction)
-            makefile_path = os.path.join(output_dir, 'Makefile')
-            
-            with open(makefile_path, 'w') as f:
-                f.write(makefile_content)
-            
-            return True
-        except Exception:
-            return False
-
-    def _create_makefile_content(self, global_reconstruction: Dict[str, Any]) -> str:
-        """Create Makefile content"""
-        project_name = "launcher-new"
-        
-        # Find source files
-        source_files = []
-        reconstructed_source = global_reconstruction.get('reconstructed_source', {})
-        src_files = reconstructed_source.get('source_files', {})
-        
-        for filename in src_files.keys():
-            if filename.endswith('.c'):
-                source_files.append(f"src/{filename}")
-        
-        if not source_files:
-            source_files = ["src/main.c"]
-        
-        obj_files = [src.replace('.c', '.o').replace('src/', 'obj/') for src in source_files]
-        
-        makefile_content = f"""# Makefile for {project_name}
-
-CC = gcc
-CFLAGS = -Wall -Wextra -std=c99 -Iinclude
-TARGET = {project_name}.exe
-SRCDIR = src
-OBJDIR = obj
-SOURCES = {' '.join(source_files)}
-OBJECTS = {' '.join(obj_files)}
-
-# Default target
-all: $(TARGET)
-
-# Create object directory
-$(OBJDIR):
-	mkdir -p $(OBJDIR)
-
-# Compile source files to object files
-$(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# Link object files to create executable
-$(TARGET): $(OBJECTS)
-	$(CC) $(OBJECTS) -o $(TARGET)
-
-# Clean build artifacts
-clean:
-	rm -rf $(OBJDIR) $(TARGET)
-
-# Rebuild everything
-rebuild: clean all
-
-.PHONY: all clean rebuild
-"""
-        return makefile_content
-
-    def _generate_ninja_build(self, global_reconstruction: Dict[str, Any], 
-                            output_dir: str) -> bool:
-        """Generate build.ninja file"""
-        try:
-            ninja_content = self._create_ninja_content(global_reconstruction)
-            ninja_path = os.path.join(output_dir, 'build.ninja')
-            
-            with open(ninja_path, 'w') as f:
-                f.write(ninja_content)
-            
-            return True
-        except Exception:
-            return False
-
-    def _create_ninja_content(self, global_reconstruction: Dict[str, Any]) -> str:
-        """Create build.ninja content"""
-        project_name = "launcher-new"
-        
-        # Find source files
-        source_files = []
-        reconstructed_source = global_reconstruction.get('reconstructed_source', {})
-        src_files = reconstructed_source.get('source_files', {})
-        
-        for filename in src_files.keys():
-            if filename.endswith('.c'):
-                source_files.append(f"src/{filename}")
-        
-        if not source_files:
-            source_files = ["src/main.c"]
-        
-        obj_files = [src.replace('.c', '.o').replace('src/', 'obj/') for src in source_files]
-        
-        ninja_content = f"""# Ninja build file for {project_name}
-
-cflags = -Wall -Wextra -std=c99 -Iinclude
-
-rule cc
-  command = gcc $cflags -c $in -o $out
-  description = Compiling $in
-
-rule link
-  command = gcc $in -o $out
-  description = Linking $out
-
-# Object files
-{chr(10).join(f'build {obj}: cc {src}' for obj, src in zip(obj_files, source_files))}
-
-# Executable
-build {project_name}.exe: link {' '.join(obj_files)}
-
-default {project_name}.exe
-"""
-        return ninja_content
 
     def _generate_vs_solution(self, global_reconstruction: Dict[str, Any], 
                             output_dir: str) -> bool:
@@ -547,31 +252,21 @@ EndGlobal
     def _attempt_multi_compiler_build(self, compilers: Dict[str, Dict[str, Any]], 
                                     compilation_dir: str, 
                                     global_reconstruction: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-        """Attempt compilation with multiple compilers"""
+        """Attempt compilation with Visual Studio MSBuild only"""
         results = {}
         
-        # Sort compilers by priority
-        sorted_compilers = sorted(compilers.items(), 
-                                key=lambda x: x[1]['priority'])
-        
-        for compiler_name, compiler_info in sorted_compilers:
+        # Only attempt MSVC compilation (Windows-only build process)
+        for compiler_name, compiler_info in compilers.items():
             try:
                 if compiler_name == 'msvc':
                     result = self._build_with_msvc(compilation_dir, compiler_info)
-                elif compiler_name == 'mingw':
-                    result = self._build_with_mingw(compilation_dir, compiler_info)
-                elif compiler_name == 'clang':
-                    result = self._build_with_clang(compilation_dir, compiler_info)
-                elif compiler_name == 'gcc':
-                    result = self._build_with_gcc(compilation_dir, compiler_info)
+                    results[compiler_name] = result
+                    
+                    if result['success']:
+                        self.logger.info(f"Successfully compiled with {compiler_name}")
                 else:
-                    result = {'success': False, 'errors': ['Unknown compiler']}
-                
-                results[compiler_name] = result
-                
-                # If successful, we can continue to test others or stop here
-                if result['success']:
-                    self.logger.info(f"Successfully compiled with {compiler_name}")
+                    # Skip non-MSVC compilers
+                    continue
                     
             except Exception as e:
                 results[compiler_name] = {
@@ -625,138 +320,14 @@ EndGlobal
         
         return result
 
-    def _build_with_mingw(self, compilation_dir: str, compiler_info: Dict[str, Any]) -> Dict[str, Any]:
-        """Build with MinGW"""
-        result = {'success': False, 'errors': [], 'binary_path': None}
-        
-        try:
-            original_cwd = os.getcwd()
-            os.chdir(compilation_dir)
-            
-            # Use Makefile if available, otherwise direct compilation
-            if os.path.exists('Makefile'):
-                cmd = ['make']
-            else:
-                # Direct compilation
-                src_files = []
-                if os.path.exists('src'):
-                    for f in os.listdir('src'):
-                        if f.endswith('.c'):
-                            src_files.append(f'src/{f}')
-                
-                if not src_files:
-                    result['errors'].append("No source files found")
-                    return result
-                
-                cmd = ['gcc', '-Wall', '-Wextra', '-std=c99', '-Iinclude'] + src_files + ['-o', 'launcher-new.exe']
-            
-            process = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            
-            if process.returncode == 0 and os.path.exists('launcher-new.exe'):
-                result['success'] = True
-                result['binary_path'] = os.path.join(compilation_dir, 'launcher-new.exe')
-            else:
-                result['errors'].append(f"MinGW compilation failed: {process.stderr}")
-                
-        except Exception as e:
-            result['errors'].append(f"MinGW compilation error: {str(e)}")
-        finally:
-            os.chdir(original_cwd)
-        
-        return result
 
-    def _build_with_clang(self, compilation_dir: str, compiler_info: Dict[str, Any]) -> Dict[str, Any]:
-        """Build with Clang"""
-        result = {'success': False, 'errors': [], 'binary_path': None}
-        
-        try:
-            original_cwd = os.getcwd()
-            os.chdir(compilation_dir)
-            
-            # Direct compilation with clang
-            src_files = []
-            if os.path.exists('src'):
-                for f in os.listdir('src'):
-                    if f.endswith('.c'):
-                        src_files.append(f'src/{f}')
-            
-            if not src_files:
-                result['errors'].append("No source files found")
-                return result
-            
-            cmd = ['clang', '-Wall', '-Wextra', '-std=c99', '-Iinclude'] + src_files + ['-o', 'launcher-new.exe']
-            process = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            
-            if process.returncode == 0 and os.path.exists('launcher-new.exe'):
-                result['success'] = True
-                result['binary_path'] = os.path.join(compilation_dir, 'launcher-new.exe')
-            else:
-                result['errors'].append(f"Clang compilation failed: {process.stderr}")
-                
-        except Exception as e:
-            result['errors'].append(f"Clang compilation error: {str(e)}")
-        finally:
-            os.chdir(original_cwd)
-        
-        return result
 
-    def _build_with_gcc(self, compilation_dir: str, compiler_info: Dict[str, Any]) -> Dict[str, Any]:
-        """Build with GCC (non-MinGW)"""
-        result = {'success': False, 'errors': [], 'binary_path': None}
-        
-        try:
-            original_cwd = os.getcwd()
-            os.chdir(compilation_dir)
-            
-            # Use Makefile if available, otherwise direct compilation
-            if os.path.exists('Makefile'):
-                cmd = ['make']
-            else:
-                # Direct compilation
-                src_files = []
-                if os.path.exists('src'):
-                    for f in os.listdir('src'):
-                        if f.endswith('.c'):
-                            src_files.append(f'src/{f}')
-                
-                if not src_files:
-                    result['errors'].append("No source files found")
-                    return result
-                
-                cmd = ['gcc', '-Wall', '-Wextra', '-std=c99', '-Iinclude'] + src_files + ['-o', 'launcher-new']
-            
-            process = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            
-            binary_name = 'launcher-new' if not cmd[0] == 'make' else 'launcher-new.exe'
-            if process.returncode == 0 and os.path.exists(binary_name):
-                result['success'] = True
-                result['binary_path'] = os.path.join(compilation_dir, binary_name)
-            else:
-                result['errors'].append(f"GCC compilation failed: {process.stderr}")
-                
-        except Exception as e:
-            result['errors'].append(f"GCC compilation error: {str(e)}")
-        finally:
-            os.chdir(original_cwd)
-        
-        return result
 
     def _determine_best_compiler(self, compilation_attempts: Dict[str, Dict[str, Any]]) -> Optional[str]:
-        """Determine the best compiler based on success and priority"""
-        successful_compilers = []
-        
+        """Determine the best compiler (MSVC only for Windows-only build process)"""
         for compiler, attempt in compilation_attempts.items():
-            if attempt['success']:
-                successful_compilers.append(compiler)
+            if compiler == 'msvc' and attempt['success']:
+                return 'msvc'
         
-        if not successful_compilers:
-            return None
-        
-        # Priority order: MSVC > MinGW > Clang > GCC
-        priority_order = ['msvc', 'mingw', 'clang', 'gcc']
-        
-        for compiler in priority_order:
-            if compiler in successful_compilers:
-                return compiler
-        
-        return successful_compilers[0]  # Fallback to first successful
+        # No successful MSVC compilation
+        return None
