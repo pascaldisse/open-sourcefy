@@ -331,12 +331,129 @@ def get_matrix_config() -> Dict[str, Any]:
     config = get_config_manager()
     
     return {
-        'parallel_execution': config.get('matrix.parallel_execution', True),
-        'batch_size': config.get('matrix.batch_size', 8),
-        'agent_timeout': config.get('matrix.agent_timeout', 300),
-        'max_retries': config.get('matrix.max_retries', 2),
-        'quality_threshold': config.get('matrix.quality_threshold', 0.75),
-        'enable_ai_enhancement': config.get('matrix.enable_ai_enhancement', True),
-        'ghidra_timeout': config.get('ghidra.timeout', 600),
-        'cleanup_temp': config.get('matrix.cleanup_temp', True)
+        'parallel_execution': config.get_value('matrix.parallel_execution', True),
+        'batch_size': config.get_value('matrix.batch_size', 8),
+        'agent_timeout': config.get_value('matrix.agent_timeout', 300),
+        'max_retries': config.get_value('matrix.max_retries', 2),
+        'quality_threshold': config.get_value('matrix.quality_threshold', 0.75),
+        'enable_ai_enhancement': config.get_value('matrix.enable_ai_enhancement', True),
+        'ghidra_timeout': config.get_value('ghidra.timeout', 600),
+        'cleanup_temp': config.get_value('matrix.cleanup_temp', True)
     }
+
+
+class SharedAnalysisTools:
+    """Shared analysis tools for Matrix agents"""
+    
+    @staticmethod
+    def calculate_entropy(data: bytes) -> float:
+        """Calculate Shannon entropy of binary data"""
+        if not data:
+            return 0.0
+        
+        # Count byte frequencies
+        byte_counts = [0] * 256
+        for byte in data:
+            byte_counts[byte] += 1
+        
+        # Calculate entropy
+        entropy = 0.0
+        data_len = len(data)
+        for count in byte_counts:
+            if count > 0:
+                p = count / data_len
+                entropy -= p * (p.bit_length() - 1)
+        
+        return entropy
+    
+    @staticmethod
+    def detect_patterns(data: bytes, min_length: int = 4) -> List[Dict[str, Any]]:
+        """Detect repeating patterns in binary data"""
+        patterns = []
+        data_len = len(data)
+        
+        for length in range(min_length, min(data_len // 4, 32)):
+            seen_patterns = {}
+            
+            for i in range(data_len - length + 1):
+                pattern = data[i:i + length]
+                if pattern in seen_patterns:
+                    seen_patterns[pattern].append(i)
+                else:
+                    seen_patterns[pattern] = [i]
+            
+            # Report patterns that occur multiple times
+            for pattern, positions in seen_patterns.items():
+                if len(positions) > 2:
+                    patterns.append({
+                        'pattern': pattern.hex(),
+                        'length': length,
+                        'occurrences': len(positions),
+                        'positions': positions[:10]  # Limit to first 10
+                    })
+        
+        return sorted(patterns, key=lambda x: x['occurrences'], reverse=True)
+
+
+class SharedValidationTools:
+    """Shared validation tools for Matrix agents"""
+    
+    @staticmethod
+    def validate_pe_structure(binary_path: Path) -> Dict[str, Any]:
+        """Validate PE file structure"""
+        try:
+            with open(binary_path, 'rb') as f:
+                # Check DOS header
+                dos_header = f.read(64)
+                if len(dos_header) < 64 or dos_header[:2] != b'MZ':
+                    return {'valid': False, 'error': 'Invalid DOS header'}
+                
+                # Get PE offset
+                pe_offset = int.from_bytes(dos_header[60:64], 'little')
+                f.seek(pe_offset)
+                
+                # Check PE signature
+                pe_sig = f.read(4)
+                if pe_sig != b'PE\x00\x00':
+                    return {'valid': False, 'error': 'Invalid PE signature'}
+                
+                return {'valid': True, 'pe_offset': pe_offset}
+                
+        except Exception as e:
+            return {'valid': False, 'error': str(e)}
+    
+    @staticmethod
+    def validate_code_quality(code: str) -> Dict[str, Any]:
+        """Validate generated code quality"""
+        if not code or not code.strip():
+            return {'quality_score': 0.0, 'issues': ['Empty code']}
+        
+        issues = []
+        quality_score = 1.0
+        
+        # Check for placeholder patterns
+        placeholder_patterns = [
+            'TODO', 'FIXME', 'placeholder', 'dummy', 
+            'undefined', 'unknown', 'temp'
+        ]
+        
+        for pattern in placeholder_patterns:
+            if pattern.lower() in code.lower():
+                issues.append(f'Contains placeholder: {pattern}')
+                quality_score -= 0.1
+        
+        # Check for basic C structure
+        if 'int main(' not in code and 'void main(' not in code:
+            if '#include' not in code:
+                quality_score -= 0.2
+                issues.append('Missing includes')
+        
+        # Check for function definitions
+        if 'function' in code.lower() or 'def ' in code:
+            quality_score -= 0.3
+            issues.append('Contains non-C syntax')
+        
+        return {
+            'quality_score': max(0.0, quality_score),
+            'issues': issues
+        }

@@ -74,8 +74,8 @@ class MatrixAgentV2(abc.ABC):
         self.output_manager = None  # Set during execution
         
         # Execution settings
-        self.timeout = self.config.get(f'agents.agent_{agent_id:02d}.timeout', 300)
-        self.max_retries = self.config.get(f'agents.agent_{agent_id:02d}.max_retries', 2)
+        self.timeout = self.config.get_value(f'agents.agent_{agent_id:02d}.timeout', 300)
+        self.max_retries = self.config.get_value(f'agents.agent_{agent_id:02d}.max_retries', 2)
         self.retry_count = 0
 
     def _setup_logger(self) -> logging.Logger:
@@ -252,8 +252,8 @@ class DecompilerAgent(MatrixAgentV2):
         self.decompiler_type = "advanced"
         
         # Decompiler-specific settings
-        self.ghidra_timeout = self.config.get('ghidra.timeout', 600)
-        self.quality_threshold = self.config.get('decompilation.quality_threshold', 0.7)
+        self.ghidra_timeout = self.config.get_value('ghidra.timeout', 600)
+        self.quality_threshold = self.config.get_value('decompilation.quality_threshold', 0.7)
 
 
 class ReconstructionAgent(MatrixAgentV2):
@@ -272,8 +272,8 @@ class ValidationAgent(MatrixAgentV2):
         self.validation_type = "comprehensive"
         
         # Validation-specific settings
-        self.quality_threshold = self.config.get('validation.quality_threshold', 0.75)
-        self.completeness_threshold = self.config.get('validation.completeness_threshold', 0.7)
+        self.quality_threshold = self.config.get_value('validation.quality_threshold', 0.75)
+        self.completeness_threshold = self.config.get_value('validation.completeness_threshold', 0.7)
 
 
 # Matrix Agent Dependencies - Optimized for parallel execution after Agent 1

@@ -21,11 +21,21 @@ from ..shared_components import (
 )
 from ..exceptions import MatrixAgentError, ValidationError, ConfigurationError
 
-# LangChain imports for AI-enhanced analysis
-from langchain.agents import Tool, AgentExecutor
-from langchain.agents.react.base import ReActDocstoreAgent
-from langchain.llms import LlamaCpp
-from langchain.memory import ConversationBufferMemory
+# LangChain imports for AI-enhanced analysis (optional)
+try:
+    from langchain.agents import Tool, AgentExecutor
+    from langchain.agents.react.base import ReActDocstoreAgent
+    from langchain.llms import LlamaCpp
+    from langchain.memory import ConversationBufferMemory
+    AI_AVAILABLE = True
+except ImportError:
+    AI_AVAILABLE = False
+    # Create dummy types for type annotations when LangChain isn't available
+    Tool = Any
+    AgentExecutor = Any
+    ReActDocstoreAgent = Any
+    LlamaCpp = Any
+    ConversationBufferMemory = Any
 
 
 # Configuration constants - NO MAGIC NUMBERS
@@ -33,12 +43,12 @@ class AgentSmithConstants:
     """Agent Smith-specific constants loaded from configuration"""
     
     def __init__(self, config_manager, agent_id: int):
-        self.MAX_RETRY_ATTEMPTS = config_manager.get(f'agents.agent_{agent_id:02d}.max_retries', 3)
-        self.TIMEOUT_SECONDS = config_manager.get(f'agents.agent_{agent_id:02d}.timeout', 300)
-        self.QUALITY_THRESHOLD = config_manager.get(f'agents.agent_{agent_id:02d}.quality_threshold', 0.75)
-        self.MAX_RESOURCES_TO_EXTRACT = config_manager.get('resources.max_extract', 100)
-        self.MIN_STRING_LENGTH = config_manager.get('analysis.min_string_length', 4)
-        self.MAX_DATA_STRUCTURE_SIZE = config_manager.get('analysis.max_data_structure_size', 10240)
+        self.MAX_RETRY_ATTEMPTS = config_manager.get_value(f'agents.agent_{agent_id:02d}.max_retries', 3)
+        self.TIMEOUT_SECONDS = config_manager.get_value(f'agents.agent_{agent_id:02d}.timeout', 300)
+        self.QUALITY_THRESHOLD = config_manager.get_value(f'agents.agent_{agent_id:02d}.quality_threshold', 0.75)
+        self.MAX_RESOURCES_TO_EXTRACT = config_manager.get_value('resources.max_extract', 100)
+        self.MIN_STRING_LENGTH = config_manager.get_value('analysis.min_string_length', 4)
+        self.MAX_DATA_STRUCTURE_SIZE = config_manager.get_value('analysis.max_data_structure_size', 10240)
 
 
 @dataclass
@@ -169,7 +179,7 @@ class AgentSmithAgent(AnalysisAgent):
         self.metrics = MatrixMetrics(self.agent_id, self.matrix_character.value)
         
         # Initialize LangChain components for AI enhancement
-        self.ai_enabled = self.config.get('ai.enabled', True)
+        self.ai_enabled = self.config.get_value('ai.enabled', True)
         if self.ai_enabled:
             self.llm = self._setup_llm()
             self.agent_executor = self._setup_langchain_agent()
@@ -189,6 +199,20 @@ class AgentSmithAgent(AnalysisAgent):
         for path_key in required_paths:
             try:
                 path = self.config.get_path(path_key)
+                if path is None:
+                    # Use default paths if not configured
+                    if path_key == 'paths.temp_directory':
+                        path = Path('./temp')
+                    elif path_key == 'paths.output_directory':
+                        path = Path('./output')
+                    elif path_key == 'paths.resources_directory':
+                        path = Path('./resources')
+                    else:
+                        missing_paths.append(f"{path_key}: No path configured")
+                        continue
+                elif isinstance(path, str):
+                    path = Path(path)
+                
                 if not path.exists():
                     path.mkdir(parents=True, exist_ok=True)
             except Exception as e:
@@ -208,9 +232,9 @@ class AgentSmithAgent(AnalysisAgent):
                 
             return LlamaCpp(
                 model_path=str(model_path),
-                temperature=self.config.get('ai.model.temperature', 0.1),
-                max_tokens=self.config.get('ai.model.max_tokens', 2048),
-                verbose=self.config.get('debug.enabled', False)
+                temperature=self.config.get_value('ai.model.temperature', 0.1),
+                max_tokens=self.config.get_value('ai.model.max_tokens', 2048),
+                verbose=self.config.get_value('debug.enabled', False)
             )
         except Exception as e:
             self.logger.warning(f"Failed to setup LLM: {e}, disabling AI features")
@@ -229,15 +253,15 @@ class AgentSmithAgent(AnalysisAgent):
             agent = ReActDocstoreAgent.from_llm_and_tools(
                 llm=self.llm,
                 tools=tools,
-                verbose=self.config.get('debug.enabled', False)
+                verbose=self.config.get_value('debug.enabled', False)
             )
             
             return AgentExecutor.from_agent_and_tools(
                 agent=agent,
                 tools=tools,
                 memory=memory,
-                verbose=self.config.get('debug.enabled', False),
-                max_iterations=self.config.get('ai.max_iterations', 5)
+                verbose=self.config.get_value('debug.enabled', False),
+                max_iterations=self.config.get_value('ai.max_iterations', 5)
             )
         except Exception as e:
             self.logger.warning(f"Failed to setup LangChain agent: {e}")
@@ -862,7 +886,7 @@ class AgentSmithAgent(AnalysisAgent):
             
             return {
                 'ai_insights': ai_result,
-                'ai_confidence': self.config.get('ai.confidence_threshold', 0.7),
+                'ai_confidence': self.config.get_value('ai.confidence_threshold', 0.7),
                 'ai_enabled': True
             }
         except Exception as e:

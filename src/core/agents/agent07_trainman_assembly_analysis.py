@@ -43,6 +43,12 @@ try:
     AI_AVAILABLE = True
 except ImportError:
     AI_AVAILABLE = False
+    # Create dummy types for type annotations when LangChain isn't available
+    Tool = Any
+    AgentExecutor = Any
+    ReActDocstoreAgent = Any
+    LlamaCpp = Any
+    ConversationBufferMemory = Any
 
 
 @dataclass
@@ -150,10 +156,10 @@ class Agent7_Trainman_AssemblyAnalysis(BaseAgent):
         self.analysis_engines = {
             'instruction_analyzer': self._analyze_instruction_mix,
             'pattern_detector': self._detect_and_classify_patterns,
-            'calling_convention_analyzer': self._analyze_calling_conventions,
-            'control_flow_analyzer': self._analyze_control_flow,
-            'performance_analyzer': self._analyze_performance_characteristics,
-            'security_analyzer': self._analyze_security_aspects
+            'calling_convention_analyzer': self._analyze_calling_conventions_comprehensive,
+            'control_flow_analyzer': self._analyze_code_flow_transitions,
+            'performance_analyzer': self._analyze_performance_and_security,
+            'security_analyzer': self._identify_security_checkpoints
         }
         
         # Instruction pattern templates

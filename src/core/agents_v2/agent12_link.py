@@ -80,19 +80,10 @@ class Agent12_Link:
         
         # Core components
         self.logger = self._setup_logging()
-        if HAS_MATRIX_FRAMEWORK:
-            # Provide default output paths for instantiation
-            default_output_paths = {
-                'agents': Path('./output/agents'),
-                'temp': Path('./output/temp'),
-                'reports': Path('./output/reports')
-            }
-            self.file_manager = MatrixFileManager(default_output_paths)
-        else:
-            self.file_manager = None
+        self.file_manager = MatrixFileManager() if HAS_MATRIX_FRAMEWORK else None
         self.validator = MatrixValidator() if HAS_MATRIX_FRAMEWORK else None
-        self.progress_tracker = MatrixProgressTracker(5, "Link") if HAS_MATRIX_FRAMEWORK else None
-        self.error_handler = MatrixErrorHandler("Link") if HAS_MATRIX_FRAMEWORK else None
+        self.progress_tracker = MatrixProgressTracker() if HAS_MATRIX_FRAMEWORK else None
+        self.error_handler = MatrixErrorHandler() if HAS_MATRIX_FRAMEWORK else None
         
         # Communication components
         self.communication_channels = self._initialize_communication_channels()

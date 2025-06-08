@@ -46,6 +46,12 @@ try:
     AI_AVAILABLE = True
 except ImportError:
     AI_AVAILABLE = False
+    # Create dummy types for type annotations when LangChain isn't available
+    Tool = Any
+    AgentExecutor = Any
+    ReActDocstoreAgent = Any
+    LlamaCpp = Any
+    ConversationBufferMemory = Any
 
 
 @dataclass
