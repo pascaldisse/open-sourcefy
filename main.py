@@ -67,6 +67,7 @@ class MatrixCLIConfig:
     pipeline_mode: str = "full_pipeline" if not MATRIX_AVAILABLE else PipelineMode.FULL_PIPELINE
     execution_mode: str = "master_first_parallel" if not MATRIX_AVAILABLE else MatrixExecutionMode.MASTER_FIRST_PARALLEL
     resource_profile: Union[str, MatrixResourceLimits] = "standard"
+    resource_profile_name: str = "standard"  # Store original string for display
     
     # Agent selection
     custom_agents: Optional[List[int]] = None
@@ -275,6 +276,7 @@ class MatrixCLI:
         # Execution configuration
         config.execution_mode = MatrixExecutionMode(args.execution_mode)
         # Convert resource profile string to MatrixResourceLimits instance
+        config.resource_profile_name = args.resource_profile
         if args.resource_profile == "standard":
             config.resource_profile = MatrixResourceLimits.STANDARD()
         elif args.resource_profile == "high_performance":
@@ -602,7 +604,7 @@ Usage Examples:
         print(f"Output Directory: {output_dir}")
         print(f"Pipeline Mode: {config.pipeline_mode.value}")
         print(f"Execution Mode: {config.execution_mode.value}")
-        print(f"Resource Profile: {args.resource_profile}")
+        print(f"Resource Profile: {config.resource_profile_name}")
         print(f"Max Parallel Agents: {config.max_parallel_agents}")
         print(f"Agent Timeout: {config.timeout_agent}s")
         print(f"Master Timeout: {config.timeout_master}s")

@@ -124,8 +124,12 @@ class MatrixAgent(abc.ABC):
             self.output_manager = context.get('output_manager')
             
             # Pre-execution validation
-            if not self._validate_prerequisites(context):
-                return self._create_failure_result("Prerequisites not satisfied", start_time)
+            try:
+                validation_result = self._validate_prerequisites(context)
+                if validation_result is False:
+                    return self._create_failure_result("Prerequisites not satisfied", start_time)
+            except Exception as e:
+                return self._create_failure_result(f"Prerequisites validation failed: {str(e)}", start_time)
             
             # Execute Matrix task
             task_data = self.execute_matrix_task(context)
@@ -155,6 +159,9 @@ class MatrixAgent(abc.ABC):
 
     def _validate_prerequisites(self, context: Dict[str, Any]) -> bool:
         """Validate prerequisites for execution"""
+        self.logger.debug(f"Validating prerequisites for Agent{self.agent_id:02d}")
+        self.logger.debug(f"Available context keys: {list(context.keys())}")
+        
         # Check dependencies
         for dep_id in self.dependencies:
             if not self._is_dependency_satisfied(dep_id, context):
@@ -163,11 +170,13 @@ class MatrixAgent(abc.ABC):
         
         # Check required context keys
         required_keys = self._get_required_context_keys()
+        self.logger.debug(f"Required context keys: {required_keys}")
         for key in required_keys:
             if key not in context:
                 self.logger.error(f"Required context key missing: {key}")
                 return False
                 
+        self.logger.debug("All prerequisites satisfied")
         return True
 
     def _get_required_context_keys(self) -> List[str]:

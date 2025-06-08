@@ -125,7 +125,7 @@ class Agent12_Link(ReconstructionAgent):
         return ("Link serves as the communications bridge and integration controller, "
                 "ensuring seamless data flow and system interoperability across all pipeline components.")
 
-    def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute communications bridge and integration control"""
         self.logger.info("🔗 Link establishing communication bridges...")
         

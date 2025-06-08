@@ -25,7 +25,7 @@ import tempfile
 from ..matrix_agents import ValidationAgent, AgentResult, AgentStatus, MatrixCharacter
 from ..config_manager import ConfigManager
 from ..shared_utils import PerformanceMonitor
-from ..error_handler import MatrixErrorHandler
+from ..shared_utils import ErrorHandler as MatrixErrorHandler
 
 # AI enhancement imports
 try:
@@ -112,8 +112,8 @@ class Agent16_AgentBrown(ValidationAgent):
         self.enable_compilation_test = self.config.get_value('agents.agent_16.compilation_test', True)
         
         # Initialize components
-        self.performance_monitor = PerformanceMonitor("AgentBrown")
-        self.error_handler = MatrixErrorHandler("AgentBrown", max_retries=2)
+        self.performance_monitor = PerformanceMonitor()
+        self.error_handler = MatrixErrorHandler()
         
         # Initialize AI components if available
         self.ai_enabled = AI_AVAILABLE and self.config.get_value('ai.enabled', True)

@@ -23,21 +23,8 @@ from ..shared_components import (
 )
 from ..exceptions import MatrixAgentError, ValidationError, ConfigurationError, BinaryAnalysisError
 
-# LangChain imports for AI-enhanced analysis (optional)
-try:
-    from langchain.agents import Tool, AgentExecutor
-    from langchain.agents.react.base import ReActDocstoreAgent
-    from langchain.llms import LlamaCpp
-    from langchain.memory import ConversationBufferMemory
-    AI_AVAILABLE = True
-except ImportError:
-    AI_AVAILABLE = False
-    # Create dummy types for type annotations when LangChain isn't available
-    Tool = Any
-    AgentExecutor = Any
-    ReActDocstoreAgent = Any
-    LlamaCpp = Any
-    ConversationBufferMemory = Any
+# AI imports using centralized AI setup
+from ..ai_setup import get_ai_setup, is_ai_enabled, create_ai_tools, AIAgentExecutor
 
 # Binary analysis libraries with error handling
 try:
@@ -127,14 +114,17 @@ class SentinelAgent(AnalysisAgent):
         # Check binary analysis library availability
         self.available_parsers = self._check_parser_availability()
         
-        # Initialize LangChain components for AI enhancement
-        self.ai_enabled = self.config.get_value('ai.enabled', True)
-        if self.ai_enabled:
-            self.llm = self._setup_llm()
-            self.agent_executor = self._setup_langchain_agent()
+        # Initialize AI components using centralized setup
+        self.ai_setup = get_ai_setup(self.config)
+        self.ai_enabled = self.ai_setup.is_enabled()
+        self.ai_interface = self.ai_setup.get_ai_interface()
+        self.agent_executor = AIAgentExecutor(self.ai_interface) if self.ai_interface else None
         
         # Validate configuration
         self._validate_configuration()
+        
+        # Log AI status
+        self._log_ai_status()
     
     def _check_parser_availability(self) -> Dict[str, bool]:
         """Check binary analysis libraries - Windows PE only"""
@@ -178,71 +168,13 @@ class SentinelAgent(AnalysisAgent):
         if missing_paths:
             raise ConfigurationError(f"Invalid configuration paths: {missing_paths}")
     
-    def _setup_llm(self):
-        """Setup LangChain language model from configuration"""
-        try:
-            model_path = self.config.get_path('ai.model.path')
-            if not model_path.exists():
-                self.logger.warning(f"AI model not found at {model_path}, disabling AI features")
-                self.ai_enabled = False
-                return None
-                
-            return LlamaCpp(
-                model_path=str(model_path),
-                temperature=self.config.get_value('ai.model.temperature', 0.1),
-                max_tokens=self.config.get_value('ai.model.max_tokens', 2048),
-                verbose=self.config.get_value('debug.enabled', False)
-            )
-        except Exception as e:
-            self.logger.warning(f"Failed to setup LLM: {e}, disabling AI features")
-            self.ai_enabled = False
-            return None
-    
-    def _setup_langchain_agent(self) -> Optional[AgentExecutor]:
-        """Setup LangChain agent with Sentinel-specific tools"""
-        if not self.ai_enabled or not self.llm:
-            return None
-            
-        try:
-            tools = self._create_agent_tools()
-            memory = ConversationBufferMemory()
-            
-            agent = ReActDocstoreAgent.from_llm_and_tools(
-                llm=self.llm,
-                tools=tools,
-                verbose=self.config.get_value('debug.enabled', False)
-            )
-            
-            return AgentExecutor.from_agent_and_tools(
-                agent=agent,
-                tools=tools,
-                memory=memory,
-                verbose=self.config.get_value('debug.enabled', False),
-                max_iterations=self.config.get_value('ai.max_iterations', 5)
-            )
-        except Exception as e:
-            self.logger.warning(f"Failed to setup LangChain agent: {e}")
-            return None
-    
-    def _create_agent_tools(self) -> List[Tool]:
-        """Create LangChain tools specific to Sentinel's capabilities"""
-        return [
-            Tool(
-                name="validate_binary_format",
-                description="Validate binary file format and structure",
-                func=self._ai_format_validation_tool
-            ),
-            Tool(
-                name="analyze_security_indicators",
-                description="Analyze binary for security indicators and threats",
-                func=self._ai_security_analysis_tool
-            ),
-            Tool(
-                name="generate_binary_insights",
-                description="Generate insights about binary characteristics",
-                func=self._ai_insight_generation_tool
-            )
-        ]
+    def _log_ai_status(self):
+        """Log AI setup status"""
+        if self.ai_enabled:
+            config = self.ai_setup.get_config()
+            self.logger.info(f"AI enabled: {config.provider.value} with model {config.model}")
+        else:
+            self.logger.info("AI features disabled")
     
     def get_matrix_description(self) -> str:
         """The Sentinel's role in the Matrix"""
@@ -315,13 +247,14 @@ class SentinelAgent(AnalysisAgent):
             self.metrics.end_tracking()
             
             # Log success with metrics
+            binary_metadata = core_results.get('binary_metadata')
             self.logger.info(
                 "Sentinel analysis completed successfully",
                 extra={
-                    'execution_time': self.metrics.execution_time,
+                    'execution_time': getattr(self.metrics, 'execution_time', 0.0),
                     'quality_score': validation_result.quality_score,
-                    'binary_format': core_results.get('binary_metadata', {}).get('format_type'),
-                    'file_size': core_results.get('binary_metadata', {}).get('file_size'),
+                    'binary_format': binary_metadata.format_type if binary_metadata else 'unknown',
+                    'file_size': binary_metadata.file_size if binary_metadata else 0,
                     'validation_passed': True
                 }
             )
@@ -338,7 +271,7 @@ class SentinelAgent(AnalysisAgent):
                 extra={
                     'error_type': type(e).__name__,
                     'error_message': str(e),
-                    'execution_time': self.metrics.execution_time,
+                    'execution_time': getattr(self.metrics, 'execution_time', 0.0),
                     'agent_id': self.agent_id,
                     'matrix_character': self.matrix_character.value,
                     'binary_path': context.get('binary_path', 'unknown')
@@ -662,48 +595,54 @@ class SentinelAgent(AnalysisAgent):
             return []
     
     def _execute_ai_analysis(self, core_results: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute AI-enhanced analysis using LangChain"""
-        if not self.agent_executor:
-            # Return empty analysis with clear indication that AI is not available
+        """Execute AI-enhanced analysis using centralized AI setup"""
+        if not self.ai_interface:
             return {
                 'ai_analysis_available': False,
-                'threat_assessment': 'AI analysis not available - LangChain not initialized',
+                'threat_assessment': 'AI analysis not available - AI interface not initialized',
                 'behavioral_insights': 'Basic heuristics only',
                 'confidence_score': 0.0,
-                'ai_recommendations': 'Install and configure LangChain for enhanced analysis'
+                'ai_recommendations': 'Configure AI provider and API key'
             }
         
         try:
-            # Prepare context for AI analysis
+            # Prepare binary info for AI analysis
             binary_metadata = core_results.get('binary_metadata')
             format_analysis = core_results.get('format_analysis', {})
             
-            # Create AI analysis prompt
-            prompt = f"""
-            Analyze this binary file for security indicators and insights:
-            
-            File: {binary_metadata.file_path if binary_metadata else 'unknown'}
-            Format: {binary_metadata.format_type if binary_metadata else 'unknown'}
-            Architecture: {binary_metadata.architecture if binary_metadata else 'unknown'}
-            Size: {binary_metadata.file_size if binary_metadata else 0} bytes
-            
-            Sections: {format_analysis.get('section_count', 0)}
-            Imports: {format_analysis.get('import_count', 0)}
-            Exports: {format_analysis.get('export_count', 0)}
-            
-            Provide security assessment and behavioral insights.
-            """
-            
-            # Execute AI analysis
-            ai_result = self.agent_executor.run(prompt)
-            
-            return {
-                'ai_insights': ai_result,
-                'ai_confidence': self.config.get_value('ai.confidence_threshold', 0.7),
-                'ai_enabled': True
+            binary_info = {
+                'file_path': binary_metadata.file_path if binary_metadata else 'unknown',
+                'format_type': binary_metadata.format_type if binary_metadata else 'unknown',
+                'architecture': binary_metadata.architecture if binary_metadata else 'unknown',
+                'file_size': binary_metadata.file_size if binary_metadata else 0,
+                'entropy': core_results.get('entropy', {}).get('overall_entropy', 0),
+                'section_count': format_analysis.get('section_count', 0),
+                'import_count': format_analysis.get('import_count', 0),
+                'export_count': format_analysis.get('export_count', 0),
+                'notable_strings': core_results.get('strings', [])[:10]  # First 10 strings
             }
+            
+            # Execute AI security analysis
+            ai_response = self.ai_interface.analyze_binary_security(binary_info)
+            
+            if ai_response.success:
+                return {
+                    'ai_insights': ai_response.content,
+                    'ai_confidence': 0.8,  # High confidence when AI analysis succeeds
+                    'ai_enabled': True,
+                    'ai_provider': ai_response.provider,
+                    'ai_model': ai_response.model,
+                    'ai_usage': ai_response.usage
+                }
+            else:
+                self.logger.warning(f"AI analysis failed: {ai_response.error}")
+                return {
+                    'ai_enabled': False, 
+                    'ai_error': ai_response.error,
+                    'ai_provider': ai_response.provider
+                }
         except Exception as e:
-            self.logger.warning(f"AI analysis failed: {e}")
+            self.logger.warning(f"AI analysis exception: {e}")
             return {'ai_enabled': False, 'ai_error': str(e)}
     
     def _merge_analysis_results(self, core_results: Dict[str, Any], ai_results: Dict[str, Any]) -> Dict[str, Any]:
@@ -782,7 +721,7 @@ class SentinelAgent(AnalysisAgent):
                 'matrix_character': self.matrix_character.value,
                 'quality_score': validation.quality_score,
                 'validation_passed': validation.is_valid,
-                'execution_time': self.metrics.execution_time,
+                'execution_time': getattr(self.metrics, 'execution_time', 0.0),
                 'ai_enhanced': self.ai_enabled,
                 'available_parsers': self.available_parsers,
                 'analysis_timestamp': self.metrics.start_time
@@ -824,15 +763,4 @@ class SentinelAgent(AnalysisAgent):
         # Store in agent results
         context['shared_memory']['analysis_results'][self.agent_id] = results
     
-    # AI tool implementations
-    def _ai_format_validation_tool(self, input_data: str) -> str:
-        """AI tool for binary format validation"""
-        return f"Binary format validation completed for: {input_data}"
-    
-    def _ai_security_analysis_tool(self, input_data: str) -> str:
-        """AI tool for security analysis"""
-        return f"Security analysis completed. No immediate threats detected in: {input_data}"
-    
-    def _ai_insight_generation_tool(self, input_data: str) -> str:
-        """AI tool for insight generation"""
-        return f"Generated insights for binary analysis: {input_data}"
+    # AI analysis complete - using centralized AI setup

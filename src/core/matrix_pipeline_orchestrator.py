@@ -268,6 +268,7 @@ class MatrixPipelineOrchestrator:
                     timeout=self.config.resource_limits.timeout_agent
                 )
                 agent_results[agent_id] = result
+                self.agent_results[agent_id] = result  # Update shared state for subsequent agents
                 
                 from .matrix_agents import AgentStatus
                 if result.status == AgentStatus.SUCCESS:
@@ -279,11 +280,15 @@ class MatrixPipelineOrchestrator:
                 
             except asyncio.TimeoutError:
                 self.logger.error(f"⏱️ Agent {agent_id} timed out")
-                agent_results[agent_id] = self._create_timeout_result(agent_id)
+                timeout_result = self._create_timeout_result(agent_id)
+                agent_results[agent_id] = timeout_result
+                self.agent_results[agent_id] = timeout_result
                 
             except Exception as e:
                 self.logger.error(f"❌ Agent {agent_id} error: {e}")
-                agent_results[agent_id] = self._create_error_result(agent_id, str(e))
+                error_result = self._create_error_result(agent_id, str(e))
+                agent_results[agent_id] = error_result
+                self.agent_results[agent_id] = error_result
         
         self.logger.info(f"🎯 Parallel execution complete: {completed_count}/{len(self.selected_agents)} successful")
         return agent_results
@@ -294,6 +299,9 @@ class MatrixPipelineOrchestrator:
             # Get agent from agents registry
             from .agents import get_agent_by_id
             agent = get_agent_by_id(agent_id)
+            
+            # Debug: log current agent results state
+            self.logger.debug(f"Agent {agent_id} context: self.agent_results = {list(self.agent_results.keys())}")
             
             # Prepare agent context with unified structure
             agent_context = {
@@ -349,7 +357,7 @@ class MatrixPipelineOrchestrator:
     
     def _generate_pipeline_result(self, agent_results: Dict[int, Any]) -> MatrixPipelineResult:
         """Generate final pipeline result"""
-        from .matrix_agents_v2 import AgentStatus
+        from .matrix_agents import AgentStatus
         
         successful_count = sum(1 for result in agent_results.values() 
                              if result.status == AgentStatus.SUCCESS)

@@ -293,6 +293,16 @@ class MatrixMetrics:
             'success_rate': 1.0 - (self.metrics['errors_count'] / max(self.metrics['operations_count'], 1))
         })
         return summary
+    
+    @property
+    def execution_time(self) -> float:
+        """Get execution time"""
+        return self.metrics['execution_time']
+    
+    @property
+    def start_time(self) -> float:
+        """Get start time"""
+        return self.metrics['start_time'] or 0.0
 
 
 def create_shared_memory() -> SharedMemory:
@@ -348,6 +358,8 @@ class SharedAnalysisTools:
     @staticmethod
     def calculate_entropy(data: bytes) -> float:
         """Calculate Shannon entropy of binary data"""
+        import math
+        
         if not data:
             return 0.0
         
@@ -362,7 +374,7 @@ class SharedAnalysisTools:
         for count in byte_counts:
             if count > 0:
                 p = count / data_len
-                entropy -= p * (p.bit_length() - 1)
+                entropy -= p * math.log2(p)
         
         return entropy
     
@@ -440,6 +452,24 @@ class SharedValidationTools:
             if key not in context:
                 missing_keys.append(key)
         return missing_keys
+    
+    @staticmethod
+    def validate_dependency_results(context: Dict[str, Any], dependencies: List[int]) -> List[int]:
+        """Validate dependency results exist and succeeded, return failed dependencies"""
+        agent_results = context.get('agent_results', {})
+        failed = []
+        
+        for dep_id in dependencies:
+            dep_result = agent_results.get(dep_id)
+            if not dep_result or not hasattr(dep_result, 'status'):
+                failed.append(dep_id)
+            else:
+                # Handle both enum values and string values
+                status_value = dep_result.status.value if hasattr(dep_result.status, 'value') else str(dep_result.status)
+                if status_value != 'success':
+                    failed.append(dep_id)
+                
+        return failed
     
     @staticmethod
     def validate_binary_path(binary_path: Path) -> bool:

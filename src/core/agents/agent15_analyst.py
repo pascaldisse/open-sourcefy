@@ -24,7 +24,7 @@ from collections import defaultdict
 from ..matrix_agents import ReconstructionAgent, AgentResult, AgentStatus, MatrixCharacter
 from ..config_manager import ConfigManager
 from ..shared_utils import PerformanceMonitor
-from ..error_handler import MatrixErrorHandler
+from ..shared_utils import ErrorHandler as MatrixErrorHandler
 
 # AI enhancement imports
 try:
@@ -99,8 +99,8 @@ class Agent15_Analyst(ReconstructionAgent):
         self.max_cross_references = self.config.get_value('agents.agent_15.max_cross_refs', 1000)
         
         # Initialize components
-        self.performance_monitor = PerformanceMonitor("Analyst_Agent")
-        self.error_handler = MatrixErrorHandler("Analyst", max_retries=2)
+        self.performance_monitor = PerformanceMonitor()
+        self.error_handler = MatrixErrorHandler()
         
         # Initialize AI components if available
         self.ai_enabled = AI_AVAILABLE and self.config.get_value('ai.enabled', True)

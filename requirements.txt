@@ -19,10 +19,13 @@ psutil>=5.9.0
 # numpy>=1.21.0
 # scikit-learn>=1.1.0
 
-# LangChain for agent framework
-langchain>=0.1.0
-langchain-core>=0.1.0
-langchain-community>=0.0.20
+# AI Integration (choose one)
+anthropic>=0.3.0  # For Claude 3.5 Sonnet
+# openai>=1.0.0  # Uncomment for OpenAI GPT support
+# LangChain for local LLM support (optional)
+# langchain>=0.1.0
+# langchain-core>=0.1.0  
+# langchain-community>=0.0.20
 
 # Binary analysis tools (optional)
 # lief>=0.12.0

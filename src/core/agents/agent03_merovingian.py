@@ -209,7 +209,7 @@ class MerovingianAgent(DecompilerAgent):
         """Setup LangChain language model from configuration"""
         try:
             model_path = self.config.get_path('ai.model.path')
-            if not model_path.exists():
+            if not model_path or not model_path.exists():
                 self.logger.warning(f"AI model not found at {model_path}, disabling AI features")
                 self.ai_enabled = False
                 return None
