@@ -2,51 +2,52 @@
 
 **Advanced AI-Powered Binary Decompilation & Reconstruction System**
 
-Open-Sourcefy is a sophisticated reverse engineering framework designed to achieve **99%+ binary reproduction accuracy** through intelligent decompilation and iterative source code reconstruction.
+Open-Sourcefy is a sophisticated reverse engineering framework designed to reconstruct compilable source code from binary executables through intelligent decompilation and multi-agent analysis.
 
 ## Overview
 
-This project implements a **13-agent AI-enhanced pipeline** with **Ghidra integration** and **advanced machine learning capabilities** to transform binary executables back into compilable C source code that can reproduce near-identical binaries. The system has been specifically tested and optimized for the **Matrix Online launcher.exe** binary.
+This project implements a **15-agent AI-enhanced pipeline** with **Ghidra integration** and **machine learning capabilities** to transform binary executables back into readable, compilable C source code. The system is currently in active development with a focus on the **Matrix Online launcher.exe** binary as a primary test case.
 
 ### Key Features
 
-- **🤖 13-Agent AI Pipeline**: Specialized agents with advanced AI enhancements and reliability features
-- **🧠 AI Enhancement Framework**: Machine learning-powered pattern recognition, intelligent naming, and code quality assessment
-- **🔍 Ghidra Integration**: Full Ghidra 11.0 decompilation capabilities with headless automation
-- **⚡ Enhanced Parallel Processing**: Adaptive batch sizing, load balancing, and health monitoring
-- **🎯 99%+ Accuracy**: Advanced pattern matching, optimization detection, and confidence scoring
-- **🔄 Intelligent Error Recovery**: Multi-strategy retry mechanisms with exponential backoff
-- **📊 Comprehensive Analysis**: Binary structure, optimization patterns, resource reconstruction, and AI insights
-- **🔧 Production-Ready Infrastructure**: Environment validation, performance monitoring, and centralized configuration
+- **🤖 15-Agent AI Pipeline**: Specialized agents for comprehensive binary analysis and reconstruction
+- **🧠 Machine Learning Framework**: Pattern recognition, function classification, and code quality assessment
+- **🔍 Ghidra Integration**: Automated headless decompilation with custom script support
+- **⚡ Parallel Processing**: Multi-threaded and multi-process execution modes
+- **🔄 Error Recovery**: Retry mechanisms and robust error handling
+- **📊 Comprehensive Analysis**: Binary structure, optimization patterns, and resource reconstruction
+- **🔧 Structured Output**: Organized output directory structure with detailed reports
 
 ## Architecture
 
 ### Pipeline Stages
 
-The system operates through four main pipeline stages with AI enhancements:
+The system operates through a structured multi-agent pipeline:
 
-1. **Decompile** (Agents 1,2,5,7): Binary discovery, architecture analysis, structure parsing, AI-enhanced Ghidra decompilation
-2. **Analyze** (Agents 1,2,3,4,5,8,9): Comprehensive binary analysis with AI pattern recognition and confidence scoring
-3. **Compile** (Agents 6,11,12): AI-powered optimization matching, intelligent code enhancement, integration testing
-4. **Validate** (Agents 8,12,13): Binary diff analysis, comprehensive testing, and AI-validated final verification
+1. **Discovery & Analysis** (Agents 1-5): Binary format detection, architecture analysis, structure parsing, and optimization detection
+2. **Decompilation & Processing** (Agents 6-10): Ghidra-based decompilation, pattern matching, and resource reconstruction
+3. **Enhancement & Integration** (Agents 11-15): Code enhancement, build system generation, and comprehensive validation
+4. **Extended Capabilities** (Agents 16-20): Advanced build systems, binary comparison, and automated testing
 
 ### Agent System
 
 | Agent | Name | Purpose | Status |
 |-------|------|---------|--------|
-| 1 | Binary Discovery | Initial binary analysis and discovery | ✅ Enhanced |
-| 2 | Architecture Analysis | x86 architecture and calling convention analysis | ✅ Enhanced |
-| 3 | [Smart Error Pattern Matching](docs/agent3_smart_error_pattern_matching.md) | AI-powered error detection and pattern matching | ✅ AI-Enhanced |
-| 4 | Optimization Detection | ML-enhanced compiler optimization identification | ✅ AI-Enhanced |
-| 5 | [Binary Structure Analyzer](docs/agent5_binary_structure_analyzer.md) | PE32 structure parsing and analysis | ✅ Enhanced |
-| 6 | [Optimization Matcher](docs/agent6_optimization_matcher.md) | AI-powered optimization pattern matching and reconstruction | ✅ AI-Enhanced |
-| 7 | Ghidra Decompilation | Complete function decompilation via Ghidra with AI enhancement | ✅ AI-Enhanced |
-| 8 | [Binary Diff Analyzer](docs/agent8_binary_diff_analyzer.md) | Binary difference analysis and validation | ✅ Enhanced |
-| 9 | [Advanced Assembly Analyzer](docs/agent9_advanced_assembly_analyzer.md) | Deep assembly code analysis | ✅ Enhanced |
-| 10 | [Resource Reconstructor](docs/agent10_resource_reconstructor.md) | Resource section reconstruction | ✅ Enhanced |
-| 11 | AI Enhancement | Advanced AI-powered code enhancement and intelligent naming | ✅ Fully AI-Enhanced |
-| 12 | Integration Testing | Comprehensive integration testing with AI validation | ✅ AI-Enhanced |
-| 13 | Final Validation | Final binary reproduction validation with AI insights | ✅ AI-Enhanced |
+| 1 | Binary Discovery | Initial binary analysis and metadata extraction | 🔄 Active Development |
+| 2 | Architecture Analysis | x86/x64 architecture and calling convention analysis | 🔄 Active Development |
+| 3 | Smart Error Pattern Matching | ML-based error detection and pattern matching | 🔄 Active Development |
+| 4 | Basic Decompiler | Initial decompilation and function identification | 🔄 Active Development |
+| 5 | Binary Structure Analyzer | PE/ELF/Mach-O structure parsing and analysis | 🔄 Active Development |
+| 6 | Optimization Matcher | Compiler optimization pattern detection and reversal | 🔄 Active Development |
+| 7 | Advanced Decompiler | Ghidra-based comprehensive decompilation | ✅ Recently Enhanced |
+| 8 | Binary Diff Analyzer | Binary difference analysis and validation | 🔄 Active Development |
+| 9 | Advanced Assembly Analyzer | Deep assembly instruction analysis | 🔄 Active Development |
+| 10 | Resource Reconstructor | Resource section extraction and reconstruction | 🔄 Active Development |
+| 11 | Global Reconstructor | Code organization and structure reconstruction | ✅ Recently Enhanced |
+| 12 | Compilation Orchestrator | Build system generation and compilation testing | 🔄 Active Development |
+| 13 | Final Validator | Quality assurance and binary reproduction validation | 🔄 Active Development |
+| 14 | Advanced Ghidra | Enhanced Ghidra capabilities and script integration | ✅ Recently Enhanced |
+| 15 | Metadata Analysis | Comprehensive metadata extraction and analysis | ✅ Recently Enhanced |
 
 ## Installation
 
@@ -118,17 +119,20 @@ python main.py launcher.exe --agents 1-5  # Execute agents 1 through 5
 
 ## Target: Matrix Online Launcher
 
-The system has been extensively tested on the **Matrix Online launcher.exe**:
+The system is being developed and tested with the **Matrix Online launcher.exe**:
 
 - **File Size**: 5.3MB
 - **Architecture**: x86 PE32
 - **Compiler**: Microsoft Visual C++ 7.1 (MSVC .NET 2003)
 - **Functions**: 2,099+ identified functions
-- **Target Accuracy**: 99%+ binary reproduction
+- **Development Goal**: High-quality source reconstruction
 
-### Test Results
+### Current Development Status
 
-Current reproduction accuracy: **98.7%** (see [Matrix Online Analysis](MATRIX_ONLINE_ANALYSIS.md) for detailed results)
+**Overall Quality**: 66.5% (Phase 3 - Active Development)
+- **Code Quality**: 30% (needs improvement)
+- **Analysis Accuracy**: 60%
+- **Agent Success Rate**: 16/16 agents functional (see CLAUDE.md for details)
 
 ## Documentation
 
@@ -142,57 +146,60 @@ Current reproduction accuracy: **98.7%** (see [Matrix Online Analysis](MATRIX_ON
 - **[requirements.txt](docs/requirements.txt)** - Python package dependencies
 
 ### Agent System Reference
-The system includes 15+ specialized agents for comprehensive binary analysis. Each agent has specific responsibilities:
+The system includes 15 core agents plus extension agents (16-20) for comprehensive binary analysis:
 
 **Discovery & Analysis (Agents 1-5)**
 - Agent 1: Binary Discovery and metadata extraction
-- Agent 2: Architecture analysis (x86 focus)
-- Agent 3: Smart error pattern matching with AI
-- Agent 4: Compiler optimization detection
-- Agent 5: Binary structure analysis (PE32)
+- Agent 2: Architecture analysis (x86/x64 focus)
+- Agent 3: Smart error pattern matching with ML
+- Agent 4: Basic decompilation and function identification
+- Agent 5: Binary structure analysis (PE/ELF/Mach-O)
 
 **Processing & Decompilation (Agents 6-10)**
-- Agent 6: Optimization pattern matching
+- Agent 6: Optimization pattern matching and reversal
 - Agent 7: Advanced Ghidra decompilation
 - Agent 8: Binary difference analysis
-- Agent 9: Advanced assembly analysis
-- Agent 10: Resource reconstruction
+- Agent 9: Advanced assembly instruction analysis
+- Agent 10: Resource section reconstruction
 
 **Enhancement & Validation (Agents 11-15)**
-- Agent 11: AI-powered code enhancement
-- Agent 12: Compilation orchestration
-- Agent 13: Final validation and testing
-- Agent 14: Advanced Ghidra capabilities
-- Agent 15: Metadata analysis
+- Agent 11: Global code reconstruction and organization
+- Agent 12: Compilation orchestration and build systems
+- Agent 13: Final validation and quality assurance
+- Agent 14: Advanced Ghidra capabilities and scripting
+- Agent 15: Comprehensive metadata analysis
+
+**Extension Agents (16-20)**
+- Agent 16: Dynamic analysis bridge
+- Agent 18: Advanced build system support
+- Agent 19: Binary comparison and analysis
+- Agent 20: Automated testing frameworks
 
 ## Project Status
 
-### Current State
+### Current Development Phase
 
-- ✅ **Phase 1**: Environment Optimization & Infrastructure (19-point validation system)
-- ✅ **Phase 2**: Agent System Enhancement (Health monitoring, retry mechanisms, load balancing)
-- ✅ **Phase 3**: Advanced Features & AI Integration (ML enhancement, intelligent naming, quality assessment)
-- ✅ **Agent Framework**: All 13 agents implemented with AI enhancements
-- ✅ **Pipeline System**: Full pipeline orchestration with adaptive execution
-- ✅ **CLI Interface**: Comprehensive command-line interface with advanced features
-- ✅ **AI Enhancement**: Complete ML framework for pattern recognition and code improvement
-- ✅ **Documentation**: Comprehensive documentation including AI capabilities
+- ✅ **Phase 1**: Basic pipeline infrastructure and agent framework (Complete)
+- ✅ **Phase 2**: Core agent implementations with basic functionality (Complete)
+- 🔄 **Phase 3**: Dummy code removal and error handling improvement (In Progress)
+- 📋 **Phase 4**: Full feature implementation and production readiness (Planned)
 
-### AI Enhancement Features
+### Development Progress
 
-- **🧠 Pattern Recognition**: Multi-feature extraction with 80%+ confidence scores
-- **🏷️ Intelligent Naming**: Semantic-based function naming with reasoning
-- **📊 Quality Assessment**: Complexity, maintainability, and performance analysis
-- **🔧 Code Improvement**: Automated refactoring suggestions and optimization recommendations
-- **📖 Documentation Generation**: AI-generated README, API docs, and analysis reports
+- ✅ **Agent Framework**: 15 core agents + 5 extension agents implemented
+- ✅ **Pipeline System**: Multi-stage execution with dependency management
+- ✅ **CLI Interface**: Comprehensive command-line interface
+- 🔄 **Code Quality**: Active cleanup of dummy implementations
+- 🔄 **ML Integration**: Pattern recognition and quality assessment framework
+- 📋 **Advanced Features**: Planned for Phase 4 implementation
 
-### Performance Metrics
+### Current Quality Metrics
 
-- **Pipeline Execution**: ~0.15 seconds for agent coordination
-- **Success Rate**: 100% (all agents operational)
-- **AI Enhancement Score**: 80%+ confidence in pattern recognition
-- **Memory Usage**: Optimized with health monitoring and resource tracking
-- **Parallel Efficiency**: Enhanced with dynamic load balancing and adaptive batch sizing
+- **Overall Quality**: 66.5% (improving through Phase 3)
+- **Code Quality**: 30% (needs improvement - active cleanup in progress)
+- **Analysis Accuracy**: 60% (target: 80%+)
+- **Agent Success Rate**: 16/16 agents functional
+- **Pipeline Reliability**: Good (structured error handling)
 
 ## Development
 

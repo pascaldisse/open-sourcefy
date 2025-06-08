@@ -61,10 +61,10 @@ class Agent8_BinaryDiffAnalyzer(BaseAgent):
             'difference_analysis': self._analyze_differences(optimization_data),
             'reconstruction_guidance': self._generate_reconstruction_guidance(optimization_data),
             'binary_path': binary_path,
-            'analysis_confidence': 0.75,
-            'total_differences_found': 45,
-            'critical_differences': 8,
-            'optimization_reversibility': 0.82
+            'analysis_confidence': self._calculate_analysis_confidence(optimization_data),
+            'total_differences_found': self._count_total_differences(optimization_data),
+            'critical_differences': self._count_critical_differences(optimization_data),
+            'optimization_reversibility': self._calculate_reversibility(optimization_data)
         }
 
     def _analyze_optimization_impact(self, optimization_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -74,23 +74,23 @@ class Agent8_BinaryDiffAnalyzer(BaseAgent):
         optimization_patterns = optimization_data.get('optimization_patterns', {})
         
         impact_analysis = {
-            'code_size_reduction': 0.15,  # 15% reduction typical
-            'execution_speed_improvement': 0.25,  # 25% speed improvement
-            'register_usage_optimization': 0.80,  # 80% optimal register usage
+            'code_size_reduction': self._estimate_code_size_reduction(detected_optimizations),
+            'execution_speed_improvement': self._estimate_speed_improvement(detected_optimizations),
+            'register_usage_optimization': self._analyze_register_optimization(detected_optimizations),
             'memory_access_patterns': {
-                'cache_friendly_accesses': 0.75,
-                'reduced_memory_footprint': 0.20,
-                'eliminated_redundant_loads': 12
+                'cache_friendly_accesses': self._analyze_cache_friendliness(detected_optimizations),
+                'reduced_memory_footprint': self._estimate_memory_reduction(detected_optimizations),
+                'eliminated_redundant_loads': self._count_eliminated_loads(detected_optimizations)
             },
             'control_flow_changes': {
                 'loop_unrolling_detected': len([opt for opt in detected_optimizations if 'loop' in str(opt).lower()]),
-                'branch_elimination': 8,
-                'function_inlining': 15
+                'branch_elimination': self._count_branch_eliminations(detected_optimizations),
+                'function_inlining': self._count_function_inlining(detected_optimizations)
             },
             'data_structure_optimizations': {
-                'struct_packing': True,
-                'array_optimizations': 6,
-                'constant_folding': 23
+                'struct_packing': self._detect_struct_packing(detected_optimizations),
+                'array_optimizations': self._count_array_optimizations(detected_optimizations),
+                'constant_folding': self._count_constant_folding(detected_optimizations)
             }
         }
         
@@ -263,3 +263,121 @@ class Agent8_BinaryDiffAnalyzer(BaseAgent):
         ]
         
         return guidance
+    
+    def _calculate_analysis_confidence(self, optimization_data: Dict[str, Any]) -> float:
+        """Calculate confidence score based on optimization data quality"""
+        detected_optimizations = optimization_data.get('detected_optimizations', [])
+        confidence_score = optimization_data.get('confidence_score', 0.5)
+        
+        # Basic confidence calculation based on available data
+        base_confidence = confidence_score
+        data_completeness = min(len(detected_optimizations) / 10.0, 1.0)  # Normalize to 0-1
+        
+        return min(base_confidence * (0.5 + data_completeness * 0.5), 1.0)
+    
+    def _count_total_differences(self, optimization_data: Dict[str, Any]) -> int:
+        """Count total differences found in optimization analysis"""
+        detected_optimizations = optimization_data.get('detected_optimizations', [])
+        # Simple approximation: assume differences correlate with optimization count
+        return len(detected_optimizations)
+    
+    def _count_critical_differences(self, optimization_data: Dict[str, Any]) -> int:
+        """Count critical differences that affect reconstruction accuracy"""
+        detected_optimizations = optimization_data.get('detected_optimizations', [])
+        # Estimate critical differences as ~30% of total optimizations
+        return max(1, len(detected_optimizations) // 3)
+    
+    def _calculate_reversibility(self, optimization_data: Dict[str, Any]) -> float:
+        """Calculate optimization reversibility score"""
+        detected_optimizations = optimization_data.get('detected_optimizations', [])
+        # Basic reversibility: fewer optimizations = higher reversibility
+        if len(detected_optimizations) == 0:
+            return 1.0
+        elif len(detected_optimizations) < 5:
+            return 0.9
+        elif len(detected_optimizations) < 15:
+            return 0.7
+        else:
+            return 0.5
+    
+    def _estimate_code_size_reduction(self, detected_optimizations: List[Any]) -> float:
+        """Estimate code size reduction from optimizations"""
+        # Basic estimation: each optimization reduces code size by ~2-5%
+        size_reducing_opts = ['dead_code_elimination', 'constant_folding', 'loop_unrolling']
+        reduction_count = sum(1 for opt in detected_optimizations 
+                            if any(pattern in str(opt).lower() for pattern in size_reducing_opts))
+        return min(reduction_count * 0.03, 0.4)  # Max 40% reduction
+    
+    def _estimate_speed_improvement(self, detected_optimizations: List[Any]) -> float:
+        """Estimate execution speed improvement from optimizations"""
+        # Basic estimation: performance optimizations provide ~5-15% improvement each
+        speed_opts = ['loop_unrolling', 'function_inlining', 'register_allocation', 'vectorization']
+        improvement_count = sum(1 for opt in detected_optimizations 
+                              if any(pattern in str(opt).lower() for pattern in speed_opts))
+        return min(improvement_count * 0.1, 0.8)  # Max 80% improvement
+    
+    def _analyze_register_optimization(self, detected_optimizations: List[Any]) -> float:
+        """Analyze register usage optimization level"""
+        # Check for register-related optimizations
+        register_opts = ['register_allocation', 'register_spilling', 'register_coalescing']
+        register_count = sum(1 for opt in detected_optimizations 
+                           if any(pattern in str(opt).lower() for pattern in register_opts))
+        return min(register_count * 0.2, 1.0)  # Scale 0-1
+    
+    def _analyze_cache_friendliness(self, detected_optimizations: List[Any]) -> float:
+        """Analyze cache-friendly access patterns"""
+        # Look for cache-related optimizations
+        cache_opts = ['loop_blocking', 'data_locality', 'prefetch', 'vectorization']
+        cache_count = sum(1 for opt in detected_optimizations 
+                        if any(pattern in str(opt).lower() for pattern in cache_opts))
+        return min(cache_count * 0.25, 1.0)  # Scale 0-1
+    
+    def _estimate_memory_reduction(self, detected_optimizations: List[Any]) -> float:
+        """Estimate memory footprint reduction"""
+        # Look for memory-related optimizations
+        memory_opts = ['dead_code_elimination', 'constant_folding', 'struct_packing']
+        memory_count = sum(1 for opt in detected_optimizations 
+                         if any(pattern in str(opt).lower() for pattern in memory_opts))
+        return min(memory_count * 0.05, 0.3)  # Max 30% memory reduction
+    
+    def _count_eliminated_loads(self, detected_optimizations: List[Any]) -> int:
+        """Count eliminated redundant memory loads"""
+        # Look for load-related optimizations
+        load_opts = ['load_elimination', 'redundancy_elimination', 'common_subexpression']
+        return sum(1 for opt in detected_optimizations 
+                  if any(pattern in str(opt).lower() for pattern in load_opts))
+    
+    def _count_branch_eliminations(self, detected_optimizations: List[Any]) -> int:
+        """Count eliminated branch instructions"""
+        # Look for branch-related optimizations
+        branch_opts = ['branch_elimination', 'branch_prediction', 'predication']
+        return sum(1 for opt in detected_optimizations 
+                  if any(pattern in str(opt).lower() for pattern in branch_opts))
+    
+    def _count_function_inlining(self, detected_optimizations: List[Any]) -> int:
+        """Count function inlining instances"""
+        # Look for inlining-related optimizations
+        inline_opts = ['function_inlining', 'inline', 'call_elimination']
+        return sum(1 for opt in detected_optimizations 
+                  if any(pattern in str(opt).lower() for pattern in inline_opts))
+    
+    def _detect_struct_packing(self, detected_optimizations: List[Any]) -> bool:
+        """Detect structure packing optimizations"""
+        # Look for struct/data layout optimizations
+        packing_opts = ['struct_packing', 'data_layout', 'padding_elimination']
+        return any(any(pattern in str(opt).lower() for pattern in packing_opts) 
+                  for opt in detected_optimizations)
+    
+    def _count_array_optimizations(self, detected_optimizations: List[Any]) -> int:
+        """Count array-related optimizations"""
+        # Look for array-related optimizations
+        array_opts = ['vectorization', 'loop_unrolling', 'array_bounds', 'simd']
+        return sum(1 for opt in detected_optimizations 
+                  if any(pattern in str(opt).lower() for pattern in array_opts))
+    
+    def _count_constant_folding(self, detected_optimizations: List[Any]) -> int:
+        """Count constant folding optimizations"""
+        # Look for constant-related optimizations
+        constant_opts = ['constant_folding', 'constant_propagation', 'compile_time_evaluation']
+        return sum(1 for opt in detected_optimizations 
+                  if any(pattern in str(opt).lower() for pattern in constant_opts))

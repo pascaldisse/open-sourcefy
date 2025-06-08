@@ -7,6 +7,7 @@ a real implementation of the target binary's functionality.
 import os
 import re
 import json
+import logging
 from typing import Dict, Any, List, Tuple
 from pathlib import Path
 from ..agent_base import BaseAgent, AgentResult, AgentStatus
@@ -21,6 +22,7 @@ class Agent13_FinalValidator(BaseAgent):
             name="SourceCodeValidator",
             dependencies=[11, 12]  # Depends on source reconstruction and compilation
         )
+        self.logger = logging.getLogger(f"Agent{self.agent_id}.{self.name}")
 
     def execute(self, context: Dict[str, Any]) -> AgentResult:
         """Execute comprehensive source code validation"""
@@ -126,6 +128,12 @@ class Agent13_FinalValidator(BaseAgent):
             validation_report, context
         )
         validation_report['comparison_analysis'] = comparison_analysis
+        
+        # Step 6.5: Phase 3 enhancement - Semantic equivalence validation
+        semantic_equivalence = self._validate_semantic_equivalence(
+            validation_report, context
+        )
+        validation_report['semantic_equivalence'] = semantic_equivalence
         
         # Step 7: Make final determination
         final_determination = self._make_final_determination(validation_report)
@@ -733,7 +741,7 @@ class Agent13_FinalValidator(BaseAgent):
             with open(report_path, 'w') as f:
                 json.dump(validation_report, f, indent=2, default=str)
         except Exception as e:
-            print(f"Warning: Could not save validation report: {e}")
+            self.logger.warning(f"Could not save validation report: {e}")
 
     def _fail_pipeline(self, reason: str, context: Dict[str, Any], 
                       validation_data: Dict[str, Any] = None) -> AgentResult:
@@ -756,7 +764,7 @@ class Agent13_FinalValidator(BaseAgent):
             with open(failure_path, 'w') as f:
                 json.dump(failure_data, f, indent=2, default=str)
         except Exception as e:
-            print(f"Warning: Could not save failure report: {e}")
+            self.logger.warning(f"Could not save failure report: {e}")
         
         return AgentResult(
             agent_id=self.agent_id,
@@ -928,3 +936,639 @@ class Agent13_FinalValidator(BaseAgent):
             return complexity_ratio >= 0.2 and complexity_assessment != 'too_simple'
         except:
             return False
+    
+    def _validate_semantic_equivalence(self, validation_report: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Phase 3 enhancement: Validate semantic equivalence between reconstructed code and original binary"""
+        
+        semantic_analysis = {
+            'control_flow_equivalence': {},
+            'data_structure_equivalence': {},
+            'api_usage_equivalence': {},
+            'algorithmic_equivalence': {},
+            'behavioral_consistency': {},
+            'overall_semantic_score': 0.0,
+            'equivalence_confidence': 0.0,
+            'semantic_gaps': [],
+            'critical_differences': [],
+            'equivalence_assessment': ''
+        }
+        
+        try:
+            # Get data from previous agents for comparison
+            agent_results = context.get('agent_results', {})
+            
+            # Analyze control flow equivalence
+            semantic_analysis['control_flow_equivalence'] = self._analyze_control_flow_equivalence(
+                validation_report, agent_results
+            )
+            
+            # Analyze data structure equivalence
+            semantic_analysis['data_structure_equivalence'] = self._analyze_data_structure_equivalence(
+                validation_report, agent_results
+            )
+            
+            # Analyze API usage equivalence
+            semantic_analysis['api_usage_equivalence'] = self._analyze_api_usage_equivalence(
+                validation_report, agent_results
+            )
+            
+            # Analyze algorithmic equivalence
+            semantic_analysis['algorithmic_equivalence'] = self._analyze_algorithmic_equivalence(
+                validation_report, agent_results
+            )
+            
+            # Assess behavioral consistency
+            semantic_analysis['behavioral_consistency'] = self._assess_behavioral_consistency(
+                semantic_analysis
+            )
+            
+            # Calculate overall semantic score
+            semantic_analysis['overall_semantic_score'] = self._calculate_semantic_score(semantic_analysis)
+            
+            # Determine confidence level
+            semantic_analysis['equivalence_confidence'] = self._calculate_equivalence_confidence(
+                semantic_analysis, validation_report
+            )
+            
+            # Identify semantic gaps and differences
+            semantic_analysis['semantic_gaps'] = self._identify_semantic_gaps(semantic_analysis)
+            semantic_analysis['critical_differences'] = self._identify_critical_differences(semantic_analysis)
+            
+            # Generate final assessment
+            semantic_analysis['equivalence_assessment'] = self._generate_equivalence_assessment(
+                semantic_analysis
+            )
+            
+            return semantic_analysis
+            
+        except Exception as e:
+            return {
+                'error': f"Semantic equivalence validation failed: {str(e)}",
+                'control_flow_equivalence': {},
+                'data_structure_equivalence': {},
+                'api_usage_equivalence': {},
+                'algorithmic_equivalence': {},
+                'overall_semantic_score': 0.0,
+                'equivalence_confidence': 0.0
+            }
+    
+    def _analyze_control_flow_equivalence(self, validation_report: Dict[str, Any], 
+                                        agent_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze control flow equivalence between reconstructed code and original binary"""
+        
+        control_flow_analysis = {
+            'loops_detected': 0,
+            'conditionals_detected': 0,
+            'function_calls_detected': 0,
+            'control_structures_mapped': 0,
+            'flow_complexity_match': 0.0,
+            'flow_pattern_similarity': 0.0,
+            'control_flow_score': 0.0
+        }
+        
+        try:
+            # Get control flow data from assembly analysis (Agent 9)
+            agent9_result = agent_results.get(9)
+            if agent9_result and agent9_result.status == AgentStatus.COMPLETED:
+                assembly_analysis = agent9_result.data
+                instruction_analysis = assembly_analysis.get('instruction_analysis', {})
+                control_flow_structures = instruction_analysis.get('control_flow_structures', {})
+                
+                # Extract binary control flow patterns
+                binary_loops = len(control_flow_structures.get('loop_structures', []))
+                binary_conditionals = len(control_flow_structures.get('conditional_branches', []))
+                binary_calls = len(control_flow_structures.get('function_calls', []))
+                
+                # Extract reconstructed code control flow patterns
+                method_analysis = validation_report.get('method_analysis', {})
+                method_details = method_analysis.get('method_details', [])
+                
+                reconstructed_control_structures = 0
+                for method in method_details:
+                    reconstructed_control_structures += method.get('control_structures', 0)
+                
+                # Calculate pattern similarity
+                if binary_loops + binary_conditionals + binary_calls > 0:
+                    expected_structures = binary_loops + binary_conditionals + binary_calls
+                    
+                    control_flow_analysis['loops_detected'] = binary_loops
+                    control_flow_analysis['conditionals_detected'] = binary_conditionals
+                    control_flow_analysis['function_calls_detected'] = binary_calls
+                    control_flow_analysis['control_structures_mapped'] = reconstructed_control_structures
+                    
+                    # Flow complexity match
+                    control_flow_analysis['flow_complexity_match'] = min(1.0, 
+                        reconstructed_control_structures / expected_structures)
+                    
+                    # Pattern similarity (simplified heuristic)
+                    control_flow_analysis['flow_pattern_similarity'] = min(1.0,
+                        (reconstructed_control_structures * 0.8) / expected_structures)
+                    
+                    # Overall control flow score
+                    control_flow_analysis['control_flow_score'] = (
+                        control_flow_analysis['flow_complexity_match'] * 0.6 +
+                        control_flow_analysis['flow_pattern_similarity'] * 0.4
+                    )
+            
+            return control_flow_analysis
+            
+        except Exception as e:
+            control_flow_analysis['error'] = str(e)
+            return control_flow_analysis
+    
+    def _analyze_data_structure_equivalence(self, validation_report: Dict[str, Any],
+                                          agent_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze data structure equivalence between reconstructed code and original binary"""
+        
+        data_analysis = {
+            'binary_structures_detected': 0,
+            'reconstructed_structures': 0,
+            'array_pattern_match': 0.0,
+            'struct_pattern_match': 0.0,
+            'pointer_usage_match': 0.0,
+            'data_type_consistency': 0.0,
+            'data_structure_score': 0.0
+        }
+        
+        try:
+            # Get data structure information from resource reconstructor (Agent 10)
+            agent10_result = agent_results.get(10)
+            if agent10_result and agent10_result.status == AgentStatus.COMPLETED:
+                resource_data = agent10_result.data
+                reconstructed_structures = resource_data.get('reconstructed_data_structures', {})
+                
+                # Count detected binary structures
+                binary_arrays = len(reconstructed_structures.get('arrays', []))
+                binary_structs = len(reconstructed_structures.get('structures', []))
+                binary_linked = len(reconstructed_structures.get('linked_structures', []))
+                binary_hash_tables = len(reconstructed_structures.get('hash_tables', []))
+                
+                data_analysis['binary_structures_detected'] = (
+                    binary_arrays + binary_structs + binary_linked + binary_hash_tables
+                )
+                
+                # Count reconstructed structures in source code
+                class_analysis = validation_report.get('class_analysis', {})
+                source_structures = class_analysis.get('total_structures', 0)
+                
+                data_analysis['reconstructed_structures'] = source_structures
+                
+                # Calculate pattern matches
+                if data_analysis['binary_structures_detected'] > 0:
+                    structure_ratio = min(1.0, source_structures / data_analysis['binary_structures_detected'])
+                    
+                    data_analysis['array_pattern_match'] = min(1.0, binary_arrays / max(1, data_analysis['binary_structures_detected']))
+                    data_analysis['struct_pattern_match'] = min(1.0, binary_structs / max(1, data_analysis['binary_structures_detected']))
+                    data_analysis['pointer_usage_match'] = min(1.0, binary_linked / max(1, data_analysis['binary_structures_detected']))
+                    
+                    # Data type consistency (based on type inference quality)
+                    type_inference = reconstructed_structures.get('type_inference', {})
+                    inferred_types = len(type_inference.get('inferred_types', {}))
+                    if inferred_types > 0:
+                        data_analysis['data_type_consistency'] = min(1.0, inferred_types / 10)  # Normalize to 10 types
+                    
+                    # Overall data structure score
+                    data_analysis['data_structure_score'] = (
+                        structure_ratio * 0.4 +
+                        data_analysis['array_pattern_match'] * 0.2 +
+                        data_analysis['struct_pattern_match'] * 0.2 +
+                        data_analysis['data_type_consistency'] * 0.2
+                    )
+            
+            return data_analysis
+            
+        except Exception as e:
+            data_analysis['error'] = str(e)
+            return data_analysis
+    
+    def _analyze_api_usage_equivalence(self, validation_report: Dict[str, Any],
+                                     agent_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze API usage equivalence between reconstructed code and original binary"""
+        
+        api_analysis = {
+            'binary_api_functions': 0,
+            'reconstructed_api_usage': 0,
+            'api_category_coverage': 0.0,
+            'critical_api_match': 0.0,
+            'framework_consistency': 0.0,
+            'security_api_coverage': 0.0,
+            'api_equivalence_score': 0.0
+        }
+        
+        try:
+            # Get API usage patterns from metadata analysis (Agent 15)
+            agent15_result = agent_results.get(15)
+            if agent15_result and agent15_result.status == AgentStatus.COMPLETED:
+                metadata_analysis = agent15_result.data
+                api_patterns = metadata_analysis.get('api_usage_patterns', {})
+                
+                # Count binary API functions
+                api_categories = ['file_operations', 'network_operations', 'gui_operations', 
+                                'system_operations', 'crypto_operations', 'registry_operations',
+                                'process_operations', 'memory_operations']
+                
+                total_binary_apis = 0
+                covered_categories = 0
+                
+                for category in api_categories:
+                    category_apis = api_patterns.get(category, [])
+                    if category_apis:
+                        total_binary_apis += len(category_apis)
+                        covered_categories += 1
+                
+                api_analysis['binary_api_functions'] = total_binary_apis
+                
+                # Analyze reconstructed API usage patterns from source code
+                source_analysis = validation_report.get('source_analysis', {})
+                all_source_content = source_analysis.get('all_source_content', {})
+                
+                reconstructed_api_calls = 0
+                for filename, content in all_source_content.items():
+                    # Count function calls that look like API calls
+                    api_call_patterns = [
+                        r'\b(CreateFile|ReadFile|WriteFile|Socket|Connect|Send|Recv)\s*\(',
+                        r'\b(malloc|free|printf|scanf|fopen|fclose)\s*\(',
+                        r'\b(RegOpenKey|RegCloseKey|RegQueryValue)\s*\(',
+                        r'\b(CreateProcess|TerminateProcess|WaitForSingleObject)\s*\('
+                    ]
+                    
+                    for pattern in api_call_patterns:
+                        reconstructed_api_calls += len(re.findall(pattern, content, re.IGNORECASE))
+                
+                api_analysis['reconstructed_api_usage'] = reconstructed_api_calls
+                
+                # Calculate coverage metrics
+                if total_binary_apis > 0:
+                    api_analysis['api_category_coverage'] = covered_categories / len(api_categories)
+                    
+                    # Critical API match (simplified)
+                    critical_apis = len(api_patterns.get('system_operations', [])) + len(api_patterns.get('process_operations', []))
+                    if critical_apis > 0:
+                        # Estimate critical API coverage in reconstructed code
+                        critical_matches = min(reconstructed_api_calls, critical_apis)
+                        api_analysis['critical_api_match'] = critical_matches / critical_apis
+                    
+                    # Framework consistency
+                    detected_frameworks = api_patterns.get('detected_frameworks', [])
+                    if detected_frameworks:
+                        # Check if source code includes appropriate headers for detected frameworks
+                        framework_headers = 0
+                        for framework in detected_frameworks:
+                            framework_name = framework.get('name', '').lower()
+                            if 'windows' in framework_name:
+                                for content in all_source_content.values():
+                                    if '#include <windows.h>' in content:
+                                        framework_headers += 1
+                                        break
+                            elif '.net' in framework_name:
+                                for content in all_source_content.values():
+                                    if 'using namespace' in content or '#using' in content:
+                                        framework_headers += 1
+                                        break
+                        
+                        api_analysis['framework_consistency'] = framework_headers / len(detected_frameworks)
+                    
+                    # Security API coverage
+                    security_apis = len(api_patterns.get('crypto_operations', [])) + len(api_patterns.get('registry_operations', []))
+                    if security_apis > 0:
+                        security_matches = min(reconstructed_api_calls * 0.3, security_apis)  # Estimate
+                        api_analysis['security_api_coverage'] = security_matches / security_apis
+                    
+                    # Overall API equivalence score
+                    api_analysis['api_equivalence_score'] = (
+                        api_analysis['api_category_coverage'] * 0.3 +
+                        api_analysis['critical_api_match'] * 0.4 +
+                        api_analysis['framework_consistency'] * 0.2 +
+                        api_analysis['security_api_coverage'] * 0.1
+                    )
+            
+            return api_analysis
+            
+        except Exception as e:
+            api_analysis['error'] = str(e)
+            return api_analysis
+    
+    def _analyze_algorithmic_equivalence(self, validation_report: Dict[str, Any],
+                                       agent_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze algorithmic equivalence between reconstructed code and original binary"""
+        
+        algorithm_analysis = {
+            'detected_algorithm_patterns': 0,
+            'reconstructed_algorithms': 0,
+            'sorting_algorithm_match': 0.0,
+            'search_algorithm_match': 0.0,
+            'data_structure_algorithm_match': 0.0,
+            'mathematical_algorithm_match': 0.0,
+            'algorithmic_complexity_match': 0.0,
+            'algorithm_equivalence_score': 0.0
+        }
+        
+        try:
+            # Get algorithm patterns from optimization matcher (Agent 6)
+            agent6_result = agent_results.get(6)
+            if agent6_result and agent6_result.status == AgentStatus.COMPLETED:
+                optimization_data = agent6_result.data
+                algorithm_patterns = optimization_data.get('algorithm_patterns', [])
+                
+                # Count detected algorithm patterns by type
+                algorithm_types = {
+                    'sorting': 0,
+                    'search': 0,
+                    'data_structure': 0,
+                    'mathematical': 0,
+                    'string': 0
+                }
+                
+                for pattern in algorithm_patterns:
+                    pattern_type = pattern.get('type', 'unknown')
+                    if pattern_type in algorithm_types:
+                        algorithm_types[pattern_type] += 1
+                
+                algorithm_analysis['detected_algorithm_patterns'] = len(algorithm_patterns)
+                
+                # Analyze reconstructed code for algorithmic patterns
+                method_analysis = validation_report.get('method_analysis', {})
+                method_details = method_analysis.get('method_details', [])
+                
+                reconstructed_algorithms = 0
+                for method in method_details:
+                    # Heuristic: complex methods with real implementations likely contain algorithms
+                    if (method.get('complexity', 0) > 5 and 
+                        method.get('has_real_implementation', False) and
+                        not method.get('is_placeholder', True)):
+                        reconstructed_algorithms += 1
+                
+                algorithm_analysis['reconstructed_algorithms'] = reconstructed_algorithms
+                
+                # Calculate pattern matches for each algorithm type
+                if algorithm_analysis['detected_algorithm_patterns'] > 0:
+                    total_patterns = algorithm_analysis['detected_algorithm_patterns']
+                    
+                    algorithm_analysis['sorting_algorithm_match'] = min(1.0,
+                        algorithm_types['sorting'] / max(1, total_patterns))
+                    
+                    algorithm_analysis['search_algorithm_match'] = min(1.0,
+                        algorithm_types['search'] / max(1, total_patterns))
+                    
+                    algorithm_analysis['data_structure_algorithm_match'] = min(1.0,
+                        algorithm_types['data_structure'] / max(1, total_patterns))
+                    
+                    algorithm_analysis['mathematical_algorithm_match'] = min(1.0,
+                        algorithm_types['mathematical'] / max(1, total_patterns))
+                    
+                    # Algorithmic complexity match
+                    if total_patterns > 0:
+                        complexity_ratio = min(1.0, reconstructed_algorithms / total_patterns)
+                        algorithm_analysis['algorithmic_complexity_match'] = complexity_ratio
+                    
+                    # Overall algorithm equivalence score
+                    algorithm_analysis['algorithm_equivalence_score'] = (
+                        algorithm_analysis['sorting_algorithm_match'] * 0.2 +
+                        algorithm_analysis['search_algorithm_match'] * 0.2 +
+                        algorithm_analysis['data_structure_algorithm_match'] * 0.3 +
+                        algorithm_analysis['mathematical_algorithm_match'] * 0.1 +
+                        algorithm_analysis['algorithmic_complexity_match'] * 0.2
+                    )
+            
+            return algorithm_analysis
+            
+        except Exception as e:
+            algorithm_analysis['error'] = str(e)
+            return algorithm_analysis
+    
+    def _assess_behavioral_consistency(self, semantic_analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """Assess overall behavioral consistency between reconstructed code and original binary"""
+        
+        consistency_analysis = {
+            'control_flow_consistency': 0.0,
+            'data_handling_consistency': 0.0,
+            'api_interaction_consistency': 0.0,
+            'algorithmic_consistency': 0.0,
+            'overall_behavioral_consistency': 0.0,
+            'consistency_assessment': '',
+            'behavioral_risks': []
+        }
+        
+        try:
+            # Extract consistency scores from each analysis
+            control_flow = semantic_analysis.get('control_flow_equivalence', {})
+            data_structure = semantic_analysis.get('data_structure_equivalence', {})
+            api_usage = semantic_analysis.get('api_usage_equivalence', {})
+            algorithmic = semantic_analysis.get('algorithmic_equivalence', {})
+            
+            consistency_analysis['control_flow_consistency'] = control_flow.get('control_flow_score', 0.0)
+            consistency_analysis['data_handling_consistency'] = data_structure.get('data_structure_score', 0.0)
+            consistency_analysis['api_interaction_consistency'] = api_usage.get('api_equivalence_score', 0.0)
+            consistency_analysis['algorithmic_consistency'] = algorithmic.get('algorithm_equivalence_score', 0.0)
+            
+            # Calculate overall behavioral consistency
+            consistency_weights = [0.3, 0.25, 0.25, 0.2]  # Control flow, data, API, algorithms
+            consistency_scores = [
+                consistency_analysis['control_flow_consistency'],
+                consistency_analysis['data_handling_consistency'],
+                consistency_analysis['api_interaction_consistency'],
+                consistency_analysis['algorithmic_consistency']
+            ]
+            
+            consistency_analysis['overall_behavioral_consistency'] = sum(
+                score * weight for score, weight in zip(consistency_scores, consistency_weights)
+            )
+            
+            # Generate consistency assessment
+            overall_score = consistency_analysis['overall_behavioral_consistency']
+            if overall_score >= 0.8:
+                consistency_analysis['consistency_assessment'] = 'Excellent behavioral consistency'
+            elif overall_score >= 0.6:
+                consistency_analysis['consistency_assessment'] = 'Good behavioral consistency'
+            elif overall_score >= 0.4:
+                consistency_analysis['consistency_assessment'] = 'Moderate behavioral consistency'
+            elif overall_score >= 0.2:
+                consistency_analysis['consistency_assessment'] = 'Poor behavioral consistency'
+            else:
+                consistency_analysis['consistency_assessment'] = 'Very poor behavioral consistency'
+            
+            # Identify behavioral risks
+            if consistency_analysis['control_flow_consistency'] < 0.5:
+                consistency_analysis['behavioral_risks'].append('Control flow patterns do not match original binary')
+            
+            if consistency_analysis['data_handling_consistency'] < 0.5:
+                consistency_analysis['behavioral_risks'].append('Data structure usage differs significantly from original')
+            
+            if consistency_analysis['api_interaction_consistency'] < 0.5:
+                consistency_analysis['behavioral_risks'].append('API usage patterns do not match original binary')
+            
+            if consistency_analysis['algorithmic_consistency'] < 0.5:
+                consistency_analysis['behavioral_risks'].append('Algorithmic patterns differ from original implementation')
+            
+            return consistency_analysis
+            
+        except Exception as e:
+            consistency_analysis['error'] = str(e)
+            return consistency_analysis
+    
+    def _calculate_semantic_score(self, semantic_analysis: Dict[str, Any]) -> float:
+        """Calculate overall semantic equivalence score"""
+        
+        try:
+            # Extract scores from each analysis component
+            control_flow_score = semantic_analysis.get('control_flow_equivalence', {}).get('control_flow_score', 0.0)
+            data_structure_score = semantic_analysis.get('data_structure_equivalence', {}).get('data_structure_score', 0.0)
+            api_usage_score = semantic_analysis.get('api_usage_equivalence', {}).get('api_equivalence_score', 0.0)
+            algorithmic_score = semantic_analysis.get('algorithmic_equivalence', {}).get('algorithm_equivalence_score', 0.0)
+            behavioral_score = semantic_analysis.get('behavioral_consistency', {}).get('overall_behavioral_consistency', 0.0)
+            
+            # Weighted combination of all semantic factors
+            semantic_weights = {
+                'control_flow': 0.25,
+                'data_structure': 0.20,
+                'api_usage': 0.25,
+                'algorithmic': 0.15,
+                'behavioral': 0.15
+            }
+            
+            overall_score = (
+                control_flow_score * semantic_weights['control_flow'] +
+                data_structure_score * semantic_weights['data_structure'] +
+                api_usage_score * semantic_weights['api_usage'] +
+                algorithmic_score * semantic_weights['algorithmic'] +
+                behavioral_score * semantic_weights['behavioral']
+            )
+            
+            return min(1.0, max(0.0, overall_score))
+            
+        except Exception:
+            return 0.0
+    
+    def _calculate_equivalence_confidence(self, semantic_analysis: Dict[str, Any],
+                                        validation_report: Dict[str, Any]) -> float:
+        """Calculate confidence level in the equivalence assessment"""
+        
+        try:
+            confidence_factors = []
+            
+            # Factor 1: Quality of source analysis
+            implementation_quality = validation_report.get('method_analysis', {}).get('implementation_quality', 0.0)
+            confidence_factors.append(implementation_quality)
+            
+            # Factor 2: Completeness of reconstruction
+            completeness_score = validation_report.get('implementation_analysis', {}).get('completeness_score', 0.0)
+            confidence_factors.append(completeness_score)
+            
+            # Factor 3: Amount of data available for comparison
+            data_availability = 0.0
+            if semantic_analysis.get('control_flow_equivalence', {}).get('control_structures_mapped', 0) > 0:
+                data_availability += 0.25
+            if semantic_analysis.get('data_structure_equivalence', {}).get('binary_structures_detected', 0) > 0:
+                data_availability += 0.25
+            if semantic_analysis.get('api_usage_equivalence', {}).get('binary_api_functions', 0) > 0:
+                data_availability += 0.25
+            if semantic_analysis.get('algorithmic_equivalence', {}).get('detected_algorithm_patterns', 0) > 0:
+                data_availability += 0.25
+            
+            confidence_factors.append(data_availability)
+            
+            # Factor 4: Consistency across different analysis dimensions
+            semantic_score = semantic_analysis.get('overall_semantic_score', 0.0)
+            confidence_factors.append(semantic_score)
+            
+            # Calculate overall confidence
+            if confidence_factors:
+                overall_confidence = sum(confidence_factors) / len(confidence_factors)
+                return min(1.0, max(0.0, overall_confidence))
+            else:
+                return 0.0
+                
+        except Exception:
+            return 0.0
+    
+    def _identify_semantic_gaps(self, semantic_analysis: Dict[str, Any]) -> List[str]:
+        """Identify gaps in semantic equivalence"""
+        
+        gaps = []
+        
+        try:
+            # Check each analysis component for gaps
+            control_flow = semantic_analysis.get('control_flow_equivalence', {})
+            if control_flow.get('control_flow_score', 0.0) < 0.5:
+                gaps.append(f"Control flow gap: Only {control_flow.get('control_structures_mapped', 0)} structures mapped")
+            
+            data_structure = semantic_analysis.get('data_structure_equivalence', {})
+            if data_structure.get('data_structure_score', 0.0) < 0.5:
+                gaps.append(f"Data structure gap: {data_structure.get('binary_structures_detected', 0)} detected but {data_structure.get('reconstructed_structures', 0)} reconstructed")
+            
+            api_usage = semantic_analysis.get('api_usage_equivalence', {})
+            if api_usage.get('api_equivalence_score', 0.0) < 0.5:
+                gaps.append(f"API usage gap: {api_usage.get('binary_api_functions', 0)} binary APIs vs {api_usage.get('reconstructed_api_usage', 0)} reconstructed calls")
+            
+            algorithmic = semantic_analysis.get('algorithmic_equivalence', {})
+            if algorithmic.get('algorithm_equivalence_score', 0.0) < 0.5:
+                gaps.append(f"Algorithm gap: {algorithmic.get('detected_algorithm_patterns', 0)} patterns detected vs {algorithmic.get('reconstructed_algorithms', 0)} reconstructed")
+            
+            behavioral = semantic_analysis.get('behavioral_consistency', {})
+            for risk in behavioral.get('behavioral_risks', []):
+                gaps.append(f"Behavioral gap: {risk}")
+                
+        except Exception as e:
+            gaps.append(f"Error identifying gaps: {str(e)}")
+        
+        return gaps
+    
+    def _identify_critical_differences(self, semantic_analysis: Dict[str, Any]) -> List[str]:
+        """Identify critical differences that would affect functional equivalence"""
+        
+        critical_differences = []
+        
+        try:
+            # Critical control flow differences
+            control_flow = semantic_analysis.get('control_flow_equivalence', {})
+            if control_flow.get('flow_complexity_match', 0.0) < 0.3:
+                critical_differences.append("CRITICAL: Control flow complexity significantly lower than original binary")
+            
+            # Critical API differences
+            api_usage = semantic_analysis.get('api_usage_equivalence', {})
+            if api_usage.get('critical_api_match', 0.0) < 0.4:
+                critical_differences.append("CRITICAL: Missing critical API functions required for functionality")
+            
+            # Critical data structure differences
+            data_structure = semantic_analysis.get('data_structure_equivalence', {})
+            if data_structure.get('data_structure_score', 0.0) < 0.3:
+                critical_differences.append("CRITICAL: Data structures do not match original binary requirements")
+            
+            # Critical behavioral inconsistencies
+            behavioral = semantic_analysis.get('behavioral_consistency', {})
+            if behavioral.get('overall_behavioral_consistency', 0.0) < 0.3:
+                critical_differences.append("CRITICAL: Overall behavior significantly different from original binary")
+            
+            # Low overall semantic score is critical
+            overall_score = semantic_analysis.get('overall_semantic_score', 0.0)
+            if overall_score < 0.4:
+                critical_differences.append("CRITICAL: Overall semantic equivalence below acceptable threshold")
+                
+        except Exception as e:
+            critical_differences.append(f"Error identifying critical differences: {str(e)}")
+        
+        return critical_differences
+    
+    def _generate_equivalence_assessment(self, semantic_analysis: Dict[str, Any]) -> str:
+        """Generate final equivalence assessment"""
+        
+        try:
+            overall_score = semantic_analysis.get('overall_semantic_score', 0.0)
+            confidence = semantic_analysis.get('equivalence_confidence', 0.0)
+            critical_differences = semantic_analysis.get('critical_differences', [])
+            
+            if len(critical_differences) > 0:
+                return f"UNLIKELY EQUIVALENT - {len(critical_differences)} critical differences identified"
+            elif overall_score >= 0.8 and confidence >= 0.7:
+                return "HIGHLY LIKELY EQUIVALENT - Strong semantic match with high confidence"
+            elif overall_score >= 0.6 and confidence >= 0.6:
+                return "LIKELY EQUIVALENT - Good semantic match with reasonable confidence"
+            elif overall_score >= 0.4 and confidence >= 0.5:
+                return "POSSIBLY EQUIVALENT - Moderate semantic match with limited confidence"
+            elif overall_score >= 0.2:
+                return "UNLIKELY EQUIVALENT - Poor semantic match"
+            else:
+                return "NOT EQUIVALENT - Very poor semantic match"
+                
+        except Exception:
+            return "ASSESSMENT FAILED - Unable to determine equivalence"

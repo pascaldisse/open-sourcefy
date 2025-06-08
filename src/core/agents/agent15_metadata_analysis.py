@@ -6,6 +6,7 @@ Extracts and analyzes binary metadata including PE headers, imports, exports, an
 import os
 import struct
 import json
+import logging
 from typing import Dict, Any, List, Optional, Tuple
 from ..agent_base import BaseAgent, AgentResult, AgentStatus
 
@@ -19,6 +20,7 @@ class Agent15_MetadataAnalysis(BaseAgent):
             name="MetadataAnalysis",
             dependencies=[1, 2]  # Depends on binary discovery and architecture analysis
         )
+        self.logger = logging.getLogger(f"Agent{self.agent_id}.{self.name}")
 
     def execute(self, context: Dict[str, Any]) -> AgentResult:
         """Execute binary metadata analysis"""
@@ -114,6 +116,10 @@ class Agent15_MetadataAnalysis(BaseAgent):
             # Universal analysis
             result['strings'] = self._extract_strings(binary_path)
             result['entropy_analysis'] = self._analyze_entropy(binary_path)
+            
+            # Phase 3 enhancement: API usage pattern analysis
+            result['api_usage_patterns'] = self._analyze_api_usage_patterns(result, context)
+            result['api_reconstruction_hints'] = self._generate_api_reconstruction_hints(result['api_usage_patterns'])
             
             # Assess overall quality
             result['analysis_quality'] = self._assess_metadata_quality(result)
@@ -685,8 +691,8 @@ class Agent15_MetadataAnalysis(BaseAgent):
                 
                 f.seek(current_pos)  # Restore position
                 return string_bytes.decode('ascii', errors='ignore')
-        except:
-            pass
+        except Exception as e:
+            self.logger.debug(f"Failed to read string at RVA {string_rva}: {e}")
         return ''
     
     def _parse_import_thunks(self, f, binary_path: str, thunk_rva: int) -> List[str]:
@@ -720,8 +726,8 @@ class Agent15_MetadataAnalysis(BaseAgent):
                         functions.append(f"Ordinal_{ordinal}")
                 
                 f.seek(current_pos)  # Restore position
-        except:
-            pass
+        except Exception as e:
+            self.logger.debug(f"Failed to parse import thunks at RVA {thunk_rva}: {e}")
         return functions
     
     def _read_import_name(self, f, binary_path: str, name_rva: int) -> str:
@@ -738,8 +744,8 @@ class Agent15_MetadataAnalysis(BaseAgent):
                 
                 f.seek(current_pos)
                 return name
-        except:
-            pass
+        except Exception as e:
+            self.logger.debug(f"Failed to read import name at RVA {name_rva}: {e}")
         return ''
     
     def _get_resource_type_name(self, type_id: int) -> str:
@@ -999,3 +1005,449 @@ class Agent15_MetadataAnalysis(BaseAgent):
     def _parse_macho_sections(self, binary_path: str) -> Dict[str, Any]:
         """Parse Mach-O sections"""
         raise NotImplementedError("Mach-O section parsing not implemented - requires Mach-O section header interpretation")
+    
+    def _analyze_api_usage_patterns(self, result: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze API usage patterns from import/export data"""
+        api_patterns = {
+            'file_operations': [],
+            'network_operations': [],
+            'gui_operations': [],
+            'system_operations': [],
+            'crypto_operations': [],
+            'registry_operations': [],
+            'process_operations': [],
+            'memory_operations': [],
+            'detected_frameworks': [],
+            'api_complexity_score': 0.0,
+            'security_implications': []
+        }
+        
+        try:
+            # Get import data for analysis
+            imports = result.get('imports', {})
+            imported_functions = imports.get('imported_functions', {})
+            
+            # Analyze each DLL and its functions
+            for dll_name, functions in imported_functions.items():
+                if isinstance(functions, list):
+                    dll_lower = dll_name.lower()
+                    
+                    # Categorize APIs by DLL and function patterns
+                    for function in functions:
+                        if isinstance(function, str):
+                            self._categorize_api_function(function, dll_lower, api_patterns)
+            
+            # Analyze exported functions for API patterns
+            exports = result.get('exports', {})
+            exported_functions = exports.get('exported_functions', [])
+            
+            for function in exported_functions:
+                if isinstance(function, str):
+                    self._analyze_exported_api(function, api_patterns)
+            
+            # Detect frameworks and libraries
+            api_patterns['detected_frameworks'] = self._detect_frameworks(imported_functions)
+            
+            # Calculate complexity score
+            api_patterns['api_complexity_score'] = self._calculate_api_complexity(api_patterns)
+            
+            # Assess security implications
+            api_patterns['security_implications'] = self._assess_security_implications(api_patterns)
+            
+            return api_patterns
+            
+        except Exception as e:
+            return {
+                'error': f"API usage pattern analysis failed: {str(e)}",
+                'file_operations': [],
+                'network_operations': [],
+                'gui_operations': [],
+                'system_operations': [],
+                'crypto_operations': [],
+                'detected_frameworks': [],
+                'api_complexity_score': 0.0
+            }
+    
+    def _categorize_api_function(self, function: str, dll_name: str, api_patterns: Dict[str, Any]):
+        """Categorize API function into usage patterns"""
+        func_lower = function.lower()
+        
+        # File operations
+        if any(file_api in func_lower for file_api in [
+            'createfile', 'readfile', 'writefile', 'deletefile', 'copyfile', 
+            'movefile', 'findfile', 'getfileattributes', 'setfileattributes',
+            'createdir', 'removedir', 'fopen', 'fread', 'fwrite', 'fclose'
+        ]):
+            api_patterns['file_operations'].append({
+                'function': function,
+                'dll': dll_name,
+                'category': 'file_io',
+                'risk_level': self._assess_file_api_risk(func_lower)
+            })
+        
+        # Network operations
+        elif any(net_api in func_lower for net_api in [
+            'socket', 'connect', 'send', 'recv', 'bind', 'listen', 'accept',
+            'gethostbyname', 'internetopen', 'internetconnect', 'httpopen',
+            'httpsendrequst', 'ftpopen', 'wsastartup', 'winsock'
+        ]):
+            api_patterns['network_operations'].append({
+                'function': function,
+                'dll': dll_name,
+                'category': 'networking',
+                'risk_level': self._assess_network_api_risk(func_lower)
+            })
+        
+        # GUI operations
+        elif any(gui_api in func_lower for gui_api in [
+            'createwindow', 'showwindow', 'messagebox', 'dialogbox', 'drawtext',
+            'bitblt', 'createbrush', 'createpen', 'setpixel', 'getdc',
+            'releassedc', 'beginpaint', 'endpaint', 'invalidaterect'
+        ]):
+            api_patterns['gui_operations'].append({
+                'function': function,
+                'dll': dll_name,
+                'category': 'user_interface',
+                'risk_level': 'low'
+            })
+        
+        # System operations
+        elif any(sys_api in func_lower for sys_api in [
+            'getversion', 'getsysteminfo', 'getcomputername', 'getusernaame',
+            'exitprocess', 'terminateprocess', 'createprocess', 'openprocess',
+            'getcurrentprocess', 'getmodulehandle', 'loadlibrary', 'getprocaddress'
+        ]):
+            api_patterns['system_operations'].append({
+                'function': function,
+                'dll': dll_name,
+                'category': 'system_info',
+                'risk_level': self._assess_system_api_risk(func_lower)
+            })
+        
+        # Cryptographic operations
+        elif any(crypto_api in func_lower for crypto_api in [
+            'cryptacquirecontext', 'cryptgenkey', 'cryptencrypt', 'cryptdecrypt',
+            'crypthashdata', 'cryptsignhash', 'cryptverifysignature',
+            'bcrypt', 'ncrypt', 'crypt32'
+        ]):
+            api_patterns['crypto_operations'].append({
+                'function': function,
+                'dll': dll_name,
+                'category': 'cryptography',
+                'risk_level': self._assess_crypto_api_risk(func_lower)
+            })
+        
+        # Registry operations
+        elif any(reg_api in func_lower for reg_api in [
+            'regopen', 'regclose', 'regquery', 'regset', 'regdelete',
+            'regcreate', 'regenum', 'regconnect'
+        ]):
+            api_patterns['registry_operations'].append({
+                'function': function,
+                'dll': dll_name,
+                'category': 'registry',
+                'risk_level': self._assess_registry_api_risk(func_lower)
+            })
+        
+        # Process operations
+        elif any(proc_api in func_lower for proc_api in [
+            'createthread', 'exitthread', 'terminatethread', 'suspendthread',
+            'resumethread', 'waitforsingleobject', 'createmutex', 'createevent',
+            'createssemaphore', 'virtuaalalloc', 'virtualfree', 'virtualprotect'
+        ]):
+            api_patterns['process_operations'].append({
+                'function': function,
+                'dll': dll_name,
+                'category': 'process_thread',
+                'risk_level': self._assess_process_api_risk(func_lower)
+            })
+        
+        # Memory operations
+        elif any(mem_api in func_lower for mem_api in [
+            'malloc', 'free', 'calloc', 'realloc', 'heapalloc', 'heapfree',
+            'globalalloc', 'globalfree', 'localalloc', 'localfree'
+        ]):
+            api_patterns['memory_operations'].append({
+                'function': function,
+                'dll': dll_name,
+                'category': 'memory_management',
+                'risk_level': 'low'
+            })
+    
+    def _assess_file_api_risk(self, function: str) -> str:
+        """Assess risk level of file API"""
+        if any(danger in function for danger in ['delete', 'remove', 'move', 'copy']):
+            return 'medium'
+        elif any(write in function for write in ['write', 'create', 'set']):
+            return 'low'
+        else:
+            return 'low'
+    
+    def _assess_network_api_risk(self, function: str) -> str:
+        """Assess risk level of network API"""
+        if any(danger in function for danger in ['connect', 'send', 'socket']):
+            return 'high'
+        else:
+            return 'medium'
+    
+    def _assess_system_api_risk(self, function: str) -> str:
+        """Assess risk level of system API"""
+        if any(danger in function for danger in ['terminate', 'exit', 'loadlibrary']):
+            return 'high'
+        elif any(info in function for info in ['get', 'query']):
+            return 'low'
+        else:
+            return 'medium'
+    
+    def _assess_crypto_api_risk(self, function: str) -> str:
+        """Assess risk level of crypto API"""
+        if any(secure in function for secure in ['encrypt', 'decrypt', 'hash', 'sign']):
+            return 'medium'
+        else:
+            return 'low'
+    
+    def _assess_registry_api_risk(self, function: str) -> str:
+        """Assess risk level of registry API"""
+        if any(danger in function for danger in ['set', 'delete', 'create']):
+            return 'high'
+        else:
+            return 'medium'
+    
+    def _assess_process_api_risk(self, function: str) -> str:
+        """Assess risk level of process API"""
+        if any(danger in function for danger in ['terminate', 'suspend', 'virtualprotect']):
+            return 'high'
+        elif any(alloc in function for alloc in ['alloc', 'free']):
+            return 'medium'
+        else:
+            return 'low'
+    
+    def _analyze_exported_api(self, function: str, api_patterns: Dict[str, Any]):
+        """Analyze exported function for API patterns"""
+        func_lower = function.lower()
+        
+        # Check if this might be a plugin API or callback
+        if any(plugin_hint in func_lower for plugin_hint in [
+            'plugin', 'callback', 'hook', 'handler', 'initialize', 'cleanup',
+            'getversion', 'getinfo', 'execute', 'process'
+        ]):
+            # Add to system operations as potential plugin interface
+            api_patterns['system_operations'].append({
+                'function': function,
+                'dll': 'exported',
+                'category': 'plugin_interface',
+                'risk_level': 'low'
+            })
+    
+    def _detect_frameworks(self, imported_functions: Dict[str, List[str]]) -> List[Dict[str, Any]]:
+        """Detect frameworks and libraries from import patterns"""
+        frameworks = []
+        
+        for dll_name, functions in imported_functions.items():
+            if isinstance(functions, list):
+                dll_lower = dll_name.lower()
+                
+                # .NET Framework
+                if any(net_dll in dll_lower for net_dll in ['mscoree', 'mscorlib', 'system']):
+                    frameworks.append({
+                        'name': '.NET Framework',
+                        'dll': dll_name,
+                        'confidence': 0.9,
+                        'evidence': f'Imports from {dll_name}'
+                    })
+                
+                # Windows API
+                elif any(win_dll in dll_lower for win_dll in ['kernel32', 'user32', 'advapi32', 'gdi32']):
+                    frameworks.append({
+                        'name': 'Windows API',
+                        'dll': dll_name,
+                        'confidence': 0.95,
+                        'evidence': f'Core Windows DLL: {dll_name}'
+                    })
+                
+                # Visual C++ Runtime
+                elif any(vcrt in dll_lower for vcrt in ['msvcrt', 'msvcr', 'vcruntime']):
+                    frameworks.append({
+                        'name': 'Visual C++ Runtime',
+                        'dll': dll_name,
+                        'confidence': 0.9,
+                        'evidence': f'VC++ runtime: {dll_name}'
+                    })
+                
+                # OpenSSL/Crypto
+                elif any(crypto in dll_lower for crypto in ['openssl', 'libeay', 'ssleay', 'crypto']):
+                    frameworks.append({
+                        'name': 'OpenSSL/Crypto Library',
+                        'dll': dll_name,
+                        'confidence': 0.8,
+                        'evidence': f'Crypto library: {dll_name}'
+                    })
+                
+                # Qt Framework
+                elif any(qt in dll_lower for qt in ['qt', 'qtcore', 'qtgui', 'qtwidgets']):
+                    frameworks.append({
+                        'name': 'Qt Framework',
+                        'dll': dll_name,
+                        'confidence': 0.9,
+                        'evidence': f'Qt library: {dll_name}'
+                    })
+                
+                # MFC (Microsoft Foundation Classes)
+                elif any(mfc in dll_lower for mfc in ['mfc', 'atl']):
+                    frameworks.append({
+                        'name': 'Microsoft Foundation Classes',
+                        'dll': dll_name,
+                        'confidence': 0.85,
+                        'evidence': f'MFC library: {dll_name}'
+                    })
+        
+        return frameworks
+    
+    def _calculate_api_complexity(self, api_patterns: Dict[str, Any]) -> float:
+        """Calculate API complexity score"""
+        complexity_score = 0.0
+        
+        # Weight different API categories by complexity
+        category_weights = {
+            'file_operations': 0.1,
+            'network_operations': 0.3,
+            'gui_operations': 0.1,
+            'system_operations': 0.2,
+            'crypto_operations': 0.4,
+            'registry_operations': 0.3,
+            'process_operations': 0.25,
+            'memory_operations': 0.1
+        }
+        
+        for category, weight in category_weights.items():
+            operations = api_patterns.get(category, [])
+            if operations:
+                # More operations = higher complexity
+                category_complexity = len(operations) * weight
+                complexity_score += min(category_complexity, 2.0)  # Cap per category
+        
+        # Bonus for framework diversity
+        framework_count = len(api_patterns.get('detected_frameworks', []))
+        complexity_score += framework_count * 0.1
+        
+        return min(complexity_score, 10.0)  # Cap at 10.0
+    
+    def _assess_security_implications(self, api_patterns: Dict[str, Any]) -> List[str]:
+        """Assess security implications of API usage"""
+        implications = []
+        
+        # Check for high-risk operations
+        high_risk_ops = []
+        for category in ['network_operations', 'system_operations', 'registry_operations', 'process_operations']:
+            ops = api_patterns.get(category, [])
+            high_risk_ops.extend([op for op in ops if op.get('risk_level') == 'high'])
+        
+        if high_risk_ops:
+            implications.append(f"Uses {len(high_risk_ops)} high-risk API functions")
+        
+        # Check for crypto usage
+        crypto_ops = api_patterns.get('crypto_operations', [])
+        if crypto_ops:
+            implications.append(f"Implements cryptographic operations ({len(crypto_ops)} functions)")
+        
+        # Check for network capabilities
+        network_ops = api_patterns.get('network_operations', [])
+        if network_ops:
+            implications.append(f"Has network communication capabilities ({len(network_ops)} functions)")
+        
+        # Check for file system access
+        file_ops = api_patterns.get('file_operations', [])
+        if file_ops:
+            write_ops = [op for op in file_ops if any(write in op['function'].lower() for write in ['write', 'create', 'delete'])]
+            if write_ops:
+                implications.append(f"Can modify file system ({len(write_ops)} write/modify operations)")
+        
+        # Check for registry access
+        registry_ops = api_patterns.get('registry_operations', [])
+        if registry_ops:
+            implications.append(f"Accesses Windows registry ({len(registry_ops)} operations)")
+        
+        # Check for process manipulation
+        process_ops = api_patterns.get('process_operations', [])
+        if process_ops:
+            dangerous_ops = [op for op in process_ops if op.get('risk_level') == 'high']
+            if dangerous_ops:
+                implications.append(f"Can manipulate processes/threads ({len(dangerous_ops)} high-risk operations)")
+        
+        return implications
+    
+    def _generate_api_reconstruction_hints(self, api_patterns: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate hints for reconstructing API usage in source code"""
+        hints = {
+            'header_files': [],
+            'library_dependencies': [],
+            'implementation_suggestions': [],
+            'security_considerations': [],
+            'code_patterns': []
+        }
+        
+        try:
+            # Suggest header files based on API usage
+            if api_patterns.get('file_operations'):
+                hints['header_files'].extend(['stdio.h', 'windows.h', 'io.h'])
+                hints['implementation_suggestions'].append('Implement file I/O with proper error handling')
+            
+            if api_patterns.get('network_operations'):
+                hints['header_files'].extend(['winsock2.h', 'ws2tcpip.h'])
+                hints['library_dependencies'].append('ws2_32.lib')
+                hints['implementation_suggestions'].append('Initialize Winsock before network operations')
+                hints['security_considerations'].append('Validate all network input')
+            
+            if api_patterns.get('gui_operations'):
+                hints['header_files'].extend(['windows.h', 'commctrl.h'])
+                hints['library_dependencies'].extend(['user32.lib', 'gdi32.lib'])
+                hints['implementation_suggestions'].append('Implement window procedure for message handling')
+            
+            if api_patterns.get('crypto_operations'):
+                hints['header_files'].extend(['wincrypt.h', 'bcrypt.h'])
+                hints['library_dependencies'].extend(['crypt32.lib', 'bcrypt.lib'])
+                hints['security_considerations'].append('Use secure random number generation')
+                hints['security_considerations'].append('Properly handle cryptographic keys')
+            
+            if api_patterns.get('registry_operations'):
+                hints['header_files'].append('winreg.h')
+                hints['library_dependencies'].append('advapi32.lib')
+                hints['security_considerations'].append('Validate registry paths and values')
+            
+            # Generate code patterns based on detected frameworks
+            frameworks = api_patterns.get('detected_frameworks', [])
+            for framework in frameworks:
+                framework_name = framework.get('name', '')
+                
+                if '.NET Framework' in framework_name:
+                    hints['code_patterns'].append('Use managed C++/CLI or C# implementation')
+                elif 'Qt Framework' in framework_name:
+                    hints['code_patterns'].append('Implement Qt-based GUI application')
+                elif 'MFC' in framework_name:
+                    hints['code_patterns'].append('Use MFC application framework')
+            
+            # Security recommendations based on risk assessment
+            security_implications = api_patterns.get('security_implications', [])
+            for implication in security_implications:
+                if 'high-risk' in implication:
+                    hints['security_considerations'].append('Review high-risk API usage for security vulnerabilities')
+                elif 'network' in implication:
+                    hints['security_considerations'].append('Implement input validation and secure communication')
+                elif 'file system' in implication:
+                    hints['security_considerations'].append('Validate file paths and implement access controls')
+            
+            # Remove duplicates
+            for key in hints:
+                if isinstance(hints[key], list):
+                    hints[key] = list(set(hints[key]))
+            
+            return hints
+            
+        except Exception as e:
+            return {
+                'error': f"API reconstruction hint generation failed: {str(e)}",
+                'header_files': [],
+                'library_dependencies': [],
+                'implementation_suggestions': [],
+                'security_considerations': []
+            }

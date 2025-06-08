@@ -8,6 +8,7 @@ import os
 import json
 import subprocess
 import tempfile
+import logging
 from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 from ..agent_base import BaseAgent, AgentResult, AgentStatus
@@ -22,6 +23,7 @@ class Agent18_AdvancedBuildSystems(BaseAgent):
             name="AdvancedBuildSystems",
             dependencies=[11, 12]  # Depends on GlobalReconstructor and CompilationOrchestrator
         )
+        self.logger = logging.getLogger(f"Agent{self.agent_id}.{self.name}")
 
     def execute(self, context: Dict[str, Any]) -> AgentResult:
         """Execute advanced build system generation"""
@@ -569,7 +571,7 @@ EndGlobal
                 
                 # If successful, we can continue to test others or stop here
                 if result['success']:
-                    print(f"Successfully compiled with {compiler_name}")
+                    self.logger.info(f"Successfully compiled with {compiler_name}")
                     
             except Exception as e:
                 results[compiler_name] = {

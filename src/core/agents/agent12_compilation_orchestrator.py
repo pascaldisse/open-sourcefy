@@ -56,6 +56,35 @@ class Agent12_CompilationOrchestrator(BaseAgent):
             # NEW: Add validation results to compilation output
             compilation_result['early_validation'] = early_validation
             
+            # CRITICAL: Fail the agent if compilation was not successful
+            if not compilation_result.get('successful_compilation', False):
+                error_messages = []
+                
+                # Collect all compilation errors
+                if 'compilation_errors' in compilation_result:
+                    error_messages.extend(compilation_result['compilation_errors'])
+                
+                # Add specific failure reason from final status
+                final_status = compilation_result.get('final_status', 'unknown')
+                if final_status == 'failed':
+                    error_messages.append("Compilation failed - source code could not be compiled")
+                elif final_status == 'dummy_code_detected':
+                    error_messages.append("Compilation rejected - generated code appears to be placeholder/dummy code")
+                elif final_status == 'source_write_failed':
+                    error_messages.append("Failed to write source files to disk")
+                elif final_status == 'build_file_creation_failed':
+                    error_messages.append("Failed to create build configuration files")
+                
+                # Compile error summary
+                error_summary = '; '.join(error_messages) if error_messages else f"Compilation unsuccessful - status: {final_status}"
+                
+                return AgentResult(
+                    agent_id=self.agent_id,
+                    status=AgentStatus.FAILED,
+                    data=compilation_result,
+                    error_message=f"COMPILATION FAILED: {error_summary}"
+                )
+            
             return AgentResult(
                 agent_id=self.agent_id,
                 status=AgentStatus.COMPLETED,

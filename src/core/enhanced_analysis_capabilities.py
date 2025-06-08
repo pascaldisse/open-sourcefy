@@ -27,7 +27,7 @@ except ImportError:
         def std(data):
             if not data:
                 return 0.0
-            mean_val = np.mean(data)
+            mean_val = sum(data) / len(data)
             variance = sum((x - mean_val) ** 2 for x in data) / len(data)
             return variance ** 0.5
         
@@ -43,7 +43,7 @@ except ImportError:
         def var(data):
             if not data or len(data) <= 1:
                 return 0.0
-            mean_val = np.mean(data)
+            mean_val = sum(data) / len(data)
             return sum((x - mean_val) ** 2 for x in data) / len(data)
         
         @staticmethod

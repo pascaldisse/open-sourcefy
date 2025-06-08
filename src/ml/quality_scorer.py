@@ -3,7 +3,12 @@ ML-Based Code Quality Scoring Engine
 Advanced machine learning system for comprehensive code quality assessment.
 """
 
-import numpy as np
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
+    
 import re
 import logging
 from typing import Dict, List, Any, Tuple, Optional, Set

@@ -780,11 +780,11 @@ class AIEnhancementCoordinator:
         
         # Import new ML models
         try:
-            from ..ml.neural_mapper import NeuralCodeMapper
-            from ..ml.function_classifier import FunctionClassifier
-            from ..ml.variable_namer import SmartVariableNamer
-            from ..ml.quality_scorer import QualityScorer
-            from ..ml.pattern_engine import PatternEngine
+            from src.ml.neural_mapper import NeuralCodeMapper
+            from src.ml.function_classifier import FunctionClassifier
+            from src.ml.variable_namer import SmartVariableNamer
+            from src.ml.quality_scorer import QualityScorer
+            from src.ml.pattern_engine import PatternEngine
             
             self.neural_mapper = NeuralCodeMapper()
             self.function_classifier = FunctionClassifier()

@@ -12,7 +12,11 @@ from typing import Dict, List, Any, Tuple, Optional, Set
 from dataclasses import dataclass, asdict
 from enum import Enum
 from pathlib import Path
-import numpy as np
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
 from collections import defaultdict, Counter
 import time
 

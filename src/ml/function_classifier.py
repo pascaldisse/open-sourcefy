@@ -3,7 +3,12 @@ Function Purpose Classification Model
 Advanced ML model for identifying function purposes and behaviors.
 """
 
-import numpy as np
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
+    
 import re
 import logging
 from typing import Dict, List, Any, Tuple, Optional, Set

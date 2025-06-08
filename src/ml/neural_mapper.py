@@ -3,10 +3,17 @@ Neural Network for Assembly-to-C Code Mapping
 Advanced machine learning model for intelligent code reconstruction.
 """
 
-import numpy as np
 import json
 import logging
 from typing import Dict, List, Any, Tuple, Optional
+
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+    NDArray = np.ndarray
+except ImportError:
+    NUMPY_AVAILABLE = False
+    NDArray = Any  # Fallback type when numpy is not available
 from dataclasses import dataclass
 from enum import Enum
 import re
@@ -69,7 +76,7 @@ class FeatureExtractor:
         ]
         return {reg: i for i, reg in enumerate(registers)}
     
-    def extract_features(self, assembly_block: str) -> np.ndarray:
+    def extract_features(self, assembly_block: str) -> NDArray:
         """Extract feature vector from assembly code block"""
         cache_key = hashlib.md5(assembly_block.encode()).hexdigest()
         if cache_key in self.pattern_cache:
@@ -96,16 +103,24 @@ class FeatureExtractor:
         # Memory access features
         features.extend(self._extract_memory_features(lines))
         
-        feature_vector = np.array(features, dtype=np.float32)
+        if NUMPY_AVAILABLE:
+            feature_vector = np.array(features, dtype=np.float32)
+        else:
+            feature_vector = features  # Return list when numpy not available
         self.pattern_cache[cache_key] = feature_vector
         
         return feature_vector
     
     def _extract_basic_stats(self, lines: List[str]) -> List[float]:
         """Extract basic statistical features"""
+        if NUMPY_AVAILABLE:
+            avg_length = np.mean([len(line) for line in lines]) if lines else 0
+        else:
+            avg_length = sum(len(line) for line in lines) / len(lines) if lines else 0
+            
         return [
             len(lines),  # Number of instructions
-            np.mean([len(line) for line in lines]) if lines else 0,  # Average line length
+            avg_length,  # Average line length
             len(set(lines)),  # Unique instructions
             len([line for line in lines if line.startswith('call')]),  # Function calls
             len([line for line in lines if any(j in line for j in ['je', 'jne', 'jmp'])]),  # Jumps
@@ -242,8 +257,11 @@ class NeuralCodeMapper:
         self.training_data = []
         self.c_templates = self._initialize_c_templates()
     
-    def _initialize_weights(self) -> Dict[str, np.ndarray]:
+    def _initialize_weights(self) -> Dict[str, NDArray]:
         """Initialize neural network weights"""
+        if not NUMPY_AVAILABLE:
+            return {}  # Return empty dict when numpy is not available
+            
         input_size = self._get_feature_size()
         hidden_size = 128
         output_size = len(CodeType)
@@ -318,6 +336,10 @@ class NeuralCodeMapper:
     def map_assembly_to_c(self, assembly_block: str, context: Dict[str, Any] = None) -> MappingResult:
         """Map assembly code block to C equivalent"""
         try:
+            if not NUMPY_AVAILABLE:
+                # Fallback to rule-based mapping when numpy is not available
+                return self._rule_based_mapping(assembly_block, context or {})
+                
             # Extract features
             features = self.feature_extractor.extract_features(assembly_block)
             
@@ -356,8 +378,42 @@ class NeuralCodeMapper:
                 alternatives=[]
             )
     
-    def _forward_pass(self, features: np.ndarray) -> np.ndarray:
+    def _rule_based_mapping(self, assembly_block: str, context: Dict[str, Any]) -> MappingResult:
+        """Simple rule-based mapping when numpy is not available"""
+        lines = assembly_block.strip().split('\n')
+        
+        # Simple pattern matching
+        if any('call' in line for line in lines):
+            code_type = CodeType.FUNCTION_CALL
+            c_code = "// Function call detected\nfunction_call();"
+        elif any(any(op in line for op in ['add', 'sub', 'mul', 'div']) for line in lines):
+            code_type = CodeType.ARITHMETIC
+            c_code = "// Arithmetic operation detected\nresult = a + b;"
+        elif any(any(op in line for op in ['mov', 'ld', 'st']) for line in lines):
+            code_type = CodeType.MEMORY_ACCESS
+            c_code = "// Memory access detected\nvalue = *ptr;"
+        elif any(any(op in line for op in ['je', 'jne', 'jmp', 'cmp']) for line in lines):
+            code_type = CodeType.CONTROL_FLOW
+            c_code = "// Control flow detected\nif (condition) { /* code */ }"
+        else:
+            code_type = CodeType.UNKNOWN
+            c_code = "// Unknown assembly pattern"
+            
+        return MappingResult(
+            code_type=code_type,
+            c_equivalent=c_code,
+            confidence=0.5,  # Medium confidence for rule-based
+            reasoning="Rule-based mapping (numpy not available)",
+            features={},
+            alternatives=[]
+        )
+    
+    def _forward_pass(self, features: NDArray) -> NDArray:
         """Forward pass through neural network"""
+        if not NUMPY_AVAILABLE:
+            # Return dummy probabilities if numpy not available
+            return [0.8, 0.1, 0.05, 0.025, 0.015, 0.01, 0.005, 0.0]
+            
         # Ensure features is the right size
         expected_size = self._get_feature_size()
         if len(features) < expected_size:
@@ -381,16 +437,24 @@ class NeuralCodeMapper:
         
         return a3
     
-    def _relu(self, x: np.ndarray) -> np.ndarray:
+    def _relu(self, x: NDArray) -> NDArray:
         """ReLU activation function"""
+        if not NUMPY_AVAILABLE:
+            return [max(0, val) for val in x]
         return np.maximum(0, x)
     
-    def _softmax(self, x: np.ndarray) -> np.ndarray:
+    def _softmax(self, x: NDArray) -> NDArray:
         """Softmax activation function"""
+        if not NUMPY_AVAILABLE:
+            import math
+            max_val = max(x)
+            exp_x = [math.exp(val - max_val) for val in x]
+            sum_exp = sum(exp_x)
+            return [val / sum_exp for val in exp_x]
         exp_x = np.exp(x - np.max(x))
         return exp_x / np.sum(exp_x)
     
-    def _generate_c_code(self, code_type: CodeType, features: np.ndarray, assembly: str, context: Dict[str, Any]) -> Tuple[str, str]:
+    def _generate_c_code(self, code_type: CodeType, features: NDArray, assembly: str, context: Dict[str, Any]) -> Tuple[str, str]:
         """Generate C code based on predicted type and features"""
         templates = self.c_templates.get(code_type, ["// Unknown code pattern"])
         
@@ -551,7 +615,7 @@ class NeuralCodeMapper:
                 return ', '.join(params)
         return 'void'
     
-    def _generate_reasoning(self, code_type: CodeType, analysis: Dict[str, Any], features: np.ndarray) -> str:
+    def _generate_reasoning(self, code_type: CodeType, analysis: Dict[str, Any], features: NDArray) -> str:
         """Generate reasoning for the mapping decision"""
         reasons = [f"Classified as {code_type.value}"]
         
@@ -568,10 +632,17 @@ class NeuralCodeMapper:
         
         return '; '.join(reasons)
     
-    def _generate_alternatives(self, code_type_probs: np.ndarray, features: np.ndarray, assembly: str, context: Dict[str, Any]) -> List[Tuple[str, float]]:
+    def _generate_alternatives(self, code_type_probs: NDArray, features: NDArray, assembly: str, context: Dict[str, Any]) -> List[Tuple[str, float]]:
         """Generate alternative C code suggestions"""
         alternatives = []
         code_types = list(CodeType)
+        
+        if not NUMPY_AVAILABLE:
+            # Simple fallback alternatives
+            return [
+                ("// Alternative: arithmetic operation\nresult = a * b;", 0.3),
+                ("// Alternative: function call\ncall_function();", 0.2)
+            ]
         
         # Get top 3 alternative types
         top_indices = np.argsort(code_type_probs)[-3:][::-1]
@@ -586,10 +657,14 @@ class NeuralCodeMapper:
         
         return alternatives
     
-    def _features_to_dict(self, features: np.ndarray) -> Dict[str, float]:
+    def _features_to_dict(self, features: NDArray) -> Dict[str, float]:
         """Convert feature vector to dictionary for inspection"""
         feature_names = self._get_feature_names()
-        return dict(zip(feature_names, features.tolist()[:len(feature_names)]))
+        if NUMPY_AVAILABLE and hasattr(features, 'tolist'):
+            features_list = features.tolist()[:len(feature_names)]
+        else:
+            features_list = list(features)[:len(feature_names)]
+        return dict(zip(feature_names, features_list))
     
     def _get_feature_names(self) -> List[str]:
         """Get feature names for interpretation"""

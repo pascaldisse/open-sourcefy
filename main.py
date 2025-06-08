@@ -974,17 +974,43 @@ class OpenSourcefyPipeline:
             
             validation['assessment'] = assessment
             
-            # Determine if source quality is sufficient
-            quality_criteria = [
-                assessment['total_code_lines'] >= 10,  # At least 10 lines of code
-                assessment['meaningful_functions'] >= 1,  # At least 1 meaningful function
-                len(assessment['issues']) <= 1,  # Minimal issues
-                assessment['source_files_count'] >= 1  # At least 1 source file
-            ]
+            # Enhanced validation thresholds targeting 75% code quality, 75% real implementation, 70% completeness
+            # Calculate quality scores for stricter validation
             
-            if sum(quality_criteria) < 3:  # Require at least 3 out of 4 criteria
+            # Code Quality Score (targeting 75%)
+            code_quality_score = self._calculate_code_quality_score(assessment, source_files)
+            
+            # Real Implementation Score (targeting 75%)
+            implementation_score = self._calculate_implementation_score(assessment, source_files)
+            
+            # Completeness Score (targeting 70%)
+            completeness_score = self._calculate_completeness_score(assessment, data)
+            
+            # Store scores in assessment for reporting
+            assessment['quality_scores'] = {
+                'code_quality': code_quality_score,
+                'implementation': implementation_score,
+                'completeness': completeness_score,
+                'overall': (code_quality_score + implementation_score + completeness_score) / 3
+            }
+            
+            # Apply strict validation thresholds
+            quality_passed = code_quality_score >= 0.75
+            implementation_passed = implementation_score >= 0.75
+            completeness_passed = completeness_score >= 0.70
+            
+            # Require all three thresholds to pass
+            if not (quality_passed and implementation_passed and completeness_passed):
                 validation['passed'] = False
-                validation['failure_reason'] = f'Source quality insufficient (met {sum(quality_criteria)}/4 criteria)'
+                failed_criteria = []
+                if not quality_passed:
+                    failed_criteria.append(f'Code Quality: {code_quality_score:.2f} < 0.75')
+                if not implementation_passed:
+                    failed_criteria.append(f'Implementation: {implementation_score:.2f} < 0.75')
+                if not completeness_passed:
+                    failed_criteria.append(f'Completeness: {completeness_score:.2f} < 0.70')
+                
+                validation['failure_reason'] = f'Strict validation failed: {"; ".join(failed_criteria)}'
             
         except Exception as e:
             validation['passed'] = False
@@ -1073,6 +1099,111 @@ class OpenSourcefyPipeline:
             validation['failure_reason'] = f'Final validation error: {str(e)}'
         
         return validation
+    
+    def _calculate_code_quality_score(self, assessment: Dict[str, Any], source_files: Dict[str, str]) -> float:
+        """Calculate code quality score (targeting 75%)"""
+        score = 0.0
+        
+        # Basic code structure (40%)
+        if assessment.get('has_main_function', False):
+            score += 0.15
+        if assessment.get('meaningful_functions', 0) >= 3:
+            score += 0.15
+        if assessment.get('total_code_lines', 0) >= 50:
+            score += 0.10
+        
+        # Code complexity and realism (35%)
+        total_complexity = 0
+        for filename, content in source_files.items():
+            if filename.endswith('.c'):
+                # Check for realistic C constructs
+                constructs = ['if', 'for', 'while', 'switch', 'return', 'printf', 'malloc', 'free', 'struct']
+                found_constructs = sum(1 for construct in constructs if construct in content)
+                total_complexity += found_constructs
+        
+        if total_complexity >= 10:
+            score += 0.20
+        elif total_complexity >= 5:
+            score += 0.15
+        elif total_complexity >= 2:
+            score += 0.10
+        
+        # Quality indicators (25%)
+        quality_indicators = len(assessment.get('quality_indicators', []))
+        if quality_indicators >= 5:
+            score += 0.25
+        elif quality_indicators >= 3:
+            score += 0.15
+        elif quality_indicators >= 1:
+            score += 0.10
+        
+        return min(1.0, score)
+    
+    def _calculate_implementation_score(self, assessment: Dict[str, Any], source_files: Dict[str, str]) -> float:
+        """Calculate real implementation score (targeting 75%)"""
+        score = 0.0
+        
+        # Function implementation depth (40%)
+        if assessment.get('meaningful_functions', 0) >= 5:
+            score += 0.25
+        elif assessment.get('meaningful_functions', 0) >= 3:
+            score += 0.15
+        elif assessment.get('meaningful_functions', 0) >= 1:
+            score += 0.10
+        
+        # Code volume indicating real implementation (30%)
+        total_lines = assessment.get('total_code_lines', 0)
+        if total_lines >= 200:
+            score += 0.30
+        elif total_lines >= 100:
+            score += 0.20
+        elif total_lines >= 50:
+            score += 0.10
+        
+        # Absence of placeholder indicators (30%)
+        issues = assessment.get('issues', [])
+        placeholder_issues = sum(1 for issue in issues if 'placeholder' in issue.lower() or 'hello world' in issue.lower())
+        
+        if placeholder_issues == 0:
+            score += 0.30
+        elif placeholder_issues <= 1:
+            score += 0.15
+        
+        return min(1.0, score)
+    
+    def _calculate_completeness_score(self, assessment: Dict[str, Any], data: Dict[str, Any]) -> float:
+        """Calculate completeness score (targeting 70%)"""
+        score = 0.0
+        
+        # File completeness (25%)
+        if assessment.get('source_files_count', 0) >= 3:
+            score += 0.25
+        elif assessment.get('source_files_count', 0) >= 2:
+            score += 0.15
+        elif assessment.get('source_files_count', 0) >= 1:
+            score += 0.10
+        
+        # Build system completeness (25%)
+        build_config = data.get('build_configuration', {})
+        if build_config.get('makefile') or build_config.get('build_bat'):
+            score += 0.15
+        if build_config.get('compiler_flags'):
+            score += 0.10
+        
+        # Project structure completeness (25%)
+        project_structure = data.get('project_structure', {})
+        if project_structure.get('directories'):
+            score += 0.15
+        if project_structure.get('build_system'):
+            score += 0.10
+        
+        # Documentation and metadata (25%)
+        if data.get('integration_report'):
+            score += 0.15
+        if data.get('ai_documentation'):
+            score += 0.10
+        
+        return min(1.0, score)
     
     def _calculate_pipeline_quality_score(self, checkpoints: Dict[str, Any], 
                                         agent_results: Dict[int, Dict[str, Any]]) -> float:

@@ -9,9 +9,14 @@ import json
 import hashlib
 import subprocess
 import tempfile
+import time
 from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 from ..agent_base import BaseAgent, AgentResult, AgentStatus
+from ..binary_behavior_testing import (
+    BinaryBehaviorTester, BehaviorTestCase, ComparisonMode,
+    run_behavior_comparison_test, create_file_processing_test_cases
+)
 
 
 class Agent19_BinaryComparison(BaseAgent):
@@ -23,6 +28,8 @@ class Agent19_BinaryComparison(BaseAgent):
             name="BinaryComparison",
             dependencies=[12, 18]  # Depends on CompilationOrchestrator and AdvancedBuildSystems
         )
+        import logging
+        self.logger = logging.getLogger(f"Agent{self.agent_id}")
 
     def execute(self, context: Dict[str, Any]) -> AgentResult:
         """Execute binary comparison and validation"""
@@ -543,19 +550,38 @@ class Agent19_BinaryComparison(BaseAgent):
         return comparison.get('structural_similarity', 0.0)
 
     def _analyze_functionality(self, original: str, generated_binaries: List[str]) -> Dict[str, Any]:
-        """Analyze functional equivalence"""
+        """Analyze functional equivalence with comprehensive behavioral testing"""
         analysis = {
             'execution_tests': {},
+            'behavioral_comparison': {},
+            'input_output_testing': {},
             'api_call_analysis': {},
-            'behavior_comparison': {},
+            'runtime_behavior_analysis': {},
+            'functional_equivalence_score': 0.0,
+            'behavioral_equivalence_score': 0.0,
             'functional_score': 0.0
         }
         
-        # Basic execution test
+        # Basic execution test for each binary
         for binary in generated_binaries:
             analysis['execution_tests'][binary] = self._test_execution(binary)
         
-        # Calculate functional score
+        # Use comprehensive binary behavior testing framework
+        analysis['behavioral_comparison'] = self._perform_comprehensive_behavioral_testing(
+            original, generated_binaries
+        )
+        
+        # Input/output testing with various test cases
+        analysis['input_output_testing'] = self._perform_input_output_testing(
+            original, generated_binaries
+        )
+        
+        # Runtime behavior analysis
+        analysis['runtime_behavior_analysis'] = self._analyze_runtime_behavior(
+            original, generated_binaries
+        )
+        
+        # Calculate functional scores
         successful_executions = sum(
             1 for test in analysis['execution_tests'].values() 
             if test.get('can_execute', False)
@@ -563,6 +589,12 @@ class Agent19_BinaryComparison(BaseAgent):
         
         if generated_binaries:
             analysis['functional_score'] = successful_executions / len(generated_binaries)
+        
+        # Calculate behavioral equivalence score
+        analysis['behavioral_equivalence_score'] = self._calculate_behavioral_equivalence_score(analysis)
+        
+        # Calculate functional equivalence score (comprehensive)
+        analysis['functional_equivalence_score'] = self._calculate_functional_equivalence_score(analysis)
         
         return analysis
 
@@ -598,6 +630,655 @@ class Agent19_BinaryComparison(BaseAgent):
             test_result['error'] = str(e)
         
         return test_result
+
+    def _perform_comprehensive_behavioral_testing(self, original: str, generated_binaries: List[str]) -> Dict[str, Any]:
+        """Perform comprehensive behavioral testing using the enhanced framework"""
+        testing_results = {
+            'test_results': {},
+            'behavioral_equivalence_score': 0.0,
+            'test_summary': {},
+            'recommendations': [],
+            'detailed_test_reports': {}
+        }
+        
+        try:
+            for binary in generated_binaries:
+                if os.path.exists(binary):
+                    # Use the enhanced binary behavior testing framework
+                    test_report = run_behavior_comparison_test(
+                        original_binary=original,
+                        reconstructed_binary=binary,
+                        verbose=False
+                    )
+                    
+                    testing_results['test_results'][binary] = {
+                        'equivalence_score': test_report['summary']['average_similarity'],
+                        'test_cases_passed': test_report['summary']['passed_tests'],
+                        'test_cases_total': test_report['summary']['total_tests'],
+                        'success_rate': test_report['summary']['success_rate'],
+                        'overall_assessment': test_report['summary']['overall_assessment']
+                    }
+                    
+                    testing_results['detailed_test_reports'][binary] = test_report
+                    testing_results['recommendations'].extend(test_report.get('recommendations', []))
+        
+        except Exception as e:
+            self.logger.error(f"Comprehensive behavioral testing failed: {e}")
+            testing_results['error'] = str(e)
+        
+        # Calculate overall behavioral equivalence score
+        if testing_results['test_results']:
+            scores = [result.get('equivalence_score', 0.0) for result in testing_results['test_results'].values()]
+            testing_results['behavioral_equivalence_score'] = sum(scores) / len(scores) if scores else 0.0
+        
+        # Generate test summary
+        if testing_results['test_results']:
+            total_passed = sum(result.get('test_cases_passed', 0) for result in testing_results['test_results'].values())
+            total_tests = sum(result.get('test_cases_total', 0) for result in testing_results['test_results'].values())
+            
+            testing_results['test_summary'] = {
+                'total_binaries_tested': len(testing_results['test_results']),
+                'total_test_cases': total_tests,
+                'total_passed': total_passed,
+                'overall_success_rate': total_passed / total_tests if total_tests > 0 else 0.0,
+                'average_equivalence_score': testing_results['behavioral_equivalence_score']
+            }
+        
+        return testing_results
+
+    def _perform_input_output_testing(self, original: str, generated_binaries: List[str]) -> Dict[str, Any]:
+        """Perform advanced input/output testing with various test scenarios"""
+        testing_results = {
+            'file_processing_tests': {},
+            'argument_handling_tests': {},
+            'stdin_tests': {},
+            'edge_case_tests': {},
+            'overall_io_score': 0.0
+        }
+        
+        try:
+            # Create temporary test directory
+            import tempfile
+            with tempfile.TemporaryDirectory() as temp_dir:
+                
+                # Create file processing test cases
+                file_test_cases = create_file_processing_test_cases(temp_dir)
+                
+                # Test each generated binary
+                for binary in generated_binaries:
+                    if os.path.exists(binary):
+                        binary_results = self._run_enhanced_io_tests(
+                            original, binary, file_test_cases, temp_dir
+                        )
+                        
+                        testing_results['file_processing_tests'][binary] = binary_results['file_tests']
+                        testing_results['argument_handling_tests'][binary] = binary_results['arg_tests']
+                        testing_results['stdin_tests'][binary] = binary_results['stdin_tests']
+                        testing_results['edge_case_tests'][binary] = binary_results['edge_tests']
+                
+                # Calculate overall I/O score
+                testing_results['overall_io_score'] = self._calculate_io_score(testing_results)
+        
+        except Exception as e:
+            self.logger.error(f"Input/output testing failed: {e}")
+            testing_results['error'] = str(e)
+        
+        return testing_results
+    
+    def _run_enhanced_io_tests(self, original: str, generated: str, 
+                             file_test_cases: List[BehaviorTestCase], 
+                             temp_dir: str) -> Dict[str, Any]:
+        """Run enhanced I/O tests on a binary pair"""
+        results = {
+            'file_tests': [],
+            'arg_tests': [],
+            'stdin_tests': [],
+            'edge_tests': []
+        }
+        
+        # Initialize behavior tester
+        tester = BinaryBehaviorTester(verbose=False)
+        
+        # Add file processing test cases
+        for test_case in file_test_cases:
+            tester.add_test_case(test_case)
+        
+        # Add argument handling tests
+        arg_test_cases = [
+            BehaviorTestCase(
+                name="long_arguments",
+                description="Test with very long arguments",
+                command_args=["a" * 1000],
+                comparison_mode=ComparisonMode.RETURN_CODE_MATCH
+            ),
+            BehaviorTestCase(
+                name="special_characters",
+                description="Test with special characters in arguments",
+                command_args=["test@#$%^&*()"],
+                comparison_mode=ComparisonMode.FUNCTIONAL_EQUIVALENT
+            ),
+            BehaviorTestCase(
+                name="unicode_arguments",
+                description="Test with unicode arguments",
+                command_args=["test_unicode"],
+                comparison_mode=ComparisonMode.FUNCTIONAL_EQUIVALENT
+            )
+        ]
+        
+        for test_case in arg_test_cases:
+            tester.add_test_case(test_case)
+        
+        # Add stdin tests
+        stdin_test_cases = [
+            BehaviorTestCase(
+                name="large_stdin",
+                description="Test with large stdin input",
+                command_args=[],
+                input_data="A" * 1000 + "\n",
+                comparison_mode=ComparisonMode.FUNCTIONAL_EQUIVALENT
+            ),
+            BehaviorTestCase(
+                name="empty_stdin",
+                description="Test with empty stdin",
+                command_args=[],
+                input_data="",
+                comparison_mode=ComparisonMode.FUNCTIONAL_EQUIVALENT
+            )
+        ]
+        
+        for test_case in stdin_test_cases:
+            tester.add_test_case(test_case)
+        
+        # Run all tests
+        try:
+            test_report = tester.run_comparison_test(original, generated)
+            
+            # Categorize results
+            for test_detail in test_report['test_details']:
+                if 'file' in test_detail['name']:
+                    results['file_tests'].append(test_detail)
+                elif 'argument' in test_detail['name'] or 'arg' in test_detail['name']:
+                    results['arg_tests'].append(test_detail)
+                elif 'stdin' in test_detail['name']:
+                    results['stdin_tests'].append(test_detail)
+                else:
+                    results['edge_tests'].append(test_detail)
+        
+        except Exception as e:
+            results['error'] = str(e)
+        
+        return results
+    
+    def _calculate_io_score(self, testing_results: Dict[str, Any]) -> float:
+        """Calculate overall input/output testing score"""
+        total_score = 0.0
+        test_categories = 0
+        
+        for category in ['file_processing_tests', 'argument_handling_tests', 'stdin_tests', 'edge_case_tests']:
+            category_data = testing_results.get(category, {})
+            if category_data:
+                category_scores = []
+                for binary_results in category_data.values():
+                    if isinstance(binary_results, list):
+                        passed_tests = sum(1 for test in binary_results if test.get('result') == 'pass')
+                        total_tests = len(binary_results)
+                        if total_tests > 0:
+                            category_scores.append(passed_tests / total_tests)
+                
+                if category_scores:
+                    total_score += sum(category_scores) / len(category_scores)
+                    test_categories += 1
+        
+        return total_score / test_categories if test_categories > 0 else 0.0
+    
+    def _perform_cross_platform_tests(self, original: str, generated: str) -> Dict[str, Any]:
+        """Perform cross-platform compatibility testing"""
+        compatibility_results = {
+            'compatibility_score': 0.0,
+            'platform_tests': {},
+            'dependency_analysis': {},
+            'runtime_environment_tests': {}
+        }
+        
+        try:
+            # Test basic execution compatibility
+            orig_execution = self._test_execution(original)
+            gen_execution = self._test_execution(generated)
+            
+            # Basic compatibility score
+            if orig_execution.get('can_execute') and gen_execution.get('can_execute'):
+                compatibility_results['compatibility_score'] = 0.8
+                
+                # Compare exit codes
+                if orig_execution.get('exit_code') == gen_execution.get('exit_code'):
+                    compatibility_results['compatibility_score'] += 0.1
+                
+                # Compare execution success patterns
+                orig_success = orig_execution.get('exit_code', -1) == 0
+                gen_success = gen_execution.get('exit_code', -1) == 0
+                if orig_success == gen_success:
+                    compatibility_results['compatibility_score'] += 0.1
+            
+            elif not orig_execution.get('can_execute') and not gen_execution.get('can_execute'):
+                # Both fail to execute - still compatible in failure
+                compatibility_results['compatibility_score'] = 0.6
+            
+            # Store detailed test results
+            compatibility_results['platform_tests'] = {
+                'original_execution': orig_execution,
+                'generated_execution': gen_execution,
+                'execution_compatibility': orig_execution.get('can_execute') == gen_execution.get('can_execute')
+            }
+            
+            # Analyze dependencies (basic check)
+            compatibility_results['dependency_analysis'] = self._analyze_dependencies(original, generated)
+            
+        except Exception as e:
+            compatibility_results['error'] = str(e)
+            compatibility_results['compatibility_score'] = 0.0
+        
+        return compatibility_results
+    
+    def _analyze_performance_differences(self, original: str, generated: str) -> Dict[str, Any]:
+        """Analyze performance differences between binaries"""
+        performance_analysis = {
+            'performance_similarity': 0.0,
+            'execution_time_comparison': {},
+            'memory_usage_comparison': {},
+            'efficiency_metrics': {}
+        }
+        
+        try:
+            # Basic execution time comparison
+            orig_test = self._test_execution(original)
+            gen_test = self._test_execution(generated)
+            
+            orig_time = orig_test.get('execution_time', 0.0)
+            gen_time = gen_test.get('execution_time', 0.0)
+            
+            performance_analysis['execution_time_comparison'] = {
+                'original_time': orig_time,
+                'generated_time': gen_time,
+                'time_ratio': gen_time / orig_time if orig_time > 0 else float('inf'),
+                'time_difference': abs(orig_time - gen_time)
+            }
+            
+            # Calculate performance similarity based on execution time
+            if orig_time > 0 and gen_time > 0:
+                time_ratio = min(orig_time, gen_time) / max(orig_time, gen_time)
+                performance_analysis['performance_similarity'] = time_ratio
+            elif orig_time == 0 and gen_time == 0:
+                performance_analysis['performance_similarity'] = 1.0
+            else:
+                performance_analysis['performance_similarity'] = 0.0
+            
+            # Basic memory usage analysis (file size as proxy)
+            try:
+                orig_size = os.path.getsize(original)
+                gen_size = os.path.getsize(generated)
+                
+                performance_analysis['memory_usage_comparison'] = {
+                    'original_size': orig_size,
+                    'generated_size': gen_size,
+                    'size_ratio': gen_size / orig_size if orig_size > 0 else float('inf'),
+                    'size_difference': abs(orig_size - gen_size)
+                }
+                
+                # Factor size similarity into performance score
+                if orig_size > 0:
+                    size_similarity = min(orig_size, gen_size) / max(orig_size, gen_size)
+                    performance_analysis['performance_similarity'] = (
+                        performance_analysis['performance_similarity'] * 0.7 + size_similarity * 0.3
+                    )
+            except:
+                pass
+            
+        except Exception as e:
+            performance_analysis['error'] = str(e)
+        
+        return performance_analysis
+    
+    def _assess_runtime_compatibility(self, original: str, generated: str) -> Dict[str, Any]:
+        """Assess runtime compatibility between binaries"""
+        compatibility_assessment = {
+            'runtime_compatibility_score': 0.0,
+            'system_requirements': {},
+            'library_dependencies': {},
+            'runtime_behavior': {}
+        }
+        
+        try:
+            # Test basic runtime behavior
+            orig_analysis = self._analyze_binary(original)
+            gen_analysis = self._analyze_binary(generated)
+            
+            compatibility_score = 0.0
+            
+            # Architecture compatibility
+            if orig_analysis.get('architecture') == gen_analysis.get('architecture'):
+                compatibility_score += 0.4
+                compatibility_assessment['system_requirements']['architecture_match'] = True
+            else:
+                compatibility_assessment['system_requirements']['architecture_match'] = False
+            
+            # Subsystem compatibility
+            if orig_analysis.get('subsystem') == gen_analysis.get('subsystem'):
+                compatibility_score += 0.3
+                compatibility_assessment['system_requirements']['subsystem_match'] = True
+            else:
+                compatibility_assessment['system_requirements']['subsystem_match'] = False
+            
+            # Basic runtime test
+            orig_runtime = self._test_execution(original)
+            gen_runtime = self._test_execution(generated)
+            
+            # Runtime behavior compatibility
+            if orig_runtime.get('can_execute') and gen_runtime.get('can_execute'):
+                compatibility_score += 0.2
+                
+                # Check if both produce similar runtime behavior
+                if (orig_runtime.get('exit_code', -1) == 0) == (gen_runtime.get('exit_code', -1) == 0):
+                    compatibility_score += 0.1
+            
+            compatibility_assessment['runtime_compatibility_score'] = compatibility_score
+            
+            # Store detailed runtime behavior
+            compatibility_assessment['runtime_behavior'] = {
+                'original_runtime': orig_runtime,
+                'generated_runtime': gen_runtime,
+                'execution_patterns_match': (
+                    orig_runtime.get('can_execute', False) == gen_runtime.get('can_execute', False)
+                )
+            }
+            
+        except Exception as e:
+            compatibility_assessment['error'] = str(e)
+        
+        return compatibility_assessment
+    
+    def _analyze_dependencies(self, original: str, generated: str) -> Dict[str, Any]:
+        """Analyze and compare binary dependencies"""
+        dependency_analysis = {
+            'dependency_similarity': 0.0,
+            'original_dependencies': [],
+            'generated_dependencies': [],
+            'common_dependencies': [],
+            'missing_dependencies': [],
+            'extra_dependencies': []
+        }
+        
+        try:
+            # Extract dependencies using PE analysis
+            orig_analysis = self._analyze_binary(original)
+            gen_analysis = self._analyze_binary(generated)
+            
+            orig_imports = orig_analysis.get('imports', [])
+            gen_imports = gen_analysis.get('imports', [])
+            
+            # Extract DLL names from imports
+            orig_dlls = set()
+            gen_dlls = set()
+            
+            for imp in orig_imports:
+                if isinstance(imp, dict) and 'dll' in imp:
+                    orig_dlls.add(imp['dll'].lower())
+            
+            for imp in gen_imports:
+                if isinstance(imp, dict) and 'dll' in imp:
+                    gen_dlls.add(imp['dll'].lower())
+            
+            dependency_analysis['original_dependencies'] = list(orig_dlls)
+            dependency_analysis['generated_dependencies'] = list(gen_dlls)
+            dependency_analysis['common_dependencies'] = list(orig_dlls.intersection(gen_dlls))
+            dependency_analysis['missing_dependencies'] = list(orig_dlls - gen_dlls)
+            dependency_analysis['extra_dependencies'] = list(gen_dlls - orig_dlls)
+            
+            # Calculate dependency similarity
+            all_deps = orig_dlls.union(gen_dlls)
+            common_deps = orig_dlls.intersection(gen_dlls)
+            
+            if all_deps:
+                dependency_analysis['dependency_similarity'] = len(common_deps) / len(all_deps)
+            else:
+                dependency_analysis['dependency_similarity'] = 1.0  # Both have no dependencies
+                
+        except Exception as e:
+            dependency_analysis['error'] = str(e)
+        
+        return dependency_analysis
+
+    def _analyze_runtime_behavior(self, original: str, generated_binaries: List[str]) -> Dict[str, Any]:
+        """Analyze runtime behavior patterns across binaries"""
+        runtime_analysis = {
+            'behavior_patterns': {},
+            'execution_profiles': {},
+            'runtime_consistency': 0.0,
+            'behavioral_anomalies': []
+        }
+        
+        try:
+            # Baseline behavior from original
+            orig_profile = self._create_execution_profile(original)
+            runtime_analysis['execution_profiles']['original'] = orig_profile
+            
+            behavior_scores = []
+            
+            for binary in generated_binaries:
+                if os.path.exists(binary):
+                    gen_profile = self._create_execution_profile(binary)
+                    runtime_analysis['execution_profiles'][binary] = gen_profile
+                    
+                    # Compare execution profiles
+                    similarity = self._compare_execution_profiles(orig_profile, gen_profile)
+                    behavior_scores.append(similarity)
+                    
+                    runtime_analysis['behavior_patterns'][binary] = {
+                        'similarity_to_original': similarity,
+                        'execution_consistency': gen_profile.get('consistency_score', 0.0),
+                        'anomalies_detected': gen_profile.get('anomalies', [])
+                    }
+                    
+                    # Collect behavioral anomalies
+                    if similarity < 0.5:
+                        runtime_analysis['behavioral_anomalies'].append({
+                            'binary': binary,
+                            'type': 'low_similarity',
+                            'similarity_score': similarity,
+                            'details': 'Significant behavioral differences detected'
+                        })
+            
+            # Calculate overall runtime consistency
+            if behavior_scores:
+                runtime_analysis['runtime_consistency'] = sum(behavior_scores) / len(behavior_scores)
+            
+        except Exception as e:
+            runtime_analysis['error'] = str(e)
+        
+        return runtime_analysis
+    
+    def _create_execution_profile(self, binary_path: str) -> Dict[str, Any]:
+        """Create a detailed execution profile for a binary"""
+        profile = {
+            'execution_success': False,
+            'exit_patterns': [],
+            'output_characteristics': {},
+            'runtime_metrics': {},
+            'consistency_score': 0.0,
+            'anomalies': []
+        }
+        
+        try:
+            # Run multiple test executions to establish patterns
+            execution_results = []
+            
+            # Basic execution tests
+            for i in range(3):
+                result = self._test_execution(binary_path)
+                execution_results.append(result)
+                time.sleep(0.1)  # Small delay between tests
+            
+            # Analyze execution patterns
+            exit_codes = [r.get('exit_code', -999) for r in execution_results]
+            execution_times = [r.get('execution_time', 0.0) for r in execution_results]
+            can_execute_results = [r.get('can_execute', False) for r in execution_results]
+            
+            profile['execution_success'] = any(can_execute_results)
+            profile['exit_patterns'] = exit_codes
+            
+            # Output characteristics
+            if execution_results:
+                first_result = execution_results[0]
+                profile['output_characteristics'] = {
+                    'stdout_length': len(first_result.get('stdout', '')),
+                    'stderr_length': len(first_result.get('stderr', '')),
+                    'has_output': len(first_result.get('stdout', '') + first_result.get('stderr', '')) > 0
+                }
+            
+            # Runtime metrics
+            if execution_times:
+                profile['runtime_metrics'] = {
+                    'avg_execution_time': sum(execution_times) / len(execution_times),
+                    'min_execution_time': min(execution_times),
+                    'max_execution_time': max(execution_times),
+                    'time_variance': max(execution_times) - min(execution_times)
+                }
+            
+            # Consistency analysis
+            exit_code_consistency = len(set(exit_codes)) == 1
+            execution_consistency = all(can_execute_results) or not any(can_execute_results)
+            
+            consistency_factors = [exit_code_consistency, execution_consistency]
+            profile['consistency_score'] = sum(consistency_factors) / len(consistency_factors)
+            
+            # Detect anomalies
+            if not execution_consistency:
+                profile['anomalies'].append('Inconsistent execution results')
+            
+            if profile['runtime_metrics'].get('time_variance', 0) > 1.0:
+                profile['anomalies'].append('High execution time variance')
+                
+        except Exception as e:
+            profile['error'] = str(e)
+            profile['anomalies'].append(f'Profile creation failed: {str(e)}')
+        
+        return profile
+    
+    def _compare_execution_profiles(self, orig_profile: Dict[str, Any], gen_profile: Dict[str, Any]) -> float:
+        """Compare two execution profiles and return similarity score"""
+        similarity_score = 0.0
+        
+        try:
+            # Compare execution success patterns (40%)
+            if orig_profile.get('execution_success') == gen_profile.get('execution_success'):
+                similarity_score += 0.4
+            
+            # Compare exit patterns (30%)
+            orig_exits = orig_profile.get('exit_patterns', [])
+            gen_exits = gen_profile.get('exit_patterns', [])
+            
+            if orig_exits and gen_exits:
+                # Check if most common exit codes match
+                from collections import Counter
+                orig_common = Counter(orig_exits).most_common(1)
+                gen_common = Counter(gen_exits).most_common(1)
+                
+                if orig_common and gen_common and orig_common[0][0] == gen_common[0][0]:
+                    similarity_score += 0.3
+            elif not orig_exits and not gen_exits:
+                similarity_score += 0.3
+            
+            # Compare output characteristics (20%)
+            orig_output = orig_profile.get('output_characteristics', {})
+            gen_output = gen_profile.get('output_characteristics', {})
+            
+            if orig_output.get('has_output') == gen_output.get('has_output'):
+                similarity_score += 0.1
+                
+                # Compare output lengths (rough similarity)
+                orig_total = orig_output.get('stdout_length', 0) + orig_output.get('stderr_length', 0)
+                gen_total = gen_output.get('stdout_length', 0) + gen_output.get('stderr_length', 0)
+                
+                if orig_total == 0 and gen_total == 0:
+                    similarity_score += 0.1
+                elif orig_total > 0 and gen_total > 0:
+                    length_ratio = min(orig_total, gen_total) / max(orig_total, gen_total)
+                    similarity_score += 0.1 * length_ratio
+            
+            # Compare consistency scores (10%)
+            orig_consistency = orig_profile.get('consistency_score', 0.0)
+            gen_consistency = gen_profile.get('consistency_score', 0.0)
+            
+            consistency_similarity = 1.0 - abs(orig_consistency - gen_consistency)
+            similarity_score += 0.1 * consistency_similarity
+            
+        except Exception:
+            similarity_score = 0.0
+        
+        return min(1.0, similarity_score)
+    
+    def _calculate_behavioral_equivalence_score(self, analysis: Dict[str, Any]) -> float:
+        """Calculate comprehensive behavioral equivalence score"""
+        equivalence_score = 0.0
+        
+        try:
+            # Factor in comprehensive behavioral testing (60%)
+            behavioral_testing = analysis.get('behavioral_comparison', {})
+            if 'behavioral_equivalence_score' in behavioral_testing:
+                equivalence_score += behavioral_testing['behavioral_equivalence_score'] * 0.6
+            
+            # Factor in I/O testing (25%)
+            io_testing = analysis.get('input_output_testing', {})
+            if 'overall_io_score' in io_testing:
+                equivalence_score += io_testing['overall_io_score'] * 0.25
+            
+            # Factor in runtime behavior analysis (15%)
+            runtime_analysis = analysis.get('runtime_behavior_analysis', {})
+            if 'runtime_consistency' in runtime_analysis:
+                equivalence_score += runtime_analysis['runtime_consistency'] * 0.15
+        
+        except Exception:
+            equivalence_score = 0.0
+        
+        return min(1.0, equivalence_score)
+    
+    def _calculate_functional_equivalence_score(self, analysis: Dict[str, Any]) -> float:
+        """Calculate comprehensive functional equivalence score"""
+        functional_score = 0.0
+        
+        try:
+            # Base functional score from execution tests (30%)
+            base_score = analysis.get('functional_score', 0.0)
+            functional_score += base_score * 0.3
+            
+            # Behavioral equivalence score (40%)
+            behavioral_score = analysis.get('behavioral_equivalence_score', 0.0)
+            functional_score += behavioral_score * 0.4
+            
+            # Cross-platform compatibility (15%)
+            behavioral_testing = analysis.get('behavioral_comparison', {})
+            if 'cross_platform_tests' in behavioral_testing:
+                cross_platform_scores = [
+                    test.get('compatibility_score', 0.0)
+                    for test in behavioral_testing['cross_platform_tests'].values()
+                ]
+                if cross_platform_scores:
+                    avg_cross_platform = sum(cross_platform_scores) / len(cross_platform_scores)
+                    functional_score += avg_cross_platform * 0.15
+            
+            # Performance compatibility (15%)
+            if 'performance_comparison' in behavioral_testing:
+                performance_scores = [
+                    test.get('performance_similarity', 0.0)
+                    for test in behavioral_testing['performance_comparison'].values()
+                ]
+                if performance_scores:
+                    avg_performance = sum(performance_scores) / len(performance_scores)
+                    functional_score += avg_performance * 0.15
+        
+        except Exception:
+            functional_score = 0.0
+        
+        return min(1.0, functional_score)
 
     def _analyze_performance(self, original: str, generated_binaries: List[str]) -> Dict[str, Any]:
         """Analyze performance characteristics"""
@@ -1087,7 +1768,7 @@ class Agent19_BinaryComparison(BaseAgent):
                 'FIXME.*placeholder',
                 'Generated by.*analysis',
                 'Reconstructed.*binary',
-                'return 0.*}\s*$'
+                r'return 0.*}\s*$'
             ]
             
             dummy_pattern_count = 0

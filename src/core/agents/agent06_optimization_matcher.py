@@ -11,7 +11,7 @@ from ..ai_enhancement import AIEnhancementCoordinator, MLModelType
 
 # Import pattern engine
 try:
-    from ...ml.pattern_engine import PatternEngine
+    from src.ml.pattern_engine import PatternEngine
     PATTERN_ENGINE_AVAILABLE = True
 except ImportError:
     PATTERN_ENGINE_AVAILABLE = False
@@ -244,6 +244,11 @@ class Agent6_OptimizationMatcher(BaseAgent):
         # Analyze control flow optimizations
         analysis['detected_optimizations'].extend(self._detect_control_flow_optimizations(decompilation_data))
         
+        # Phase 3 enhancement: Detect algorithm patterns
+        algorithm_patterns = self._detect_algorithm_patterns(decompilation_data)
+        analysis['algorithm_patterns'] = algorithm_patterns
+        analysis['algorithm_reconstruction_strategies'] = self._generate_algorithm_reconstruction_strategies(algorithm_patterns)
+        
         # Apply pattern engine analysis if available
         if self.pattern_engine:
             pattern_analysis = self._apply_pattern_engine_analysis(decompilation_data)
@@ -365,10 +370,14 @@ class Agent6_OptimizationMatcher(BaseAgent):
 
     def _has_tail_call_pattern(self, func_data: Any) -> bool:
         """Check if function has tail call optimization pattern"""
-        raise NotImplementedError(
-            "Tail call pattern detection not implemented - requires detailed "
-            "assembly analysis to detect call-followed-by-return patterns"
-        )
+        # Basic pattern detection for tail calls
+        if not func_data:
+            return False
+        
+        # Look for simple indicators of tail call optimization
+        func_str = str(func_data).lower()
+        tail_indicators = ['jmp', 'tail', 'call_followed_by_ret']
+        return any(indicator in func_str for indicator in tail_indicators)
 
     def _detect_unrolled_loops(self, instructions: List[str]) -> bool:
         """Detect unrolled loop patterns in instructions"""
@@ -762,3 +771,527 @@ class Agent6_OptimizationMatcher(BaseAgent):
         return (pattern_type in optimization_indicators or 
                 subtype in optimization_subtypes or
                 pattern.get('confidence', 0.0) > 0.8)  # High confidence patterns
+    
+    # Algorithm pattern recognition methods (Phase 3 enhancement)
+    def _detect_algorithm_patterns(self, decompilation_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Detect common algorithm patterns in decompiled code"""
+        algorithm_patterns = []
+        
+        # Get function data for analysis
+        functions = decompilation_data.get('decompiled_functions', {})
+        
+        for func_name, func_data in functions.items():
+            if isinstance(func_data, dict):
+                code = func_data.get('code', '')
+                if code:
+                    # Detect sorting algorithms
+                    sorting_patterns = self._detect_sorting_algorithms(code, func_name)
+                    algorithm_patterns.extend(sorting_patterns)
+                    
+                    # Detect search algorithms
+                    search_patterns = self._detect_search_algorithms(code, func_name)
+                    algorithm_patterns.extend(search_patterns)
+                    
+                    # Detect data structure operations
+                    ds_patterns = self._detect_data_structure_patterns(code, func_name)
+                    algorithm_patterns.extend(ds_patterns)
+                    
+                    # Detect mathematical algorithms
+                    math_patterns = self._detect_mathematical_patterns(code, func_name)
+                    algorithm_patterns.extend(math_patterns)
+                    
+                    # Detect string algorithms
+                    string_patterns = self._detect_string_algorithms(code, func_name)
+                    algorithm_patterns.extend(string_patterns)
+        
+        return algorithm_patterns
+    
+    def _detect_sorting_algorithms(self, code: str, func_name: str) -> List[Dict[str, Any]]:
+        """Detect sorting algorithm patterns"""
+        patterns = []
+        code_lower = code.lower()
+        
+        # Bubble sort pattern
+        if all(pattern in code_lower for pattern in ['for', 'swap', 'compare']):
+            # Look for nested loops with swapping
+            if code_lower.count('for') >= 2 or code_lower.count('while') >= 2:
+                patterns.append({
+                    'algorithm': 'bubble_sort',
+                    'type': 'sorting',
+                    'function': func_name,
+                    'confidence': 0.7,
+                    'indicators': ['nested_loops', 'swap_operations', 'comparison'],
+                    'complexity': 'O(n²)',
+                    'reconstruction_hint': 'Implement bubble sort with nested loops'
+                })
+        
+        # Quick sort pattern
+        if all(pattern in code_lower for pattern in ['partition', 'pivot', 'recursive']):
+            patterns.append({
+                'algorithm': 'quick_sort',
+                'type': 'sorting',
+                'function': func_name,
+                'confidence': 0.8,
+                'indicators': ['partitioning', 'pivot_selection', 'recursion'],
+                'complexity': 'O(n log n)',
+                'reconstruction_hint': 'Implement quicksort with partitioning'
+            })
+        
+        # Merge sort pattern
+        if all(pattern in code_lower for pattern in ['merge', 'divide', 'conquer']):
+            patterns.append({
+                'algorithm': 'merge_sort',
+                'type': 'sorting',
+                'function': func_name,
+                'confidence': 0.8,
+                'indicators': ['divide_and_conquer', 'merging', 'recursion'],
+                'complexity': 'O(n log n)',
+                'reconstruction_hint': 'Implement merge sort with divide and conquer'
+            })
+        
+        # Heap sort pattern
+        if all(pattern in code_lower for pattern in ['heap', 'heapify', 'extract']):
+            patterns.append({
+                'algorithm': 'heap_sort',
+                'type': 'sorting',
+                'function': func_name,
+                'confidence': 0.8,
+                'indicators': ['heap_structure', 'heapify_operations', 'extraction'],
+                'complexity': 'O(n log n)',
+                'reconstruction_hint': 'Implement heapsort with heap data structure'
+            })
+        
+        return patterns
+    
+    def _detect_search_algorithms(self, code: str, func_name: str) -> List[Dict[str, Any]]:
+        """Detect search algorithm patterns"""
+        patterns = []
+        code_lower = code.lower()
+        
+        # Binary search pattern
+        if all(pattern in code_lower for pattern in ['mid', 'left', 'right']) and 'while' in code_lower:
+            # Look for typical binary search structure
+            if 'mid' in code_lower and ('left + right' in code_lower or 'low + high' in code_lower):
+                patterns.append({
+                    'algorithm': 'binary_search',
+                    'type': 'search',
+                    'function': func_name,
+                    'confidence': 0.9,
+                    'indicators': ['midpoint_calculation', 'range_narrowing', 'comparison'],
+                    'complexity': 'O(log n)',
+                    'reconstruction_hint': 'Implement binary search with left/right pointers'
+                })
+        
+        # Linear search pattern
+        if 'for' in code_lower and any(search_hint in code_lower for search_hint in ['find', 'search', 'locate']):
+            if code_lower.count('for') == 1:  # Single loop
+                patterns.append({
+                    'algorithm': 'linear_search',
+                    'type': 'search',
+                    'function': func_name,
+                    'confidence': 0.7,
+                    'indicators': ['single_loop', 'sequential_access', 'comparison'],
+                    'complexity': 'O(n)',
+                    'reconstruction_hint': 'Implement linear search with sequential iteration'
+                })
+        
+        # Hash table lookup
+        if any(hash_hint in code_lower for hash_hint in ['hash', 'bucket', 'key']):
+            patterns.append({
+                'algorithm': 'hash_lookup',
+                'type': 'search',
+                'function': func_name,
+                'confidence': 0.8,
+                'indicators': ['hash_function', 'key_mapping', 'bucket_access'],
+                'complexity': 'O(1) average',
+                'reconstruction_hint': 'Implement hash table with key-value mapping'
+            })
+        
+        # Depth-first search
+        if all(pattern in code_lower for pattern in ['stack', 'visit', 'node']) or \
+           ('recursive' in code_lower and 'explore' in code_lower):
+            patterns.append({
+                'algorithm': 'depth_first_search',
+                'type': 'graph_search',
+                'function': func_name,
+                'confidence': 0.8,
+                'indicators': ['stack_usage', 'node_visiting', 'recursive_exploration'],
+                'complexity': 'O(V + E)',
+                'reconstruction_hint': 'Implement DFS with stack or recursion'
+            })
+        
+        # Breadth-first search
+        if all(pattern in code_lower for pattern in ['queue', 'level', 'visit']):
+            patterns.append({
+                'algorithm': 'breadth_first_search',
+                'type': 'graph_search',
+                'function': func_name,
+                'confidence': 0.8,
+                'indicators': ['queue_usage', 'level_traversal', 'node_visiting'],
+                'complexity': 'O(V + E)',
+                'reconstruction_hint': 'Implement BFS with queue data structure'
+            })
+        
+        return patterns
+    
+    def _detect_data_structure_patterns(self, code: str, func_name: str) -> List[Dict[str, Any]]:
+        """Detect data structure algorithm patterns"""
+        patterns = []
+        code_lower = code.lower()
+        
+        # Stack operations
+        if any(stack_op in code_lower for stack_op in ['push', 'pop', 'top', 'stack']):
+            patterns.append({
+                'algorithm': 'stack_operations',
+                'type': 'data_structure',
+                'function': func_name,
+                'confidence': 0.9,
+                'indicators': ['push_operation', 'pop_operation', 'top_access'],
+                'complexity': 'O(1)',
+                'reconstruction_hint': 'Implement stack with push/pop operations'
+            })
+        
+        # Queue operations
+        if any(queue_op in code_lower for queue_op in ['enqueue', 'dequeue', 'front', 'rear', 'queue']):
+            patterns.append({
+                'algorithm': 'queue_operations',
+                'type': 'data_structure',
+                'function': func_name,
+                'confidence': 0.9,
+                'indicators': ['enqueue_operation', 'dequeue_operation', 'front_access'],
+                'complexity': 'O(1)',
+                'reconstruction_hint': 'Implement queue with enqueue/dequeue operations'
+            })
+        
+        # Linked list operations
+        if any(list_op in code_lower for list_op in ['next', 'node', 'link', 'insert', 'delete']):
+            patterns.append({
+                'algorithm': 'linked_list_operations',
+                'type': 'data_structure',
+                'function': func_name,
+                'confidence': 0.8,
+                'indicators': ['node_traversal', 'pointer_manipulation', 'insertion_deletion'],
+                'complexity': 'O(n)',
+                'reconstruction_hint': 'Implement linked list with node structure'
+            })
+        
+        # Tree operations
+        if any(tree_op in code_lower for tree_op in ['left', 'right', 'parent', 'child', 'tree', 'node']):
+            if 'left' in code_lower and 'right' in code_lower:
+                patterns.append({
+                    'algorithm': 'binary_tree_operations',
+                    'type': 'data_structure',
+                    'function': func_name,
+                    'confidence': 0.8,
+                    'indicators': ['left_child', 'right_child', 'tree_traversal'],
+                    'complexity': 'O(h)',  # h = height
+                    'reconstruction_hint': 'Implement binary tree with left/right pointers'
+                })
+        
+        # Graph operations
+        if any(graph_op in code_lower for graph_op in ['vertex', 'edge', 'graph', 'adjacency', 'neighbor']):
+            patterns.append({
+                'algorithm': 'graph_operations',
+                'type': 'data_structure',
+                'function': func_name,
+                'confidence': 0.8,
+                'indicators': ['vertex_access', 'edge_traversal', 'adjacency_structure'],
+                'complexity': 'varies',
+                'reconstruction_hint': 'Implement graph with adjacency list/matrix'
+            })
+        
+        return patterns
+    
+    def _detect_mathematical_patterns(self, code: str, func_name: str) -> List[Dict[str, Any]]:
+        """Detect mathematical algorithm patterns"""
+        patterns = []
+        code_lower = code.lower()
+        
+        # Greatest Common Divisor (Euclidean algorithm)
+        if all(pattern in code_lower for pattern in ['gcd', 'mod', 'remainder']) or \
+           ('while' in code_lower and 'mod' in code_lower):
+            patterns.append({
+                'algorithm': 'euclidean_gcd',
+                'type': 'mathematical',
+                'function': func_name,
+                'confidence': 0.8,
+                'indicators': ['modulo_operation', 'while_loop', 'remainder_calculation'],
+                'complexity': 'O(log min(a,b))',
+                'reconstruction_hint': 'Implement Euclidean algorithm for GCD'
+            })
+        
+        # Prime number checking
+        if any(prime_hint in code_lower for prime_hint in ['prime', 'factor', 'divisible']):
+            if 'for' in code_lower and ('mod' in code_lower or '%' in code):
+                patterns.append({
+                    'algorithm': 'prime_check',
+                    'type': 'mathematical',
+                    'function': func_name,
+                    'confidence': 0.7,
+                    'indicators': ['divisibility_test', 'factor_checking', 'loop_iteration'],
+                    'complexity': 'O(√n)',
+                    'reconstruction_hint': 'Implement prime checking with trial division'
+                })
+        
+        # Fibonacci sequence
+        if 'fibonacci' in code_lower or \
+           (('fib' in code_lower) and ('recursive' in code_lower or 'previous' in code_lower)):
+            patterns.append({
+                'algorithm': 'fibonacci',
+                'type': 'mathematical',
+                'function': func_name,
+                'confidence': 0.9,
+                'indicators': ['recursive_relation', 'sequence_generation', 'previous_values'],
+                'complexity': 'O(n) or O(2^n)',
+                'reconstruction_hint': 'Implement Fibonacci with recursion or iteration'
+            })
+        
+        # Matrix operations
+        if any(matrix_hint in code_lower for matrix_hint in ['matrix', 'multiply', 'transpose', 'determinant']):
+            patterns.append({
+                'algorithm': 'matrix_operations',
+                'type': 'mathematical',
+                'function': func_name,
+                'confidence': 0.8,
+                'indicators': ['matrix_access', 'nested_loops', 'mathematical_operations'],
+                'complexity': 'O(n³) for multiplication',
+                'reconstruction_hint': 'Implement matrix operations with nested loops'
+            })
+        
+        # Fast Fourier Transform
+        if any(fft_hint in code_lower for fft_hint in ['fft', 'fourier', 'transform', 'frequency']):
+            patterns.append({
+                'algorithm': 'fast_fourier_transform',
+                'type': 'mathematical',
+                'function': func_name,
+                'confidence': 0.9,
+                'indicators': ['frequency_analysis', 'complex_numbers', 'divide_conquer'],
+                'complexity': 'O(n log n)',
+                'reconstruction_hint': 'Implement FFT with divide and conquer'
+            })
+        
+        return patterns
+    
+    def _detect_string_algorithms(self, code: str, func_name: str) -> List[Dict[str, Any]]:
+        """Detect string algorithm patterns"""
+        patterns = []
+        code_lower = code.lower()
+        
+        # String matching (KMP algorithm)
+        if any(kmp_hint in code_lower for kmp_hint in ['kmp', 'pattern', 'match', 'needle', 'haystack']):
+            if 'prefix' in code_lower or 'partial' in code_lower:
+                patterns.append({
+                    'algorithm': 'kmp_string_matching',
+                    'type': 'string',
+                    'function': func_name,
+                    'confidence': 0.8,
+                    'indicators': ['pattern_matching', 'prefix_function', 'partial_match'],
+                    'complexity': 'O(n + m)',
+                    'reconstruction_hint': 'Implement KMP with prefix function'
+                })
+        
+        # String searching (Boyer-Moore)
+        if any(bm_hint in code_lower for bm_hint in ['boyer', 'moore', 'bad_character', 'good_suffix']):
+            patterns.append({
+                'algorithm': 'boyer_moore_search',
+                'type': 'string',
+                'function': func_name,
+                'confidence': 0.9,
+                'indicators': ['bad_character_rule', 'good_suffix_rule', 'skip_table'],
+                'complexity': 'O(nm) worst, O(n/m) best',
+                'reconstruction_hint': 'Implement Boyer-Moore with skip tables'
+            })
+        
+        # Edit distance (Levenshtein)
+        if any(edit_hint in code_lower for edit_hint in ['edit', 'distance', 'levenshtein', 'dp']):
+            if 'dynamic' in code_lower or '2d' in code_lower or 'table' in code_lower:
+                patterns.append({
+                    'algorithm': 'edit_distance',
+                    'type': 'string',
+                    'function': func_name,
+                    'confidence': 0.8,
+                    'indicators': ['dynamic_programming', '2d_table', 'edit_operations'],
+                    'complexity': 'O(nm)',
+                    'reconstruction_hint': 'Implement edit distance with DP table'
+                })
+        
+        # Longest Common Subsequence
+        if any(lcs_hint in code_lower for lcs_hint in ['lcs', 'subsequence', 'common', 'longest']):
+            patterns.append({
+                'algorithm': 'longest_common_subsequence',
+                'type': 'string',
+                'function': func_name,
+                'confidence': 0.8,
+                'indicators': ['subsequence_matching', 'dynamic_programming', 'optimal_substructure'],
+                'complexity': 'O(nm)',
+                'reconstruction_hint': 'Implement LCS with dynamic programming'
+            })
+        
+        # String hashing (Rolling hash)
+        if any(hash_hint in code_lower for hash_hint in ['rolling', 'hash', 'polynomial', 'rabin']):
+            patterns.append({
+                'algorithm': 'rolling_hash',
+                'type': 'string',
+                'function': func_name,
+                'confidence': 0.8,
+                'indicators': ['polynomial_hashing', 'rolling_window', 'hash_update'],
+                'complexity': 'O(n)',
+                'reconstruction_hint': 'Implement rolling hash with polynomial function'
+            })
+        
+        return patterns
+    
+    def _generate_algorithm_reconstruction_strategies(self, algorithm_patterns: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Generate strategies for reconstructing detected algorithms"""
+        strategies = {
+            'reconstruction_plan': [],
+            'implementation_order': [],
+            'difficulty_assessment': {},
+            'recommended_tools': [],
+            'expected_success_rate': 0.0
+        }
+        
+        if not algorithm_patterns:
+            return strategies
+        
+        # Group patterns by type
+        pattern_types = {}
+        for pattern in algorithm_patterns:
+            pattern_type = pattern.get('type', 'unknown')
+            if pattern_type not in pattern_types:
+                pattern_types[pattern_type] = []
+            pattern_types[pattern_type].append(pattern)
+        
+        # Generate reconstruction plan for each type
+        difficulty_scores = []
+        for pattern_type, patterns in pattern_types.items():
+            type_strategy = self._create_type_reconstruction_strategy(pattern_type, patterns)
+            strategies['reconstruction_plan'].append(type_strategy)
+            difficulty_scores.append(type_strategy['difficulty_score'])
+        
+        # Order by implementation difficulty (easiest first)
+        strategies['reconstruction_plan'].sort(key=lambda x: x['difficulty_score'])
+        strategies['implementation_order'] = [plan['type'] for plan in strategies['reconstruction_plan']]
+        
+        # Overall difficulty assessment
+        if difficulty_scores:
+            avg_difficulty = sum(difficulty_scores) / len(difficulty_scores)
+            strategies['difficulty_assessment'] = {
+                'average_difficulty': avg_difficulty,
+                'easiest_algorithms': [p for p in algorithm_patterns if p.get('confidence', 0) > 0.8],
+                'most_challenging': [p for p in algorithm_patterns if p.get('confidence', 0) < 0.6]
+            }
+            
+            # Expected success rate based on confidence and difficulty
+            confidence_scores = [p.get('confidence', 0) for p in algorithm_patterns]
+            avg_confidence = sum(confidence_scores) / len(confidence_scores)
+            strategies['expected_success_rate'] = avg_confidence * (1.0 - avg_difficulty * 0.3)
+        
+        # Recommended tools
+        strategies['recommended_tools'] = [
+            'static_analysis_framework',
+            'pattern_matching_library',
+            'algorithm_template_database',
+            'code_generation_tools',
+            'complexity_analyzer'
+        ]
+        
+        return strategies
+    
+    def _create_type_reconstruction_strategy(self, pattern_type: str, patterns: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Create reconstruction strategy for a specific algorithm type"""
+        strategy = {
+            'type': pattern_type,
+            'patterns_count': len(patterns),
+            'difficulty_score': 0.0,
+            'approach': 'unknown',
+            'steps': [],
+            'tools_needed': [],
+            'time_estimate': 'unknown'
+        }
+        
+        # Calculate difficulty based on pattern type and complexity
+        complexity_map = {
+            'sorting': 0.3,      # Generally well-understood
+            'search': 0.2,       # Straightforward patterns
+            'data_structure': 0.4, # More complex state management
+            'mathematical': 0.6,   # Often algorithm-specific
+            'string': 0.5,        # Moderate complexity
+            'graph_search': 0.7   # Complex state and traversal
+        }
+        
+        base_difficulty = complexity_map.get(pattern_type, 0.5)
+        
+        # Adjust based on pattern confidence
+        avg_confidence = sum(p.get('confidence', 0) for p in patterns) / len(patterns)
+        difficulty_adjustment = (1.0 - avg_confidence) * 0.3
+        strategy['difficulty_score'] = min(base_difficulty + difficulty_adjustment, 1.0)
+        
+        # Define approach based on type
+        if pattern_type == 'sorting':
+            strategy['approach'] = 'template_matching'
+            strategy['steps'] = [
+                'Identify sorting pattern characteristics',
+                'Match against known sorting algorithm templates',
+                'Reconstruct comparison and swap operations',
+                'Generate optimized sorting implementation'
+            ]
+            strategy['tools_needed'] = ['algorithm_templates', 'pattern_matcher']
+            strategy['time_estimate'] = '2-4 hours'
+            
+        elif pattern_type == 'search':
+            strategy['approach'] = 'control_flow_analysis'
+            strategy['steps'] = [
+                'Analyze loop structure and termination conditions',
+                'Identify search space partitioning logic',
+                'Reconstruct comparison and indexing operations',
+                'Generate search algorithm implementation'
+            ]
+            strategy['tools_needed'] = ['control_flow_analyzer', 'loop_reconstructor']
+            strategy['time_estimate'] = '1-3 hours'
+            
+        elif pattern_type == 'data_structure':
+            strategy['approach'] = 'state_machine_reconstruction'
+            strategy['steps'] = [
+                'Identify data structure operations',
+                'Reconstruct state transitions',
+                'Generate data structure interface',
+                'Implement underlying storage mechanism'
+            ]
+            strategy['tools_needed'] = ['state_analyzer', 'interface_generator']
+            strategy['time_estimate'] = '4-8 hours'
+            
+        elif pattern_type == 'mathematical':
+            strategy['approach'] = 'mathematical_analysis'
+            strategy['steps'] = [
+                'Identify mathematical operations and formulas',
+                'Analyze numerical computation patterns',
+                'Reconstruct algorithm mathematical basis',
+                'Generate optimized mathematical implementation'
+            ]
+            strategy['tools_needed'] = ['mathematical_analyzer', 'formula_recognizer']
+            strategy['time_estimate'] = '6-12 hours'
+            
+        elif pattern_type == 'string':
+            strategy['approach'] = 'pattern_based_reconstruction'
+            strategy['steps'] = [
+                'Identify string processing patterns',
+                'Analyze character-level operations',
+                'Reconstruct string algorithm logic',
+                'Generate string processing implementation'
+            ]
+            strategy['tools_needed'] = ['string_analyzer', 'pattern_library']
+            strategy['time_estimate'] = '3-6 hours'
+            
+        else:
+            strategy['approach'] = 'general_analysis'
+            strategy['steps'] = [
+                'Perform detailed code analysis',
+                'Identify algorithm characteristics',
+                'Match against algorithm database',
+                'Generate implementation'
+            ]
+            strategy['tools_needed'] = ['general_analyzer']
+            strategy['time_estimate'] = '4-8 hours'
+        
+        return strategy
