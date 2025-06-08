@@ -125,7 +125,7 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
         super().__init__(
             agent_id=8,
             matrix_character=MatrixCharacter.KEYMAKER,
-            dependencies=[1, 2, 5, 7]  # Depends on Binary Discovery, Arch Analysis, Neo's decompilation, and Trainman's assembly analysis
+            dependencies=[1, 2, 3]  # Depends on Binary Discovery, Arch Analysis, and Merovingian's decompilation
         )
         
         # Load Keymaker-specific configuration
@@ -268,11 +268,10 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
             self._validate_keymaker_prerequisites(context)
             
             # Get analysis context from previous agents
-            binary_path = context['global_data']['binary_path']
+            binary_path = context.get('binary_path', '')
             agent1_data = context['agent_results'][1].data  # Binary discovery
             agent2_data = context['agent_results'][2].data  # Architecture analysis
-            agent5_data = context['agent_results'][5].data  # Neo's decompilation
-            agent7_data = context['agent_results'][7].data  # Trainman's assembly analysis
+            agent3_data = context['agent_results'][3].data  # Merovingian's decompilation
             
             self.logger.info("The Keymaker beginning comprehensive resource reconstruction...")
             
@@ -297,13 +296,13 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
             # Phase 4: Configuration Data Reconstruction
             self.logger.info("Phase 4: Reconstructing configuration data and settings")
             configuration_data = self._reconstruct_configuration_data(
-                categorized_resources, agent5_data, agent7_data
+                categorized_resources, agent3_data, {}
             )
             
             # Phase 5: Cross-Reference Mapping
             self.logger.info("Phase 5: Mapping resources to code references")
             cross_reference_map = self._create_cross_reference_mapping(
-                categorized_resources, agent5_data, agent7_data
+                categorized_resources, agent3_data, {}
             )
             
             # Phase 6: AI-Enhanced Analysis (if available)
@@ -347,62 +346,59 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
             
             execution_time = time.time() - start_time
             
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.SUCCESS,
-                data={
-                    'resource_categories': [
-                        {
-                            'name': cat.category_name,
-                            'item_count': len(cat.items),
-                            'total_size': cat.total_size,
-                            'extraction_confidence': cat.extraction_confidence,
-                            'reconstruction_quality': cat.reconstruction_quality
-                        }
-                        for cat in keymaker_result.resource_categories
-                    ],
-                    'string_resources': [
-                        {
-                            'id': res.resource_id,
-                            'name': res.name,
-                            'content': res.content[:100] + '...' if len(str(res.content)) > 100 else res.content,
-                            'size': res.size,
-                            'confidence': res.confidence
-                        }
-                        for res in keymaker_result.string_resources[:50]  # Limit for output size
-                    ],
-                    'binary_resources': [
-                        {
-                            'id': res.resource_id,
-                            'type': res.resource_type,
-                            'name': res.name,
-                            'size': res.size,
-                            'confidence': res.confidence
-                        }
-                        for res in keymaker_result.binary_resources
-                    ],
-                    'configuration_data': keymaker_result.configuration_data,
-                    'embedded_files': [
-                        {
-                            'id': res.resource_id,
-                            'name': res.name,
-                            'type': res.resource_type,
-                            'size': res.size
-                        }
-                        for res in keymaker_result.embedded_files
-                    ],
-                    'quality_metrics': {
-                        'resource_coverage': quality_metrics.resource_coverage,
-                        'extraction_accuracy': quality_metrics.extraction_accuracy,
-                        'type_classification_accuracy': quality_metrics.type_classification_accuracy,
-                        'reconstruction_completeness': quality_metrics.reconstruction_completeness,
-                        'overall_quality': quality_metrics.overall_quality
-                    },
-                    'reconstruction_map': keymaker_result.reconstruction_map,
-                    'ai_enhanced': self.ai_enabled,
-                    'keymaker_doors': keymaker_result.keymaker_doors
+            # Return dict from execute_matrix_task - base class will wrap in AgentResult
+            return {
+                'resource_categories': [
+                    {
+                        'name': cat.category_name,
+                        'item_count': len(cat.items),
+                        'total_size': cat.total_size,
+                        'extraction_confidence': cat.extraction_confidence,
+                        'reconstruction_quality': cat.reconstruction_quality
+                    }
+                    for cat in keymaker_result.resource_categories
+                ],
+                'string_resources': [
+                    {
+                        'id': res.resource_id,
+                        'name': res.name,
+                        'content': res.content[:100] + '...' if len(str(res.content)) > 100 else res.content,
+                        'size': res.size,
+                        'confidence': res.confidence
+                    }
+                    for res in keymaker_result.string_resources[:50]  # Limit for output size
+                ],
+                'binary_resources': [
+                    {
+                        'id': res.resource_id,
+                        'type': res.resource_type,
+                        'name': res.name,
+                        'size': res.size,
+                        'confidence': res.confidence
+                    }
+                    for res in keymaker_result.binary_resources
+                ],
+                'configuration_data': keymaker_result.configuration_data,
+                'embedded_files': [
+                    {
+                        'id': res.resource_id,
+                        'name': res.name,
+                        'type': res.resource_type,
+                        'size': res.size
+                    }
+                    for res in keymaker_result.embedded_files
+                ],
+                'quality_metrics': {
+                    'resource_coverage': quality_metrics.resource_coverage,
+                    'extraction_accuracy': quality_metrics.extraction_accuracy,
+                    'type_classification_accuracy': quality_metrics.type_classification_accuracy,
+                    'reconstruction_completeness': quality_metrics.reconstruction_completeness,
+                    'overall_quality': quality_metrics.overall_quality
                 },
-                metadata={
+                'reconstruction_map': keymaker_result.reconstruction_map,
+                'ai_enhanced': self.ai_enabled,
+                'keymaker_doors': keymaker_result.keymaker_doors,
+                'keymaker_metadata': {
                     'agent_name': 'Keymaker_ResourceReconstruction',
                     'matrix_character': 'The Keymaker',
                     'doors_created': len(keymaker_result.keymaker_doors) if keymaker_result.keymaker_doors else 0,
@@ -411,36 +407,27 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
                     'execution_time': execution_time,
                     'reconstruction_complete': quality_metrics.overall_quality >= 0.7
                 }
-            )
+            }
             
         except Exception as e:
             execution_time = time.time() - start_time
             error_msg = f"The Keymaker's resource reconstruction failed: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.FAILED,
-                data={},
-                error_message=error_msg,
-                metadata={
-                    'agent_name': 'Keymaker_ResourceReconstruction',
-                    'matrix_character': 'The Keymaker',
-                    'failure_reason': 'resource_reconstruction_error'
-                }
-            )
+            # Re-raise exception - base class will handle creating AgentResult
+            raise Exception(error_msg) from e
 
     def _validate_keymaker_prerequisites(self, context: Dict[str, Any]) -> None:
         """Validate that The Keymaker has the necessary data for resource reconstruction"""
         # Check required agent results
-        required_agents = [1, 2, 5, 7]
+        required_agents = [1, 2, 3]
         for agent_id in required_agents:
             agent_result = context['agent_results'].get(agent_id)
             if not agent_result or agent_result.status != AgentStatus.SUCCESS:
                 raise ValueError(f"Agent {agent_id} dependency not satisfied for Keymaker's reconstruction")
         
         # Check binary path
-        binary_path = context['global_data'].get('binary_path')
+        binary_path = context.get('binary_path')
         if not binary_path or not Path(binary_path).exists():
             raise ValueError("Binary path not found - Keymaker cannot access resources")
 
@@ -925,27 +912,262 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
     
     def _extract_pe_resources(self, binary_path: str, containers: Dict[str, Any]) -> List[ResourceItem]:
         """Extract PE resources"""
-        raise NotImplementedError(
-            "PE resource extraction not implemented - requires parsing PE resource "
-            "directory, extracting icons, strings, dialogs, bitmaps, version info, "
-            "and manifests from Windows PE executables using pefile library."
-        )
+        resources = []
+        
+        try:
+            with open(binary_path, 'rb') as f:
+                pe_data = f.read()
+            
+            # Simple PE resource extraction without pefile dependency
+            # Look for PE signature and resource section
+            if pe_data[:2] == b'MZ':
+                # Find PE header
+                pe_offset_pos = 0x3C
+                if len(pe_data) > pe_offset_pos + 4:
+                    pe_offset = struct.unpack('<I', pe_data[pe_offset_pos:pe_offset_pos+4])[0]
+                    
+                    if len(pe_data) > pe_offset + 4 and pe_data[pe_offset:pe_offset+4] == b'PE\x00\x00':
+                        # Basic resource extraction - look for common resource patterns
+                        
+                        # Extract version info patterns
+                        version_patterns = [b'FileVersion', b'ProductVersion', b'CompanyName', b'FileDescription']
+                        for pattern in version_patterns:
+                            pos = pe_data.find(pattern)
+                            if pos != -1:
+                                # Extract version string (simplified)
+                                end_pos = pos + 50
+                                version_data = pe_data[pos:end_pos]
+                                
+                                resources.append(ResourceItem(
+                                    resource_id=f'version_{pattern.decode("utf-8", errors="ignore")}',
+                                    resource_type='version_info',
+                                    name=f'version_{pattern.decode("utf-8", errors="ignore")}.txt',
+                                    size=len(version_data),
+                                    content=version_data.decode('utf-8', errors='ignore'),
+                                    metadata={'pattern': pattern.decode('utf-8', errors='ignore'), 'offset': pos},
+                                    extraction_method='pe_version_extraction',
+                                    confidence=0.7
+                                ))
+                        
+                        # Extract icon resources (look for ICO signature)
+                        ico_pos = pe_data.find(b'\x00\x00\x01\x00')  # ICO header
+                        if ico_pos != -1:
+                            ico_size = min(1024, len(pe_data) - ico_pos)  # Estimate icon size
+                            ico_data = pe_data[ico_pos:ico_pos + ico_size]
+                            
+                            resources.append(ResourceItem(
+                                resource_id='main_icon',
+                                resource_type='icon',
+                                name='main_icon.ico',
+                                size=ico_size,
+                                content=ico_data,
+                                metadata={'offset': ico_pos, 'estimated_size': ico_size},
+                                extraction_method='pe_icon_extraction',
+                                confidence=0.6
+                            ))
+                        
+                        # Extract manifest resources (look for XML manifests)
+                        manifest_start = pe_data.find(b'<?xml')
+                        if manifest_start != -1:
+                            manifest_end = pe_data.find(b'</assembly>', manifest_start)
+                            if manifest_end != -1:
+                                manifest_data = pe_data[manifest_start:manifest_end + 11]
+                                
+                                resources.append(ResourceItem(
+                                    resource_id='application_manifest',
+                                    resource_type='manifest',
+                                    name='application.manifest',
+                                    size=len(manifest_data),
+                                    content=manifest_data.decode('utf-8', errors='ignore'),
+                                    metadata={'offset': manifest_start},
+                                    extraction_method='pe_manifest_extraction',
+                                    confidence=0.8
+                                ))
+            
+        except Exception as e:
+            self.logger.error(f'PE resource extraction failed: {e}')
+        
+        return resources
     
     def _extract_elf_resources(self, binary_path: str, containers: Dict[str, Any]) -> List[ResourceItem]:
         """Extract ELF resources"""
-        raise NotImplementedError(
-            "ELF resource extraction not implemented - requires parsing ELF "
-            "sections (.rodata, .data), extracting embedded resources, strings, "
-            "and data structures from Linux/Unix executables."
-        )
+        resources = []
+        
+        try:
+            with open(binary_path, 'rb') as f:
+                elf_data = f.read()
+            
+            # Simple ELF resource extraction without elftools dependency
+            # Check for ELF signature
+            if elf_data[:4] == b'\x7fELF':
+                # Extract from common ELF sections
+                
+                # Look for .rodata section (read-only data)
+                rodata_marker = b'.rodata\x00'
+                rodata_pos = elf_data.find(rodata_marker)
+                if rodata_pos != -1:
+                    # Extract strings from rodata section (simplified)
+                    section_start = rodata_pos + len(rodata_marker)
+                    section_end = min(section_start + 4096, len(elf_data))  # Limit section size
+                    
+                    rodata_content = elf_data[section_start:section_end]
+                    readable_strings = self._extract_printable_strings(rodata_content)
+                    
+                    if readable_strings:
+                        resources.append(ResourceItem(
+                            resource_id='rodata_strings',
+                            resource_type='string_table',
+                            name='rodata_strings.txt',
+                            size=len(rodata_content),
+                            content='\n'.join(readable_strings[:50]),  # First 50 strings
+                            metadata={'section': '.rodata', 'string_count': len(readable_strings)},
+                            extraction_method='elf_rodata_extraction',
+                            confidence=0.7
+                        ))
+                
+                # Look for .comment section (compiler info)
+                comment_marker = b'.comment\x00'
+                comment_pos = elf_data.find(comment_marker)
+                if comment_pos != -1:
+                    comment_start = comment_pos + len(comment_marker)
+                    comment_end = min(comment_start + 256, len(elf_data))
+                    comment_data = elf_data[comment_start:comment_end]
+                    
+                    # Extract compiler information
+                    comment_str = comment_data.decode('utf-8', errors='ignore').strip('\x00')
+                    if comment_str:
+                        resources.append(ResourceItem(
+                            resource_id='compiler_info',
+                            resource_type='build_info',
+                            name='compiler_info.txt',
+                            size=len(comment_data),
+                            content=comment_str,
+                            metadata={'section': '.comment'},
+                            extraction_method='elf_comment_extraction',
+                            confidence=0.8
+                        ))
+                
+                # Look for .note sections (additional metadata)
+                note_marker = b'.note'
+                note_pos = elf_data.find(note_marker)
+                if note_pos != -1:
+                    note_start = note_pos + 10  # Skip marker
+                    note_end = min(note_start + 512, len(elf_data))
+                    note_data = elf_data[note_start:note_end]
+                    
+                    resources.append(ResourceItem(
+                        resource_id='elf_notes',
+                        resource_type='metadata',
+                        name='elf_notes.bin',
+                        size=len(note_data),
+                        content=note_data,
+                        metadata={'section': '.note'},
+                        extraction_method='elf_note_extraction',
+                        confidence=0.6
+                    ))
+            
+        except Exception as e:
+            self.logger.error(f'ELF resource extraction failed: {e}')
+        
+        return resources
     
     def _extract_macho_resources(self, binary_path: str, containers: Dict[str, Any]) -> List[ResourceItem]:
         """Extract Mach-O resources"""
-        raise NotImplementedError(
-            "Mach-O resource extraction not implemented - requires parsing Mach-O "
-            "load commands, extracting resources from __DATA segments, and "
-            "handling macOS application bundles and frameworks."
-        )
+        resources = []
+        
+        try:
+            with open(binary_path, 'rb') as f:
+                macho_data = f.read()
+            
+            # Simple Mach-O resource extraction
+            # Check for Mach-O signatures
+            if macho_data[:4] in [b'\xfe\xed\xfa\xce', b'\xfe\xed\xfa\xcf', b'\xce\xfa\xed\xfe', b'\xcf\xfa\xed\xfe']:
+                # Extract from common Mach-O sections
+                
+                # Look for __TEXT segment strings
+                text_marker = b'__TEXT'
+                text_pos = macho_data.find(text_marker)
+                if text_pos != -1:
+                    # Extract strings from TEXT segment
+                    text_start = text_pos + len(text_marker)
+                    text_end = min(text_start + 2048, len(macho_data))
+                    text_content = macho_data[text_start:text_end]
+                    
+                    text_strings = self._extract_printable_strings(text_content)
+                    if text_strings:
+                        resources.append(ResourceItem(
+                            resource_id='text_segment_strings',
+                            resource_type='string_table',
+                            name='text_strings.txt',
+                            size=len(text_content),
+                            content='\n'.join(text_strings[:30]),
+                            metadata={'segment': '__TEXT', 'string_count': len(text_strings)},
+                            extraction_method='macho_text_extraction',
+                            confidence=0.7
+                        ))
+                
+                # Look for __DATA segment
+                data_marker = b'__DATA'
+                data_pos = macho_data.find(data_marker)
+                if data_pos != -1:
+                    data_start = data_pos + len(data_marker)
+                    data_end = min(data_start + 1024, len(macho_data))
+                    data_content = macho_data[data_start:data_end]
+                    
+                    resources.append(ResourceItem(
+                        resource_id='data_segment',
+                        resource_type='data',
+                        name='data_segment.bin',
+                        size=len(data_content),
+                        content=data_content,
+                        metadata={'segment': '__DATA'},
+                        extraction_method='macho_data_extraction',
+                        confidence=0.6
+                    ))
+                
+                # Look for load commands that might contain version info
+                lc_uuid_marker = b'\x1b\x00\x00\x00'  # LC_UUID command
+                uuid_pos = macho_data.find(lc_uuid_marker)
+                if uuid_pos != -1 and uuid_pos + 20 < len(macho_data):
+                    uuid_data = macho_data[uuid_pos + 8:uuid_pos + 24]  # UUID is 16 bytes
+                    uuid_str = uuid_data.hex()
+                    
+                    resources.append(ResourceItem(
+                        resource_id='binary_uuid',
+                        resource_type='identifier',
+                        name='binary_uuid.txt',
+                        size=len(uuid_str),
+                        content=uuid_str,
+                        metadata={'load_command': 'LC_UUID'},
+                        extraction_method='macho_uuid_extraction',
+                        confidence=0.9
+                    ))
+                
+                # Look for Objective-C class information
+                objc_marker = b'__objc_classname'
+                objc_pos = macho_data.find(objc_marker)
+                if objc_pos != -1:
+                    objc_start = objc_pos + len(objc_marker)
+                    objc_end = min(objc_start + 512, len(macho_data))
+                    objc_content = macho_data[objc_start:objc_end]
+                    
+                    objc_strings = self._extract_printable_strings(objc_content)
+                    if objc_strings:
+                        resources.append(ResourceItem(
+                            resource_id='objc_classes',
+                            resource_type='class_info',
+                            name='objc_classes.txt',
+                            size=len(objc_content),
+                            content='\n'.join(objc_strings[:20]),
+                            metadata={'section': '__objc_classname'},
+                            extraction_method='macho_objc_extraction',
+                            confidence=0.8
+                        ))
+            
+        except Exception as e:
+            self.logger.error(f'Mach-O resource extraction failed: {e}')
+        
+        return resources
     
     def _extract_string_resources(self, binary_path: str, containers: Dict[str, Any]) -> List[ResourceItem]:
         """Extract string resources"""
@@ -1010,11 +1232,202 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
     
     def _detect_embedded_files(self, binary_path: str, containers: Dict[str, Any]) -> List[ResourceItem]:
         """Detect embedded files"""
-        raise NotImplementedError(
-            "Embedded file detection not implemented - requires entropy analysis, "
-            "file signature scanning, and data carving techniques to find files "
-            "embedded within binary executables."
-        )
+        embedded_files = []
+        
+        try:
+            with open(binary_path, 'rb') as f:
+                binary_data = f.read()
+            
+            # Search for embedded file signatures
+            all_signatures = {**self.resource_patterns['image_signatures'], 
+                            **self.resource_patterns['archive_signatures']}
+            
+            for file_type, signature in all_signatures.items():
+                signature_bytes = signature.encode('latin-1') if isinstance(signature, str) else signature
+                offset = 0
+                
+                while True:
+                    pos = binary_data.find(signature_bytes, offset)
+                    if pos == -1:
+                        break
+                    
+                    # Estimate file size based on type
+                    estimated_size = self._estimate_embedded_file_size(binary_data, pos, file_type)
+                    
+                    if estimated_size > 0:
+                        file_data = binary_data[pos:pos + estimated_size]
+                        
+                        # Validate the extracted data
+                        if self._validate_embedded_file(file_data, file_type):
+                            embedded_files.append(ResourceItem(
+                                resource_id=f'embedded_{file_type}_{pos:08x}',
+                                resource_type='embedded_file',
+                                name=f'embedded_{file_type}_{pos:08x}.{file_type}',
+                                size=estimated_size,
+                                content=file_data,
+                                metadata={
+                                    'offset': pos,
+                                    'file_type': file_type,
+                                    'signature': signature.hex() if isinstance(signature, bytes) else signature
+                                },
+                                extraction_method='signature_based_carving',
+                                confidence=0.7
+                            ))
+                    
+                    offset = pos + 1
+                    
+                    # Limit search to prevent excessive processing
+                    if len(embedded_files) > 20:
+                        break
+            
+            # Look for high-entropy regions that might contain compressed/encrypted files
+            entropy_regions = self._find_high_entropy_regions(binary_data)
+            for region_start, region_size in entropy_regions:
+                if region_size > 100:  # Only consider significant regions
+                    region_data = binary_data[region_start:region_start + region_size]
+                    
+                    embedded_files.append(ResourceItem(
+                        resource_id=f'high_entropy_{region_start:08x}',
+                        resource_type='compressed_data',
+                        name=f'high_entropy_{region_start:08x}.bin',
+                        size=region_size,
+                        content=region_data,
+                        metadata={
+                            'offset': region_start,
+                            'entropy_score': self._calculate_entropy_score(region_data),
+                            'analysis_type': 'entropy_based'
+                        },
+                        extraction_method='entropy_analysis',
+                        confidence=0.5
+                    ))
+                    
+                    # Limit high-entropy regions
+                    if len([f for f in embedded_files if f.resource_type == 'compressed_data']) > 5:
+                        break
+        
+        except Exception as e:
+            self.logger.error(f'Embedded file detection failed: {e}')
+        
+        return embedded_files
+    
+    def _estimate_embedded_file_size(self, data: bytes, start_pos: int, file_type: str) -> int:
+        """Estimate the size of an embedded file"""
+        # File type specific size estimation
+        if file_type in ['png', 'jpeg', 'gif', 'bmp']:
+            # For images, look for common end markers or estimate from header
+            if file_type == 'png':
+                # PNG files end with IEND chunk
+                end_marker = b'IEND\xaeB`\x82'
+                end_pos = data.find(end_marker, start_pos)
+                if end_pos != -1:
+                    return end_pos - start_pos + len(end_marker)
+                else:
+                    return min(10240, len(data) - start_pos)  # Max 10KB estimate
+            
+            elif file_type == 'jpeg':
+                # JPEG files end with FFD9
+                end_marker = b'\xff\xd9'
+                end_pos = data.find(end_marker, start_pos + 2)
+                if end_pos != -1:
+                    return end_pos - start_pos + 2
+                else:
+                    return min(20480, len(data) - start_pos)  # Max 20KB estimate
+        
+        elif file_type in ['zip', 'rar']:
+            # Archives - look for end of central directory or estimate
+            if file_type == 'zip':
+                # ZIP central directory end signature
+                end_marker = b'PK\x05\x06'
+                end_pos = data.find(end_marker, start_pos)
+                if end_pos != -1:
+                    return end_pos - start_pos + 22  # Minimum end record size
+                else:
+                    return min(51200, len(data) - start_pos)  # Max 50KB estimate
+        
+        # Default estimation
+        remaining_data = len(data) - start_pos
+        return min(8192, remaining_data)  # Default 8KB maximum
+    
+    def _validate_embedded_file(self, file_data: bytes, file_type: str) -> bool:
+        """Validate that extracted data is likely a valid file of the given type"""
+        if len(file_data) < 10:
+            return False
+        
+        # Basic validation based on file structure
+        if file_type == 'png':
+            # PNG should have proper chunk structure
+            return len(file_data) > 8 and file_data[8:12] == b'IHDR'
+        
+        elif file_type == 'jpeg':
+            # JPEG should have proper markers
+            return len(file_data) > 10 and file_data[2:4] == b'\xff\xe0'
+        
+        elif file_type == 'zip':
+            # ZIP should have proper local file header structure
+            if len(file_data) > 30:
+                return struct.unpack('<H', file_data[8:10])[0] < 100  # Reasonable compression method
+        
+        # Default: accept if reasonable size
+        return 100 <= len(file_data) <= 1024 * 1024  # Between 100 bytes and 1MB
+    
+    def _find_high_entropy_regions(self, data: bytes) -> List[Tuple[int, int]]:
+        """Find regions of high entropy that might contain compressed/encrypted data"""
+        regions = []
+        block_size = 1024
+        entropy_threshold = 7.0  # High entropy threshold
+        
+        for i in range(0, len(data) - block_size, block_size // 2):  # Overlapping blocks
+            block = data[i:i + block_size]
+            entropy = self._calculate_entropy_score(block)
+            
+            if entropy > entropy_threshold:
+                # Find the full extent of the high-entropy region
+                start = i
+                end = i + block_size
+                
+                # Extend backwards
+                while start > 0:
+                    prev_block = data[max(0, start - block_size):start]
+                    if len(prev_block) < block_size or self._calculate_entropy_score(prev_block) < entropy_threshold:
+                        break
+                    start -= block_size // 2
+                
+                # Extend forwards
+                while end < len(data):
+                    next_block = data[end:end + block_size]
+                    if len(next_block) < block_size or self._calculate_entropy_score(next_block) < entropy_threshold:
+                        break
+                    end += block_size // 2
+                
+                region_size = end - start
+                if region_size >= block_size:  # Only significant regions
+                    regions.append((start, region_size))
+                    
+                # Skip ahead to avoid overlapping regions
+                i = end
+        
+        return regions[:10]  # Limit to 10 regions
+    
+    def _calculate_entropy_score(self, data: bytes) -> float:
+        """Calculate Shannon entropy of data"""
+        if not data:
+            return 0.0
+        
+        from collections import Counter
+        import math
+        
+        # Count byte frequencies
+        byte_counts = Counter(data)
+        length = len(data)
+        
+        # Calculate Shannon entropy
+        entropy = 0.0
+        for count in byte_counts.values():
+            probability = count / length
+            if probability > 0:
+                entropy -= probability * math.log2(probability)
+        
+        return entropy
     
     def _deduplicate_resources(self, resources: List[ResourceItem]) -> List[ResourceItem]:
         """Remove duplicate resources"""

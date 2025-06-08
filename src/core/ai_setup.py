@@ -403,14 +403,25 @@ class ClaudeCodeInterface(AIInterface):
                 tmp_file_path = tmp_file.name
             
             try:
-                # Call Claude CLI with the prompt file
-                cmd = [
-                    self.claude_cmd, 
-                    '--prompt-file', tmp_file_path,
-                    '--max-tokens', str(self.config.max_tokens),
-                    '--temperature', str(self.config.temperature),
-                    '--output-format', 'json'
-                ]
+                # Call Claude CLI with the correct arguments based on command
+                if 'claude-code' in self.claude_cmd or 'claude-skip' in self.claude_cmd:
+                    # Use claude-code/claude-skip arguments  
+                    cmd = [
+                        self.claude_cmd, 
+                        '--prompt-file', tmp_file_path,
+                        '--max-tokens', str(self.config.max_tokens),
+                        '--temperature', str(self.config.temperature),
+                        '--output-format', 'json'
+                    ]
+                else:
+                    # Use claude command arguments (newer version)
+                    cmd = [
+                        self.claude_cmd,
+                        '--print',
+                        '--output-format', 'json',
+                        '--model', self.config.model,
+                        full_prompt  # Pass prompt directly as argument
+                    ]
                 
                 result = subprocess.run(
                     cmd,

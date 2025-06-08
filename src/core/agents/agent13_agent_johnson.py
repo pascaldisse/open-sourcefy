@@ -97,7 +97,8 @@ class Agent13_AgentJohnson(ReconstructionAgent):
                 auth_analysis, crypto_analysis, input_validation
             )
             
-            johnson_result = {
+            # Return dict from execute_matrix_task - base class will wrap in AgentResult
+            return {
                 'vulnerability_analysis': vulnerability_analysis,
                 'security_patterns': security_patterns,
                 'exploit_detection': exploit_detection,
@@ -109,27 +110,12 @@ class Agent13_AgentJohnson(ReconstructionAgent):
                 'johnson_metrics': self._calculate_johnson_metrics(vulnerability_analysis, security_report)
             }
             
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.COMPLETED,
-                data=johnson_result,
-                metadata={
-                    'depends_on': [12],
-                    'analysis_type': 'security_and_vulnerability_detection',
-                    'vulnerabilities_found': len(vulnerability_analysis.get('vulnerabilities', [])),
-                    'security_score': security_report.get('security_score', 0.0),
-                    'risk_level': security_report.get('risk_level', 'unknown'),
-                    'exploit_potential': exploit_detection.get('exploit_risk_score', 0.0)
-                }
-            )
-            
         except Exception as e:
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.FAILED,
-                data={},
-                error_message=f"Agent Johnson security analysis failed: {str(e)}"
-            )
+            error_msg = f"Agent Johnson security analysis failed: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
+            
+            # Re-raise exception - base class will handle creating AgentResult
+            raise Exception(error_msg) from e
 
     def _perform_vulnerability_analysis(self, all_results: Dict[int, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Perform comprehensive vulnerability analysis"""

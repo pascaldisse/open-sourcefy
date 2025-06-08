@@ -257,49 +257,29 @@ class Agent15_Analyst(ReconstructionAgent):
             
             self.performance_monitor.end_operation("analyst_metadata_analysis")
             
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.COMPLETED,
-                data={
-                    'comprehensive_metadata': analyst_result.comprehensive_metadata,
-                    'intelligence_synthesis': analyst_result.intelligence_synthesis,
-                    'documentation_analysis': analyst_result.documentation_analysis,
-                    'cross_references': analyst_result.cross_references,
-                    'quality_assessment': {
-                        'documentation_completeness': quality_assessment.documentation_completeness,
-                        'cross_reference_accuracy': quality_assessment.cross_reference_accuracy,
-                        'intelligence_synthesis': quality_assessment.intelligence_synthesis,
-                        'data_consistency': quality_assessment.data_consistency,
-                        'overall_quality': quality_assessment.overall_quality
-                    },
-                    'analyst_insights': analyst_result.analyst_insights
+            # Return dict from execute_matrix_task - base class will wrap in AgentResult
+            return {
+                'comprehensive_metadata': analyst_result.comprehensive_metadata,
+                'intelligence_synthesis': analyst_result.intelligence_synthesis,
+                'documentation_analysis': analyst_result.documentation_analysis,
+                'cross_references': analyst_result.cross_references,
+                'quality_assessment': {
+                    'documentation_completeness': quality_assessment.documentation_completeness,
+                    'cross_reference_accuracy': quality_assessment.cross_reference_accuracy,
+                    'intelligence_synthesis': quality_assessment.intelligence_synthesis,
+                    'data_consistency': quality_assessment.data_consistency,
+                    'overall_quality': quality_assessment.overall_quality
                 },
-                metadata={
-                    'agent_name': 'Analyst',
-                    'analysis_depth': self.analysis_depth,
-                    'ai_enabled': self.ai_enabled,
-                    'execution_time': self.performance_monitor.get_execution_time(),
-                    'metadata_entries': len(comprehensive_metadata),
-                    'cross_references': len(cross_references),
-                    'quality_score': quality_assessment.overall_quality
-                }
-            )
+                'analyst_insights': analyst_result.analyst_insights
+            }
             
         except Exception as e:
             self.performance_monitor.end_operation("analyst_metadata_analysis")
             error_msg = f"The Analyst's metadata analysis failed: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.FAILED,
-                data={},
-                error_message=error_msg,
-                metadata={
-                    'agent_name': 'Analyst',
-                    'failure_reason': 'metadata_analysis_error'
-                }
-            )
+            # Re-raise exception - base class will handle creating AgentResult
+            raise Exception(error_msg) from e
 
     def _validate_analyst_prerequisites(self, context: Dict[str, Any]) -> None:
         """Validate that The Analyst has necessary data"""

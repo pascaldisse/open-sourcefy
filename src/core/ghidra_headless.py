@@ -404,15 +404,25 @@ public class EnhancedDecompiler extends GhidraScript {
         # Ensure output directory exists
         os.makedirs(output_dir, exist_ok=True)
         
-        # Get script path
-        script_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            "ghidra_scripts",
-            script_name
-        )
+        # Get script path - check community scripts directory first, then fallback to project ghidra directory
+        script_path = None
         
-        if not os.path.exists(script_path):
-            logger.warning(f"Script not found: {script_path}, analysis will run without custom script")
+        # First check community scripts directory (where EnhancedDecompiler.java is created)
+        community_script_path = os.path.join(self.community_scripts_dir, script_name)
+        if os.path.exists(community_script_path):
+            script_path = community_script_path
+        else:
+            # Fallback to project ghidra directory for other scripts
+            project_script_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+                "ghidra",
+                script_name
+            )
+            if os.path.exists(project_script_path):
+                script_path = project_script_path
+        
+        if not script_path:
+            logger.warning(f"Script not found: {script_name}, analysis will run without custom script")
             script_path = None
         
         # Build command
@@ -493,6 +503,175 @@ public class EnhancedDecompiler extends GhidraScript {
                 logger.warning(f"Failed to read function file {func_file}: {e}")
                 
         logger.info(f"Extracted {len(functions)} functions from {binary_path}")
+        return functions
+
+    def multi_pass_decompilation(self, binary_path: str, output_dir: str, max_passes: int = 3) -> Dict[str, Any]:
+        """
+        Perform multi-pass decompilation to improve quality
+        
+        Args:
+            binary_path: Path to the binary file
+            output_dir: Directory to store outputs
+            max_passes: Maximum number of passes to perform
+            
+        Returns:
+            Dictionary with decompilation results and quality metrics
+        """
+        logger.info(f"Starting multi-pass decompilation of {binary_path} (max {max_passes} passes)")
+        
+        results = {
+            'binary_path': binary_path,
+            'passes': [],
+            'final_quality': 0.0,
+            'improvement_ratio': 0.0,
+            'functions': {}
+        }
+        
+        best_quality = 0.0
+        best_pass_output = None
+        
+        for pass_num in range(1, max_passes + 1):
+            logger.info(f"Starting decompilation pass {pass_num}/{max_passes}")
+            
+            pass_output_dir = os.path.join(output_dir, f"pass_{pass_num}")
+            os.makedirs(pass_output_dir, exist_ok=True)
+            
+            # Run decompilation for this pass
+            success, output = self.run_ghidra_analysis(
+                binary_path, 
+                pass_output_dir,
+                timeout=300 + (pass_num * 60)  # Longer timeout for later passes
+            )
+            
+            if not success:
+                logger.warning(f"Pass {pass_num} failed: {output}")
+                continue
+                
+            # Analyze quality of this pass
+            quality_score = self._analyze_pass_quality(pass_output_dir)
+            
+            pass_result = {
+                'pass_number': pass_num,
+                'success': success,
+                'quality_score': quality_score,
+                'output_dir': pass_output_dir,
+                'functions_found': len(list(Path(pass_output_dir).glob("*.c")))
+            }
+            
+            results['passes'].append(pass_result)
+            
+            logger.info(f"Pass {pass_num} completed with quality score: {quality_score:.3f}")
+            
+            # Track best pass
+            if quality_score > best_quality:
+                best_quality = quality_score
+                best_pass_output = pass_output_dir
+                
+            # Early termination if quality is good enough
+            if quality_score > 0.85:
+                logger.info(f"High quality achieved at pass {pass_num}, stopping early")
+                break
+                
+            # Diminishing returns check
+            if pass_num > 1 and quality_score < results['passes'][-2]['quality_score'] * 1.05:
+                logger.info(f"Diminishing returns detected at pass {pass_num}, stopping")
+                break
+        
+        # Calculate final metrics
+        results['final_quality'] = best_quality
+        if results['passes']:
+            initial_quality = results['passes'][0]['quality_score']
+            results['improvement_ratio'] = (best_quality - initial_quality) / max(initial_quality, 0.1)
+        
+        # Process best pass results
+        if best_pass_output:
+            results['functions'] = self._extract_functions_from_output(best_pass_output)
+            results['best_pass_dir'] = best_pass_output
+            
+        logger.info(f"Multi-pass decompilation completed. Final quality: {best_quality:.3f}")
+        return results
+        
+    def _analyze_pass_quality(self, output_dir: str) -> float:
+        """Analyze the quality of a decompilation pass"""
+        quality_score = 0.0
+        total_functions = 0
+        
+        output_path = Path(output_dir)
+        
+        # Count functions and analyze quality
+        for c_file in output_path.glob("*.c"):
+            total_functions += 1
+            try:
+                with open(c_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    
+                # Quality indicators
+                func_quality = self._calculate_function_quality(content)
+                quality_score += func_quality
+                
+            except Exception as e:
+                logger.warning(f"Failed to analyze {c_file}: {e}")
+                
+        # Normalize by number of functions
+        if total_functions > 0:
+            quality_score /= total_functions
+        else:
+            quality_score = 0.0
+            
+        # Check for summary file quality
+        summary_file = output_path / "decompilation_summary.txt"
+        if summary_file.exists():
+            try:
+                with open(summary_file, 'r') as f:
+                    summary_content = f.read()
+                    success_rate_match = re.search(r'Success rate: ([\d.]+)%', summary_content)
+                    if success_rate_match:
+                        success_rate = float(success_rate_match.group(1)) / 100.0
+                        quality_score = (quality_score + success_rate) / 2.0
+            except Exception:
+                pass
+                
+        return min(1.0, max(0.0, quality_score))
+        
+    def _calculate_function_quality(self, code: str) -> float:
+        """Calculate quality score for a single function"""
+        quality = 0.5  # Base score
+        
+        # Positive indicators
+        if 'return' in code:
+            quality += 0.1
+        if re.search(r'\w+\s*\([^)]*\)\s*{', code):  # Function definition
+            quality += 0.1
+        if any(keyword in code for keyword in ['if', 'while', 'for', 'switch']):
+            quality += 0.1
+        if '"' in code or "'" in code:  # String literals
+            quality += 0.05
+            
+        # Negative indicators
+        if 'undefined' in code:
+            quality -= 0.2
+        if 'UNRECOVERED' in code:
+            quality -= 0.3
+        if code.count('DAT_') > 3:
+            quality -= 0.1
+        if len(code.strip()) < 50:  # Too short
+            quality -= 0.1
+            
+        return max(0.0, min(1.0, quality))
+        
+    def _extract_functions_from_output(self, output_dir: str) -> Dict[str, str]:
+        """Extract functions from decompilation output directory"""
+        functions = {}
+        output_path = Path(output_dir)
+        
+        for c_file in output_path.glob("*.c"):
+            func_name = c_file.stem
+            try:
+                with open(c_file, 'r', encoding='utf-8') as f:
+                    functions[func_name] = f.read()
+            except Exception as e:
+                logger.warning(f"Failed to read function file {c_file}: {e}")
+                
         return functions
 
     def batch_analyze(self, binary_paths: List[str], base_output_dir: str) -> Dict[str, Dict[str, str]]:

@@ -84,27 +84,15 @@ class Agent11_TheOracle(ValidationAgent):
                 'recommendations': self._generate_recommendations(validation_result, truth_verification)
             }
             
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.COMPLETED,
-                data=oracle_result,
-                metadata={
-                    'depends_on': [10],
-                    'analysis_type': 'final_validation_and_truth_verification',
-                    'validation_score': validation_result.get('overall_score', 0.0),
-                    'truth_score': truth_verification.get('truth_score', 0.0),
-                    'oracle_confidence': final_verdict.get('confidence', 0.0),
-                    'final_grade': final_verdict.get('grade', 'UNKNOWN')
-                }
-            )
+            # Return dict from execute_matrix_task - base class will wrap in AgentResult
+            return oracle_result
             
         except Exception as e:
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.FAILED,
-                data={},
-                error_message=f"The Oracle validation failed: {str(e)}"
-            )
+            error_msg = f"The Oracle validation failed: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
+            
+            # Re-raise exception - base class will handle creating AgentResult
+            raise Exception(error_msg) from e
 
     def _perform_comprehensive_validation(self, all_results: Dict[int, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Perform comprehensive validation of all pipeline components"""

@@ -95,7 +95,8 @@ class Agent14_TheCleaner(ReconstructionAgent):
             # Save cleaned code
             self._save_cleaned_code(final_polish, context)
             
-            cleaner_result = {
+            # Return dict from execute_matrix_task - base class will wrap in AgentResult
+            return {
                 'initial_cleanup': cleanup_result,
                 'optimization_applied': optimization_result,
                 'quality_enhancement': quality_enhancement,
@@ -106,27 +107,12 @@ class Agent14_TheCleaner(ReconstructionAgent):
                 'cleaner_metrics': self._calculate_cleaner_metrics(cleanup_report, final_polish)
             }
             
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.COMPLETED,
-                data=cleaner_result,
-                metadata={
-                    'depends_on': [13],
-                    'analysis_type': 'code_cleanup_and_optimization',
-                    'files_cleaned': len(final_polish.get('cleaned_files', {})),
-                    'optimizations_applied': len(optimization_result.get('optimizations', [])),
-                    'quality_score': cleanup_report.get('final_quality_score', 0.0),
-                    'cleanup_efficiency': cleaner_result['cleaner_metrics'].get('cleanup_efficiency', 0.0)
-                }
-            )
-            
         except Exception as e:
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.FAILED,
-                data={},
-                error_message=f"The Cleaner code cleanup failed: {str(e)}"
-            )
+            error_msg = f"The Cleaner code cleanup failed: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
+            
+            # Re-raise exception - base class will handle creating AgentResult
+            raise Exception(error_msg) from e
 
     def _perform_code_cleanup(self, all_results: Dict[int, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Perform initial code cleanup"""

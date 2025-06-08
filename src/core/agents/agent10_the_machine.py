@@ -96,26 +96,15 @@ class Agent10_TheMachine(ReconstructionAgent):
                 'machine_metrics': self._calculate_machine_metrics(compilation_results)
             }
             
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.SUCCESS,
-                data=machine_result,
-                metadata={
-                    'depends_on': [8, 9],
-                    'analysis_type': 'compilation_orchestration',
-                    'build_systems_detected': len(build_system.get('detected_systems', [])),
-                    'compilation_success_rate': compilation_results.get('success_rate', 0.0),
-                    'machine_efficiency': optimized_build.get('efficiency_score', 0.0)
-                }
-            )
+            # Return dict from execute_matrix_task - base class will wrap in AgentResult
+            return machine_result
             
         except Exception as e:
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.FAILED,
-                data={},
-                error_message=f"The Machine compilation orchestration failed: {str(e)}"
-            )
+            error_msg = f"The Machine compilation orchestration failed: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
+            
+            # Re-raise exception - base class will handle creating AgentResult
+            raise Exception(error_msg) from e
 
     def _gather_available_sources(self, all_results: Dict[int, Any], shared_memory: Dict[str, Any] = None) -> Dict[str, Any]:
         """Gather all available source code from various agents"""

@@ -279,59 +279,42 @@ class Agent16_AgentBrown(ValidationAgent):
             
             self.performance_monitor.end_operation("agent_brown_qa")
             
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.COMPLETED,
-                data={
-                    'quality_metrics': {
-                        'code_quality': quality_metrics.code_quality,
-                        'compilation_success': quality_metrics.compilation_success,
-                        'functionality_score': quality_metrics.functionality_score,
-                        'optimization_level': quality_metrics.optimization_level,
-                        'security_score': quality_metrics.security_score,
-                        'maintainability': quality_metrics.maintainability,
-                        'overall_quality': quality_metrics.overall_quality
-                    },
-                    'optimization_results': {
-                        'original_size': optimization_results.original_size,
-                        'optimized_size': optimization_results.optimized_size,
-                        'performance_improvement': optimization_results.performance_improvement,
-                        'optimizations_applied': optimization_results.optimizations_applied,
-                        'quality_score': optimization_results.quality_score
-                    },
-                    'validation_report': validation_report,
-                    'final_recommendations': recommendations,
-                    'production_readiness': production_readiness,
-                    'agent_brown_insights': agent_brown_insights
+            # Return dict from execute_matrix_task - base class will wrap in AgentResult
+            return {
+                'quality_metrics': {
+                    'code_quality': quality_metrics.code_quality,
+                    'compilation_success': quality_metrics.compilation_success,
+                    'functionality_score': quality_metrics.functionality_score,
+                    'optimization_level': quality_metrics.optimization_level,
+                    'security_score': quality_metrics.security_score,
+                    'maintainability': quality_metrics.maintainability,
+                    'overall_quality': quality_metrics.overall_quality
                 },
-                metadata={
-                    'agent_name': 'AgentBrown_QualityAssurance',
-                    'matrix_character': 'Agent Brown',
-                    'quality_threshold': self.quality_threshold,
-                    'optimization_level': self.optimization_level,
-                    'ai_enabled': self.ai_enabled,
-                    'execution_time': self.performance_monitor.get_execution_time(),
-                    'production_ready': production_readiness == 'ready',
-                    'overall_quality_score': quality_metrics.overall_quality
-                }
-            )
+                'optimization_results': {
+                    'original_size': optimization_results.original_size,
+                    'optimized_size': optimization_results.optimized_size,
+                    'performance_improvement': optimization_results.performance_improvement,
+                    'optimizations_applied': optimization_results.optimizations_applied,
+                    'quality_score': optimization_results.quality_score
+                },
+                'validation_report': validation_report,
+                'final_recommendations': recommendations,
+                'production_readiness': production_readiness,
+                'agent_brown_insights': agent_brown_insights,
+                'quality_threshold': self.quality_threshold,
+                'optimization_level': self.optimization_level,
+                'ai_enabled': self.ai_enabled,
+                'production_ready': production_readiness == 'ready',
+                'overall_quality_score': quality_metrics.overall_quality
+            }
             
         except Exception as e:
             self.performance_monitor.end_operation("agent_brown_qa")
             error_msg = f"Agent Brown's quality assurance failed: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.FAILED,
-                data={},
-                error_message=error_msg,
-                metadata={
-                    'agent_name': 'AgentBrown_QualityAssurance',
-                    'matrix_character': 'Agent Brown',
-                    'failure_reason': 'quality_assurance_error'
-                }
-            )
+            # Re-raise exception - base class will handle creating AgentResult
+            raise Exception(error_msg) from e
 
     def _validate_agent_brown_prerequisites(self, context: Dict[str, Any]) -> None:
         """Validate that Agent Brown has necessary data for final validation"""

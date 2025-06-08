@@ -117,7 +117,7 @@ class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
         super().__init__(
             agent_id=7,
             matrix_character=MatrixCharacter.TRAINMAN,
-            dependencies=[1, 2, 5]  # Depends on Binary Discovery, Arch Analysis, and Neo's decompilation
+            dependencies=[1, 2, 3]  # Depends on Binary Discovery, Arch Analysis, and Merovingian's decompilation
         )
         
         # Load Trainman-specific configuration
@@ -262,17 +262,17 @@ class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
             self._validate_trainman_prerequisites(context)
             
             # Get analysis context from previous agents
-            binary_path = context['global_data']['binary_path']
+            binary_path = context.get('binary_path', '')
             agent1_data = context['agent_results'][1].data  # Binary discovery
             agent2_data = context['agent_results'][2].data  # Architecture analysis
-            agent5_data = context['agent_results'][5].data  # Neo's decompilation
+            agent3_data = context['agent_results'][3].data  # Merovingian's decompilation
             
             self.logger.info("The Trainman beginning advanced assembly analysis at Mobil Ave station...")
             
             # Phase 1: Assembly Code Extraction and Preparation
             self.logger.info("Phase 1: Extracting and preparing assembly code")
             assembly_data = self._extract_assembly_code(
-                binary_path, agent1_data, agent2_data, agent5_data
+                binary_path, agent1_data, agent2_data, agent3_data
             )
             
             # Phase 2: Deep Instruction Analysis
@@ -346,10 +346,8 @@ class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
             
             execution_time = time.time() - start_time
             
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.SUCCESS,
-                data={
+            # Return dict from execute_matrix_task - base class will wrap in AgentResult
+            return {
                     'instruction_analysis': trainman_result.instruction_analysis,
                     'calling_conventions': [
                         {
@@ -383,49 +381,38 @@ class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
                         'overall_analysis_quality': quality_metrics.overall_analysis_quality
                     },
                     'ai_enhanced': self.ai_enabled,
-                    'trainman_insights': trainman_result.trainman_insights
-                },
-                metadata={
-                    'agent_name': 'Trainman_AssemblyAnalysis',
-                    'matrix_character': 'The Trainman',
-                    'analysis_depth': self.analysis_depth,
-                    'patterns_detected': len(trainman_result.instruction_patterns),
-                    'calling_conventions_found': len(trainman_result.calling_conventions),
-                    'ai_enabled': self.ai_enabled,
-                    'execution_time': execution_time,
-                    'station_status': 'analysis_complete'
-                }
-            )
+                    'trainman_insights': trainman_result.trainman_insights,
+                    'trainman_metadata': {
+                        'agent_name': 'Trainman_AssemblyAnalysis',
+                        'matrix_character': 'The Trainman',
+                        'analysis_depth': self.analysis_depth,
+                        'patterns_detected': len(trainman_result.instruction_patterns),
+                        'calling_conventions_found': len(trainman_result.calling_conventions),
+                        'ai_enabled': self.ai_enabled,
+                        'execution_time': execution_time,
+                        'station_status': 'analysis_complete'
+                    }
+            }
             
         except Exception as e:
             execution_time = time.time() - start_time
             error_msg = f"The Trainman's assembly analysis failed: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             
-            return AgentResult(
-                agent_id=self.agent_id,
-                status=AgentStatus.FAILED,
-                data={},
-                error_message=error_msg,
-                metadata={
-                    'agent_name': 'Trainman_AssemblyAnalysis',
-                    'matrix_character': 'The Trainman',
-                    'failure_reason': 'assembly_analysis_error',
-                    'station_status': 'error_state'
-                }
-            )
+            # Re-raise exception - base class will handle creating AgentResult
+            raise Exception(error_msg) from e
 
     def _validate_trainman_prerequisites(self, context: Dict[str, Any]) -> None:
         """Validate that The Trainman has the necessary data for assembly analysis"""
         # Check required agent results
-        required_agents = [1, 2, 5]
+        required_agents = [1, 2, 3]
         for agent_id in required_agents:
             agent_result = context['agent_results'].get(agent_id)
             if not agent_result or agent_result.status != AgentStatus.SUCCESS:
                 raise ValueError(f"Agent {agent_id} dependency not satisfied for Trainman's analysis")
         
         # Check binary path
-        binary_path = context['global_data'].get('binary_path')
+        binary_path = context.get('binary_path')
         if not binary_path or not Path(binary_path).exists():
             raise ValueError("Binary path not found - Trainman cannot access the station")
 
@@ -944,50 +931,441 @@ class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
     
     def _find_pattern_occurrences(self, instructions: List[Dict[str, Any]], pattern_name: str, pattern_regexes: List[str]) -> List[InstructionPattern]:
         """Find occurrences of instruction patterns"""
-        raise NotImplementedError(
-            "Pattern occurrence detection not implemented - requires regex matching "
-            "against instruction sequences to identify specific assembly patterns. "
-            "Would need pattern database and efficient string matching algorithms."
-        )
+        patterns = []
+        
+        if not instructions or not pattern_regexes:
+            return patterns
+        
+        # Convert instructions to searchable text
+        instruction_lines = [inst.get('raw_line', '').lower() for inst in instructions]
+        
+        matches = []
+        for i, line in enumerate(instruction_lines):
+            # Check if this line starts a pattern match
+            pattern_match = True
+            matched_instructions = []
+            
+            for j, regex_pattern in enumerate(pattern_regexes):
+                if i + j < len(instruction_lines):
+                    import re
+                    if re.search(regex_pattern, instruction_lines[i + j]):
+                        matched_instructions.append(instruction_lines[i + j])
+                    else:
+                        pattern_match = False
+                        break
+                else:
+                    pattern_match = False
+                    break
+            
+            if pattern_match and len(matched_instructions) == len(pattern_regexes):
+                matches.append((i, matched_instructions))
+        
+        # Create pattern objects for found matches
+        if matches:
+            pattern = InstructionPattern(
+                pattern_type=pattern_name,
+                instructions=list(set([inst for _, inst_list in matches for inst in inst_list])),
+                frequency=len(matches),
+                significance=min(len(matches) / 10.0, 1.0),
+                description=f'{pattern_name} pattern found {len(matches)} times',
+                metadata={
+                    'pattern_regexes': pattern_regexes,
+                    'match_positions': [pos for pos, _ in matches],
+                    'total_matches': len(matches)
+                }
+            )
+            patterns.append(pattern)
+        
+        return patterns
     
     def _detect_performance_patterns(self, instructions: List[Dict[str, Any]]) -> List[InstructionPattern]:
         """Detect performance-critical patterns"""
-        raise NotImplementedError(
-            "Performance pattern detection not implemented - requires analysis of "
-            "instruction sequences for vectorization, loop unrolling, cache "
-            "optimization, and other performance-critical code patterns."
-        )
+        patterns = []
+        
+        if not instructions:
+            return patterns
+        
+        # Detect vectorization patterns (SIMD instructions)
+        simd_instructions = ['movq', 'movdq', 'addps', 'mulps', 'subps', 'divps', 'movaps', 'movups']
+        simd_count = 0
+        simd_lines = []
+        
+        for inst in instructions:
+            inst_name = inst.get('instruction', '').lower()
+            if any(simd in inst_name for simd in simd_instructions):
+                simd_count += 1
+                simd_lines.append(inst.get('raw_line', ''))
+        
+        if simd_count > 2:
+            patterns.append(InstructionPattern(
+                pattern_type='vectorization',
+                instructions=simd_lines[:5],  # Show first 5 examples
+                frequency=simd_count,
+                significance=min(simd_count / 20.0, 1.0),
+                description=f'SIMD/vectorization pattern detected with {simd_count} vector instructions',
+                metadata={'simd_instruction_count': simd_count, 'optimization_type': 'vectorization'}
+            ))
+        
+        # Detect cache optimization patterns (sequential memory access)
+        memory_instructions = []
+        for i, inst in enumerate(instructions):
+            raw_line = inst.get('raw_line', '').lower()
+            if any(mem_op in raw_line for mem_op in ['mov', 'lea', 'push', 'pop']):
+                if '[' in raw_line and ']' in raw_line:  # Memory reference
+                    memory_instructions.append((i, inst))
+        
+        # Look for sequential memory access patterns
+        sequential_access_count = 0
+        for i in range(len(memory_instructions) - 1):
+            curr_line = memory_instructions[i][1].get('raw_line', '')
+            next_line = memory_instructions[i+1][1].get('raw_line', '')
+            # Simple heuristic: consecutive memory operations suggest cache optimization
+            if memory_instructions[i+1][0] - memory_instructions[i][0] <= 2:
+                sequential_access_count += 1
+        
+        if sequential_access_count > 3:
+            patterns.append(InstructionPattern(
+                pattern_type='cache_optimization',
+                instructions=[inst[1].get('raw_line', '') for inst in memory_instructions[:5]],
+                frequency=sequential_access_count,
+                significance=min(sequential_access_count / 15.0, 1.0),
+                description=f'Cache optimization pattern with {sequential_access_count} sequential memory accesses',
+                metadata={'sequential_accesses': sequential_access_count, 'optimization_type': 'cache'}
+            ))
+        
+        # Detect register reuse patterns (performance optimization)
+        register_usage = {}
+        for inst in instructions:
+            for reg in inst.get('registers_used', []):
+                register_usage[reg] = register_usage.get(reg, 0) + 1
+        
+        high_usage_regs = [reg for reg, count in register_usage.items() if count > 5]
+        if len(high_usage_regs) > 2:
+            patterns.append(InstructionPattern(
+                pattern_type='register_optimization',
+                instructions=[f'High usage: {reg} ({register_usage[reg]} times)' for reg in high_usage_regs[:3]],
+                frequency=len(high_usage_regs),
+                significance=min(len(high_usage_regs) / 8.0, 1.0),
+                description=f'Register optimization pattern with {len(high_usage_regs)} heavily used registers',
+                metadata={'high_usage_registers': high_usage_regs, 'optimization_type': 'register_allocation'}
+            ))
+        
+        return patterns
     
     def _detect_loop_patterns(self, instructions: List[Dict[str, Any]]) -> List[InstructionPattern]:
         """Detect loop patterns"""
-        raise NotImplementedError(
-            "Loop pattern detection not implemented - requires control flow analysis "
-            "to identify loop structures, loop invariants, and optimization patterns "
-            "like loop unrolling and vectorization."
-        )
+        patterns = []
+        
+        if not instructions:
+            return patterns
+        
+        # Find potential loop structures by looking for jump-back patterns
+        loop_candidates = []
+        
+        for i, inst in enumerate(instructions):
+            inst_name = inst.get('instruction', '').lower()
+            raw_line = inst.get('raw_line', '').lower()
+            
+            # Look for conditional jumps that might be loop ends
+            if any(jump in inst_name for jump in ['je', 'jne', 'jl', 'jg', 'jle', 'jge', 'jz', 'jnz']):
+                # Look for jump target (simplified - would need proper address parsing)
+                if any(target in raw_line for target in ['$', '+', '-']):
+                    loop_candidates.append((i, inst, 'conditional_loop'))
+            
+            # Look for explicit loop instructions
+            elif inst_name in ['loop', 'loope', 'loopne', 'loopz', 'loopnz']:
+                loop_candidates.append((i, inst, 'explicit_loop'))
+        
+        # Analyze loop candidates
+        if loop_candidates:
+            loop_instructions = []
+            for pos, inst, loop_type in loop_candidates:
+                loop_instructions.append(inst.get('raw_line', ''))
+                
+                # Look for loop body (instructions between compare and jump)
+                if pos > 0:
+                    # Check previous instructions for compare operations
+                    for j in range(max(0, pos - 5), pos):
+                        prev_inst = instructions[j].get('instruction', '').lower()
+                        if prev_inst in ['cmp', 'test', 'inc', 'dec', 'add', 'sub']:
+                            loop_instructions.append(instructions[j].get('raw_line', ''))
+            
+            if loop_candidates:
+                patterns.append(InstructionPattern(
+                    pattern_type='loop_structure',
+                    instructions=loop_instructions[:10],  # Limit to first 10 instructions
+                    frequency=len(loop_candidates),
+                    significance=min(len(loop_candidates) / 5.0, 1.0),
+                    description=f'Loop structures detected with {len(loop_candidates)} loop patterns',
+                    metadata={
+                        'loop_types': [ltype for _, _, ltype in loop_candidates],
+                        'loop_positions': [pos for pos, _, _ in loop_candidates]
+                    }
+                ))
+        
+        # Detect potential loop unrolling (repeated instruction sequences)
+        instruction_sequences = []
+        sequence_length = 4
+        
+        for i in range(len(instructions) - sequence_length + 1):
+            sequence = [inst.get('instruction', '') for inst in instructions[i:i+sequence_length]]
+            sequence_key = ' '.join(sequence)
+            instruction_sequences.append(sequence_key)
+        
+        # Count sequence repetitions
+        from collections import Counter
+        sequence_counts = Counter(instruction_sequences)
+        repeated_sequences = [(seq, count) for seq, count in sequence_counts.items() if count > 2]
+        
+        if repeated_sequences:
+            most_repeated = max(repeated_sequences, key=lambda x: x[1])
+            patterns.append(InstructionPattern(
+                pattern_type='loop_unrolling',
+                instructions=[most_repeated[0]],
+                frequency=most_repeated[1],
+                significance=min(most_repeated[1] / 10.0, 1.0),
+                description=f'Loop unrolling pattern: sequence repeated {most_repeated[1]} times',
+                metadata={
+                    'repeated_sequence': most_repeated[0],
+                    'repetition_count': most_repeated[1],
+                    'total_repeated_sequences': len(repeated_sequences)
+                }
+            ))
+        
+        return patterns
     
     def _detect_function_boundaries(self, instructions: List[Dict[str, Any]]) -> List[InstructionPattern]:
         """Detect function boundaries"""
-        raise NotImplementedError(
-            "Function boundary detection not implemented - requires analysis of "
-            "prologue/epilogue patterns, call/return instructions, and stack "
-            "frame setup to identify function start/end points."
-        )
+        patterns = []
+        
+        if not instructions:
+            return patterns
+        
+        # Function prologue detection
+        prologue_positions = []
+        for i in range(len(instructions) - 2):
+            # Common prologue pattern: push ebp; mov ebp, esp; sub esp, N
+            inst1 = instructions[i].get('instruction', '').lower()
+            inst2 = instructions[i+1].get('instruction', '').lower() if i+1 < len(instructions) else ''
+            inst3 = instructions[i+2].get('instruction', '').lower() if i+2 < len(instructions) else ''
+            
+            raw1 = instructions[i].get('raw_line', '').lower()
+            raw2 = instructions[i+1].get('raw_line', '').lower() if i+1 < len(instructions) else ''
+            
+            # Pattern 1: push ebp; mov ebp, esp
+            if (inst1 == 'push' and 'ebp' in raw1 and 
+                inst2 == 'mov' and 'ebp' in raw2 and 'esp' in raw2):
+                prologue_positions.append(i)
+            
+            # Pattern 2: Single instruction prologue markers
+            elif inst1 in ['enter'] or ('proc' in raw1 and 'far' in raw1):
+                prologue_positions.append(i)
+        
+        if prologue_positions:
+            prologue_instructions = []
+            for pos in prologue_positions[:5]:  # Show first 5 examples
+                if pos + 2 < len(instructions):
+                    prologue_instructions.extend([
+                        instructions[pos].get('raw_line', ''),
+                        instructions[pos+1].get('raw_line', ''),
+                        instructions[pos+2].get('raw_line', '')
+                    ])
+            
+            patterns.append(InstructionPattern(
+                pattern_type='function_prologue',
+                instructions=prologue_instructions[:10],
+                frequency=len(prologue_positions),
+                significance=min(len(prologue_positions) / 10.0, 1.0),
+                description=f'Function prologue patterns detected at {len(prologue_positions)} locations',
+                metadata={'prologue_positions': prologue_positions}
+            ))
+        
+        # Function epilogue detection
+        epilogue_positions = []
+        for i in range(len(instructions) - 1):
+            # Common epilogue pattern: mov esp, ebp; pop ebp; ret
+            inst1 = instructions[i].get('instruction', '').lower()
+            inst2 = instructions[i+1].get('instruction', '').lower() if i+1 < len(instructions) else ''
+            
+            raw1 = instructions[i].get('raw_line', '').lower()
+            
+            # Pattern 1: mov esp, ebp; pop ebp (followed by ret)
+            if (inst1 == 'mov' and 'esp' in raw1 and 'ebp' in raw1 and 
+                inst2 == 'pop' and 'ebp' in instructions[i+1].get('raw_line', '').lower()):
+                epilogue_positions.append(i)
+            
+            # Pattern 2: Simple return
+            elif inst1 in ['ret', 'retn', 'retf'] or inst1 == 'leave':
+                epilogue_positions.append(i)
+        
+        if epilogue_positions:
+            epilogue_instructions = []
+            for pos in epilogue_positions[:5]:  # Show first 5 examples
+                epilogue_instructions.append(instructions[pos].get('raw_line', ''))
+                if pos + 1 < len(instructions):
+                    epilogue_instructions.append(instructions[pos+1].get('raw_line', ''))
+            
+            patterns.append(InstructionPattern(
+                pattern_type='function_epilogue',
+                instructions=epilogue_instructions[:10],
+                frequency=len(epilogue_positions),
+                significance=min(len(epilogue_positions) / 10.0, 1.0),
+                description=f'Function epilogue patterns detected at {len(epilogue_positions)} locations',
+                metadata={'epilogue_positions': epilogue_positions}
+            ))
+        
+        # Function call detection
+        call_positions = []
+        for i, inst in enumerate(instructions):
+            inst_name = inst.get('instruction', '').lower()
+            if inst_name in ['call', 'callq']:
+                call_positions.append(i)
+        
+        if call_positions:
+            call_instructions = [instructions[pos].get('raw_line', '') for pos in call_positions[:10]]
+            
+            patterns.append(InstructionPattern(
+                pattern_type='function_calls',
+                instructions=call_instructions,
+                frequency=len(call_positions),
+                significance=min(len(call_positions) / 20.0, 1.0),
+                description=f'Function call instructions detected at {len(call_positions)} locations',
+                metadata={'call_positions': call_positions}
+            ))
+        
+        return patterns
     
     def _analyze_call_patterns(self, instructions: List[Dict[str, Any]], architecture: str) -> List[Dict[str, Any]]:
         """Analyze function call patterns"""
-        raise NotImplementedError(
-            "Call pattern analysis not implemented - requires analysis of function "
-            "call instructions, parameter passing conventions, and stack cleanup "
-            "patterns to identify calling conventions and function signatures."
-        )
+        call_patterns = []
+        
+        if not instructions:
+            return call_patterns
+        
+        # Find all call instructions
+        for i, inst in enumerate(instructions):
+            inst_name = inst.get('instruction', '').lower()
+            raw_line = inst.get('raw_line', '').lower()
+            
+            if inst_name in ['call', 'callq']:
+                pattern = {
+                    'position': i,
+                    'instruction': raw_line,
+                    'target': 'unknown',
+                    'parameter_setup': [],
+                    'stack_cleanup': [],
+                    'calling_convention_hints': []
+                }
+                
+                # Extract call target
+                parts = raw_line.split()
+                if len(parts) > 1:
+                    pattern['target'] = parts[-1].replace(',', '').replace(';', '')
+                
+                # Look backwards for parameter setup (preceding instructions)
+                for j in range(max(0, i-10), i):
+                    prev_inst = instructions[j]
+                    prev_name = prev_inst.get('instruction', '').lower()
+                    prev_line = prev_inst.get('raw_line', '').lower()
+                    
+                    # Parameter passing via registers (fastcall/register calling convention)
+                    if prev_name == 'mov' and any(reg in prev_line for reg in ['eax', 'ebx', 'ecx', 'edx', 'rdi', 'rsi']):
+                        pattern['parameter_setup'].append(prev_line)
+                        pattern['calling_convention_hints'].append('register_based')
+                    
+                    # Parameter passing via stack (cdecl/stdcall)
+                    elif prev_name == 'push':
+                        pattern['parameter_setup'].append(prev_line)
+                        pattern['calling_convention_hints'].append('stack_based')
+                    
+                    # Immediate values as parameters
+                    elif prev_name == 'mov' and '$' in prev_line:
+                        pattern['parameter_setup'].append(prev_line)
+                
+                # Look forwards for stack cleanup (following instructions)
+                for j in range(i+1, min(len(instructions), i+5)):
+                    next_inst = instructions[j]
+                    next_name = next_inst.get('instruction', '').lower()
+                    next_line = next_inst.get('raw_line', '').lower()
+                    
+                    # Stack cleanup patterns
+                    if next_name in ['add', 'pop'] and ('esp' in next_line or 'rsp' in next_line):
+                        pattern['stack_cleanup'].append(next_line)
+                        pattern['calling_convention_hints'].append('caller_cleanup')
+                    
+                    # Break on next call or return
+                    elif next_name in ['call', 'ret', 'retn']:
+                        break
+                
+                call_patterns.append(pattern)
+        
+        return call_patterns
     
     def _identify_calling_convention(self, pattern: Dict[str, Any], architecture: str) -> Optional[CallingConvention]:
         """Identify calling convention from pattern"""
-        raise NotImplementedError(
-            "Calling convention identification not implemented - requires analysis "
-            "of function prologue/epilogue patterns, parameter passing mechanisms, "
-            "and stack cleanup behavior to determine calling conventions."
+        hints = pattern.get('calling_convention_hints', [])
+        parameter_setup = pattern.get('parameter_setup', [])
+        stack_cleanup = pattern.get('stack_cleanup', [])
+        
+        if not hints:
+            return None
+        
+        # Count different types of hints
+        register_hints = hints.count('register_based')
+        stack_hints = hints.count('stack_based')
+        cleanup_hints = hints.count('caller_cleanup')
+        
+        # Determine calling convention based on patterns
+        if register_hints > stack_hints:
+            # Register-based calling convention
+            if architecture.lower() in ['x86_64', 'amd64']:
+                convention_type = 'microsoft_x64' if 'rdi' in str(parameter_setup) else 'system_v_x64'
+            else:
+                convention_type = 'fastcall'
+            
+            return CallingConvention(
+                convention_type=convention_type,
+                parameter_passing='register',
+                stack_cleanup='caller' if cleanup_hints > 0 else 'callee',
+                confidence=min(0.7 + (register_hints * 0.1), 1.0),
+                evidence=[
+                    f'Register-based parameter passing detected ({register_hints} instances)',
+                    f'Parameter setup: {parameter_setup[:3]}',
+                    f'Architecture: {architecture}'
+                ]
+            )
+        
+        elif stack_hints > 0:
+            # Stack-based calling convention
+            if cleanup_hints > 0:
+                convention_type = 'cdecl'
+                stack_cleanup = 'caller'
+            else:
+                convention_type = 'stdcall'
+                stack_cleanup = 'callee'
+            
+            return CallingConvention(
+                convention_type=convention_type,
+                parameter_passing='stack',
+                stack_cleanup=stack_cleanup,
+                confidence=min(0.6 + (stack_hints * 0.1), 1.0),
+                evidence=[
+                    f'Stack-based parameter passing detected ({stack_hints} instances)',
+                    f'Stack cleanup: {"caller" if cleanup_hints > 0 else "callee"}',
+                    f'Parameter setup: {parameter_setup[:3]}'
+                ]
+            )
+        
+        # Default/unknown convention
+        return CallingConvention(
+            convention_type='unknown',
+            parameter_passing='mixed',
+            stack_cleanup='unknown',
+            confidence=0.3,
+            evidence=[
+                f'Mixed or unclear calling pattern',
+                f'Hints: register={register_hints}, stack={stack_hints}, cleanup={cleanup_hints}'
+            ]
         )
     
     def _merge_calling_conventions(self, conventions: List[CallingConvention]) -> List[CallingConvention]:
@@ -996,35 +1374,406 @@ class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
     
     def _identify_basic_blocks(self, instructions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Identify basic blocks"""
-        raise NotImplementedError(
-            "Basic block identification not implemented - requires analysis of "
-            "control flow instructions (jumps, branches, calls) to partition "
-            "instruction sequences into basic blocks for CFG construction."
-        )
+        if not instructions:
+            return []
+        
+        basic_blocks = []
+        block_starts = set([0])  # First instruction is always a block start
+        
+        # Identify block boundaries
+        for i, inst in enumerate(instructions):
+            inst_name = inst.get('instruction', '').lower()
+            
+            # Instructions that end a basic block
+            if inst_name in ['ret', 'retn', 'retf', 'jmp', 'je', 'jne', 'jz', 'jnz', 
+                           'jl', 'jg', 'jle', 'jge', 'ja', 'jb', 'jae', 'jbe', 'call']:
+                # Next instruction starts a new block (if it exists)
+                if i + 1 < len(instructions):
+                    block_starts.add(i + 1)
+            
+            # Jump targets also start new blocks (simplified - would need address analysis)
+            # Look for labels or addresses in jump instructions
+            if any(jump in inst_name for jump in ['jmp', 'je', 'jne', 'jz', 'jnz', 'jl', 'jg']):
+                raw_line = inst.get('raw_line', '')
+                # Simple heuristic: if the jump target looks like an offset, mark it
+                if '+' in raw_line or '-' in raw_line:
+                    # This is simplified - real implementation would parse addresses
+                    pass
+        
+        # Create basic blocks
+        block_starts = sorted(list(block_starts))
+        
+        for i in range(len(block_starts)):
+            start_idx = block_starts[i]
+            end_idx = block_starts[i + 1] if i + 1 < len(block_starts) else len(instructions)
+            
+            if start_idx < len(instructions):
+                block_instructions = instructions[start_idx:end_idx]
+                
+                basic_block = {
+                    'block_id': i,
+                    'start_index': start_idx,
+                    'end_index': end_idx - 1,
+                    'instruction_count': len(block_instructions),
+                    'instructions': [inst.get('raw_line', '') for inst in block_instructions],
+                    'first_instruction': block_instructions[0].get('instruction', '') if block_instructions else '',
+                    'last_instruction': block_instructions[-1].get('instruction', '') if block_instructions else '',
+                    'block_type': self._classify_basic_block(block_instructions)
+                }
+                
+                basic_blocks.append(basic_block)
+        
+        return basic_blocks
+    
+    def _classify_basic_block(self, instructions: List[Dict[str, Any]]) -> str:
+        """Classify the type of basic block"""
+        if not instructions:
+            return 'empty'
+        
+        last_inst = instructions[-1].get('instruction', '').lower()
+        
+        if last_inst in ['ret', 'retn', 'retf']:
+            return 'return'
+        elif last_inst == 'jmp':
+            return 'unconditional_jump'
+        elif last_inst in ['je', 'jne', 'jz', 'jnz', 'jl', 'jg', 'jle', 'jge']:
+            return 'conditional_jump'
+        elif last_inst == 'call':
+            return 'function_call'
+        else:
+            return 'sequential'
     
     def _build_control_flow_graph(self, basic_blocks: List[Dict[str, Any]], instructions: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Build control flow graph"""
-        raise NotImplementedError(
-            "Control flow graph construction not implemented - requires building "
-            "graph structure from basic blocks with edges representing control "
-            "transfer instructions (jumps, calls, returns)."
-        )
+        cfg = {
+            'nodes': [],
+            'edges': [],
+            'entry_points': [],
+            'exit_points': []
+        }
+        
+        if not basic_blocks:
+            return cfg
+        
+        # Create nodes from basic blocks
+        for block in basic_blocks:
+            node = {
+                'id': block['block_id'],
+                'type': block['block_type'],
+                'instruction_count': block['instruction_count'],
+                'start_index': block['start_index'],
+                'end_index': block['end_index']
+            }
+            cfg['nodes'].append(node)
+            
+            # Identify entry and exit points
+            if block['block_id'] == 0 or block['block_type'] in ['function_call']:
+                cfg['entry_points'].append(block['block_id'])
+            
+            if block['block_type'] in ['return', 'unconditional_jump']:
+                cfg['exit_points'].append(block['block_id'])
+        
+        # Create edges based on control flow
+        for i, block in enumerate(basic_blocks):
+            block_id = block['block_id']
+            block_type = block['block_type']
+            
+            # Sequential flow to next block
+            if block_type == 'sequential' and i + 1 < len(basic_blocks):
+                cfg['edges'].append({
+                    'from': block_id,
+                    'to': basic_blocks[i + 1]['block_id'],
+                    'type': 'sequential'
+                })
+            
+            # Conditional jumps create two edges
+            elif block_type == 'conditional_jump':
+                # Fall-through edge (condition false)
+                if i + 1 < len(basic_blocks):
+                    cfg['edges'].append({
+                        'from': block_id,
+                        'to': basic_blocks[i + 1]['block_id'],
+                        'type': 'fall_through'
+                    })
+                
+                # Jump edge (condition true) - simplified target resolution
+                # In a real implementation, we'd parse the jump target address
+                # For now, we'll estimate based on instruction patterns
+                target_block = self._estimate_jump_target(block, basic_blocks, i)
+                if target_block is not None:
+                    cfg['edges'].append({
+                        'from': block_id,
+                        'to': target_block,
+                        'type': 'conditional_jump'
+                    })
+            
+            # Function calls create call and return edges
+            elif block_type == 'function_call':
+                if i + 1 < len(basic_blocks):
+                    cfg['edges'].append({
+                        'from': block_id,
+                        'to': basic_blocks[i + 1]['block_id'],
+                        'type': 'function_return'
+                    })
+            
+            # Unconditional jumps
+            elif block_type == 'unconditional_jump':
+                target_block = self._estimate_jump_target(block, basic_blocks, i)
+                if target_block is not None:
+                    cfg['edges'].append({
+                        'from': block_id,
+                        'to': target_block,
+                        'type': 'unconditional_jump'
+                    })
+        
+        return cfg
+    
+    def _estimate_jump_target(self, block: Dict[str, Any], basic_blocks: List[Dict[str, Any]], current_index: int) -> Optional[int]:
+        """Estimate jump target block (simplified implementation)"""
+        # This is a simplified heuristic since we don't have full address resolution
+        # In a real implementation, this would parse actual jump targets
+        
+        # Look for backward jumps (loops) - target earlier blocks
+        if 'loop' in str(block.get('instructions', [])).lower():
+            # Estimate loop target as a few blocks back
+            target_index = max(0, current_index - 3)
+            if target_index < len(basic_blocks):
+                return basic_blocks[target_index]['block_id']
+        
+        # Look for forward jumps - estimate target as a few blocks ahead
+        elif current_index + 3 < len(basic_blocks):
+            return basic_blocks[current_index + 3]['block_id']
+        
+        return None
     
     def _calculate_register_pressure(self, instruction_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate register pressure"""
-        raise NotImplementedError(
-            "Register pressure calculation not implemented - requires tracking "
-            "register usage across instruction sequences to identify register "
-            "allocation pressure and optimization opportunities."
+        register_usage = instruction_analysis.get('register_usage', {})
+        instructions = instruction_analysis.get('instructions', [])
+        
+        if not register_usage or not instructions:
+            return {
+                'overall_pressure': 'low',
+                'high_pressure_registers': [],
+                'register_conflicts': 0,
+                'spill_indicators': 0,
+                'register_utilization': 0.0
+            }
+        
+        # Calculate register pressure metrics
+        total_registers = len(register_usage)
+        total_usage = sum(register_usage.values())
+        avg_usage_per_register = total_usage / max(total_registers, 1)
+        
+        # Identify high-pressure registers (used more than average)
+        high_pressure_threshold = avg_usage_per_register * 1.5
+        high_pressure_registers = [
+            reg for reg, usage in register_usage.items() 
+            if usage > high_pressure_threshold
+        ]
+        
+        # Estimate register conflicts (simplified)
+        # Look for instructions that might cause register conflicts
+        conflict_indicators = 0
+        spill_indicators = 0
+        
+        for inst in instructions:
+            raw_line = inst.get('raw_line', '').lower()
+            
+            # Look for memory operations that might indicate register spilling
+            if any(pattern in raw_line for pattern in ['[esp', '[ebp', 'push', 'pop']):
+                spill_indicators += 1
+            
+            # Look for register-to-register moves (potential conflicts)
+            if 'mov' in raw_line and any(reg in raw_line for reg in register_usage.keys()):
+                conflict_indicators += 1
+        
+        # Calculate overall pressure level
+        pressure_score = (
+            len(high_pressure_registers) / max(total_registers, 1) +
+            spill_indicators / max(len(instructions), 1) * 10
         )
+        
+        if pressure_score > 0.8:
+            overall_pressure = 'very_high'
+        elif pressure_score > 0.6:
+            overall_pressure = 'high'
+        elif pressure_score > 0.4:
+            overall_pressure = 'medium'
+        else:
+            overall_pressure = 'low'
+        
+        # Calculate register utilization percentage
+        # Estimate based on common architectures (x86 has ~8 general purpose registers)
+        estimated_available_registers = 8
+        register_utilization = min(total_registers / estimated_available_registers, 1.0)
+        
+        return {
+            'overall_pressure': overall_pressure,
+            'high_pressure_registers': high_pressure_registers,
+            'register_conflicts': conflict_indicators,
+            'spill_indicators': spill_indicators,
+            'register_utilization': register_utilization,
+            'pressure_score': pressure_score,
+            'total_registers_used': total_registers,
+            'average_usage_per_register': avg_usage_per_register,
+            'register_usage_distribution': register_usage
+        }
     
     def _analyze_memory_access_patterns(self, instruction_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze memory access patterns"""
-        raise NotImplementedError(
-            "Memory access pattern analysis not implemented - requires tracking "
-            "memory addressing patterns, stride detection, and cache behavior "
-            "analysis for performance optimization identification."
-        )
+        memory_operations = instruction_analysis.get('memory_operations', [])
+        instructions = instruction_analysis.get('instructions', [])
+        
+        if not instructions:
+            return {
+                'access_patterns': [],
+                'stride_analysis': {},
+                'cache_friendliness': 'unknown',
+                'alignment_analysis': {},
+                'total_memory_operations': 0
+            }
+        
+        # Extract memory access patterns
+        memory_accesses = []
+        for inst in instructions:
+            raw_line = inst.get('raw_line', '').lower()
+            
+            # Look for memory references [reg+offset], [reg], etc.
+            if '[' in raw_line and ']' in raw_line:
+                # Extract memory reference pattern
+                start = raw_line.find('[')
+                end = raw_line.find(']') + 1
+                if start != -1 and end != -1:
+                    memory_ref = raw_line[start:end]
+                    memory_accesses.append({
+                        'pattern': memory_ref,
+                        'instruction': inst.get('instruction', ''),
+                        'line': raw_line,
+                        'type': self._classify_memory_access(raw_line)
+                    })
+        
+        # Analyze access patterns
+        access_patterns = []
+        pattern_counts = {}
+        
+        for access in memory_accesses:
+            pattern = access['pattern']
+            pattern_counts[pattern] = pattern_counts.get(pattern, 0) + 1
+        
+        # Identify common patterns
+        for pattern, count in pattern_counts.items():
+            if count > 2:  # Patterns that appear multiple times
+                access_patterns.append({
+                    'pattern': pattern,
+                    'frequency': count,
+                    'type': self._classify_access_pattern(pattern)
+                })
+        
+        # Stride analysis (simplified)
+        stride_analysis = self._analyze_stride_patterns(memory_accesses)
+        
+        # Cache friendliness assessment
+        cache_friendliness = self._assess_cache_friendliness(access_patterns, stride_analysis)
+        
+        # Memory alignment analysis
+        alignment_analysis = self._analyze_memory_alignment(memory_accesses)
+        
+        return {
+            'access_patterns': access_patterns,
+            'stride_analysis': stride_analysis,
+            'cache_friendliness': cache_friendliness,
+            'alignment_analysis': alignment_analysis,
+            'total_memory_operations': len(memory_accesses),
+            'unique_patterns': len(pattern_counts),
+            'memory_access_density': len(memory_accesses) / max(len(instructions), 1)
+        }
+    
+    def _classify_memory_access(self, raw_line: str) -> str:
+        """Classify the type of memory access"""
+        if 'mov' in raw_line:
+            return 'load_store'
+        elif any(op in raw_line for op in ['add', 'sub', 'mul', 'div']):
+            return 'arithmetic_memory'
+        elif any(op in raw_line for op in ['push', 'pop']):
+            return 'stack_operation'
+        elif 'lea' in raw_line:
+            return 'address_calculation'
+        else:
+            return 'other'
+    
+    def _classify_access_pattern(self, pattern: str) -> str:
+        """Classify memory access pattern"""
+        if 'esp' in pattern or 'rsp' in pattern:
+            return 'stack_access'
+        elif 'ebp' in pattern or 'rbp' in pattern:
+            return 'frame_access'
+        elif '+' in pattern or '-' in pattern:
+            return 'offset_access'
+        elif any(reg in pattern for reg in ['eax', 'ebx', 'ecx', 'edx']):
+            return 'register_indirect'
+        else:
+            return 'direct_access'
+    
+    def _analyze_stride_patterns(self, memory_accesses: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze stride patterns in memory accesses"""
+        # Simplified stride analysis
+        stride_indicators = {
+            'sequential_access': 0,
+            'strided_access': 0,
+            'random_access': 0
+        }
+        
+        # Look for patterns that suggest different access types
+        for access in memory_accesses:
+            pattern = access['pattern']
+            if '+4' in pattern or '+8' in pattern:
+                stride_indicators['sequential_access'] += 1
+            elif '+' in pattern and any(str(i) in pattern for i in [16, 32, 64]):
+                stride_indicators['strided_access'] += 1
+            else:
+                stride_indicators['random_access'] += 1
+        
+        return stride_indicators
+    
+    def _assess_cache_friendliness(self, access_patterns: List[Dict[str, Any]], stride_analysis: Dict[str, Any]) -> str:
+        """Assess cache friendliness of memory access patterns"""
+        sequential = stride_analysis.get('sequential_access', 0)
+        strided = stride_analysis.get('strided_access', 0)
+        random = stride_analysis.get('random_access', 0)
+        
+        total = sequential + strided + random
+        if total == 0:
+            return 'unknown'
+        
+        sequential_ratio = sequential / total
+        strided_ratio = strided / total
+        
+        if sequential_ratio > 0.6:
+            return 'cache_friendly'
+        elif strided_ratio > 0.4:
+            return 'moderately_cache_friendly'
+        else:
+            return 'cache_unfriendly'
+    
+    def _analyze_memory_alignment(self, memory_accesses: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze memory alignment patterns"""
+        alignment_analysis = {
+            'aligned_accesses': 0,
+            'unaligned_accesses': 0,
+            'alignment_hints': []
+        }
+        
+        for access in memory_accesses:
+            pattern = access['pattern']
+            # Look for alignment hints (multiples of 4, 8, 16)
+            if any(align in pattern for align in ['+4', '+8', '+16', '+32']):
+                alignment_analysis['aligned_accesses'] += 1
+                alignment_analysis['alignment_hints'].append(pattern)
+            else:
+                alignment_analysis['unaligned_accesses'] += 1
+        
+        return alignment_analysis
     
     def _estimate_cache_efficiency(self, instruction_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Estimate cache efficiency"""
@@ -1040,43 +1789,358 @@ class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
     
     def _detect_buffer_overflow_risks(self, instruction_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Detect buffer overflow risks"""
-        raise NotImplementedError(
-            "Buffer overflow risk detection not implemented - requires analysis of "
-            "unsafe memory operations, unchecked buffer accesses, and string "
-            "manipulation functions for security vulnerability assessment."
-        )
+        risks = []
+        instructions = instruction_analysis.get('instructions', [])
+        
+        if not instructions:
+            return risks
+        
+        # Dangerous function patterns
+        dangerous_functions = ['strcpy', 'sprintf', 'gets', 'scanf', 'strcat']
+        buffer_operations = ['mov', 'rep', 'stos', 'scas']
+        
+        for inst in instructions:
+            raw_line = inst.get('raw_line', '').lower()
+            
+            # Check for dangerous function calls
+            for dangerous_func in dangerous_functions:
+                if dangerous_func in raw_line:
+                    risks.append({
+                        'type': 'dangerous_function_call',
+                        'function': dangerous_func,
+                        'instruction': raw_line,
+                        'risk_level': 'high',
+                        'description': f'Call to potentially unsafe function {dangerous_func}'
+                    })
+            
+            # Check for unchecked buffer operations
+            if any(op in inst.get('instruction', '').lower() for op in buffer_operations):
+                if '[' in raw_line and ']' in raw_line:
+                    # Memory operation without visible bounds checking
+                    risks.append({
+                        'type': 'unchecked_buffer_operation',
+                        'operation': inst.get('instruction', ''),
+                        'instruction': raw_line,
+                        'risk_level': 'medium',
+                        'description': 'Buffer operation without visible bounds checking'
+                    })
+            
+            # Check for stack buffer operations
+            if 'esp' in raw_line or 'ebp' in raw_line:
+                if any(op in raw_line for op in ['add', 'sub', 'mov']):
+                    risks.append({
+                        'type': 'stack_buffer_manipulation',
+                        'instruction': raw_line,
+                        'risk_level': 'low',
+                        'description': 'Direct stack manipulation - potential for stack corruption'
+                    })
+        
+        return risks
     
     def _analyze_stack_protection(self, instruction_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze stack protection mechanisms"""
-        raise NotImplementedError(
-            "Stack protection analysis not implemented - requires detection of "
-            "stack canaries, ASLR, DEP/NX bit usage, and other stack protection "
-            "mechanisms for security assessment."
-        )
+        protection = {
+            'stack_canary_detected': False,
+            'stack_guard_patterns': [],
+            'aslr_indicators': [],
+            'dep_nx_indicators': [],
+            'protection_level': 'unknown'
+        }
+        
+        instructions = instruction_analysis.get('instructions', [])
+        
+        if not instructions:
+            return protection
+        
+        # Look for stack canary patterns
+        canary_patterns = ['__stack_chk_fail', 'gs:', 'fs:', '__security_cookie']
+        guard_instructions = []
+        
+        for inst in instructions:
+            raw_line = inst.get('raw_line', '').lower()
+            
+            # Stack canary detection
+            for pattern in canary_patterns:
+                if pattern.lower() in raw_line:
+                    protection['stack_canary_detected'] = True
+                    guard_instructions.append(raw_line)
+            
+            # Look for segment register usage (often used for canaries)
+            if any(seg in raw_line for seg in ['gs:', 'fs:']):
+                protection['stack_guard_patterns'].append(raw_line)
+            
+            # ASLR indicators (random base addresses)
+            if any(indicator in raw_line for indicator in ['rand', 'random']):
+                protection['aslr_indicators'].append(raw_line)
+            
+            # DEP/NX indicators (executable permission checks)
+            if any(indicator in raw_line for indicator in ['nx', 'exec', 'mprotect']):
+                protection['dep_nx_indicators'].append(raw_line)
+        
+        # Determine protection level
+        protection_score = 0
+        if protection['stack_canary_detected']:
+            protection_score += 2
+        if protection['stack_guard_patterns']:
+            protection_score += 1
+        if protection['aslr_indicators']:
+            protection_score += 1
+        if protection['dep_nx_indicators']:
+            protection_score += 1
+        
+        if protection_score >= 4:
+            protection['protection_level'] = 'high'
+        elif protection_score >= 2:
+            protection['protection_level'] = 'medium'
+        elif protection_score >= 1:
+            protection['protection_level'] = 'low'
+        else:
+            protection['protection_level'] = 'none_detected'
+        
+        return protection
     
     def _detect_code_injection_risks(self, instruction_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Detect code injection vulnerabilities"""
-        raise NotImplementedError(
-            "Code injection risk detection not implemented - requires analysis of "
-            "dynamic code generation, eval functions, and user input handling "
-            "for security vulnerability assessment."
-        )
+        risks = []
+        instructions = instruction_analysis.get('instructions', [])
+        
+        if not instructions:
+            return risks
+        
+        # Patterns that might indicate code injection vulnerabilities
+        injection_patterns = {
+            'dynamic_allocation': ['malloc', 'calloc', 'alloc', 'mmap'],
+            'execution_functions': ['exec', 'system', 'call', 'jmp'],
+            'input_functions': ['read', 'recv', 'input', 'scanf'],
+            'string_operations': ['sprintf', 'strcpy', 'strcat', 'memcpy']
+        }
+        
+        for inst in instructions:
+            raw_line = inst.get('raw_line', '').lower()
+            
+            # Check for dynamic memory allocation followed by execution
+            for category, patterns in injection_patterns.items():
+                for pattern in patterns:
+                    if pattern in raw_line:
+                        risk_level = 'high' if category == 'execution_functions' else 'medium'
+                        
+                        risks.append({
+                            'type': f'potential_{category}',
+                            'pattern': pattern,
+                            'instruction': raw_line,
+                            'risk_level': risk_level,
+                            'description': f'Detected {pattern} which could be used for code injection'
+                        })
+            
+            # Look for dynamic jump targets (register-based jumps)
+            if any(jump in inst.get('instruction', '').lower() for jump in ['jmp', 'call']):
+                if any(reg in raw_line for reg in ['eax', 'ebx', 'ecx', 'edx', 'rdi', 'rsi']):
+                    risks.append({
+                        'type': 'dynamic_control_transfer',
+                        'instruction': raw_line,
+                        'risk_level': 'medium',
+                        'description': 'Dynamic control transfer - potential for code injection'
+                    })
+            
+            # Look for self-modifying code patterns
+            if 'mov' in inst.get('instruction', '').lower() and '[' in raw_line:
+                # Writing to memory locations that might be executable
+                risks.append({
+                    'type': 'potential_self_modification',
+                    'instruction': raw_line,
+                    'risk_level': 'low',
+                    'description': 'Memory write operation - potential for self-modifying code'
+                })
+        
+        return risks
     
     def _analyze_privilege_escalation(self, instruction_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze privilege escalation risks"""
-        raise NotImplementedError(
-            "Privilege escalation analysis not implemented - requires detection of "
-            "unsafe privilege operations, SETUID usage, and system call patterns "
-            "that could be exploited for privilege escalation."
-        )
+        analysis = {
+            'privilege_operations': [],
+            'system_calls': [],
+            'setuid_indicators': [],
+            'escalation_risks': [],
+            'risk_level': 'low'
+        }
+        
+        instructions = instruction_analysis.get('instructions', [])
+        
+        if not instructions:
+            return analysis
+        
+        # Privilege-related function patterns
+        privilege_functions = {
+            'setuid_functions': ['setuid', 'seteuid', 'setgid', 'setegid'],
+            'system_calls': ['syscall', 'int 0x80', 'sysenter'],
+            'privilege_checks': ['getuid', 'geteuid', 'getgid', 'getegid'],
+            'dangerous_syscalls': ['execve', 'fork', 'clone', 'mmap', 'mprotect']
+        }
+        
+        for inst in instructions:
+            raw_line = inst.get('raw_line', '').lower()
+            
+            # Check for privilege-related operations
+            for category, functions in privilege_functions.items():
+                for func in functions:
+                    if func in raw_line:
+                        analysis['privilege_operations'].append({
+                            'type': category,
+                            'function': func,
+                            'instruction': raw_line
+                        })
+                        
+                        # Assess risk level
+                        if category == 'setuid_functions':
+                            analysis['setuid_indicators'].append(func)
+                            analysis['escalation_risks'].append({
+                                'type': 'setuid_operation',
+                                'function': func,
+                                'risk': 'high',
+                                'description': f'SETUID operation {func} detected - potential privilege escalation'
+                            })
+                        elif category == 'dangerous_syscalls':
+                            analysis['escalation_risks'].append({
+                                'type': 'dangerous_syscall',
+                                'function': func,
+                                'risk': 'medium',
+                                'description': f'Potentially dangerous system call {func}'
+                            })
+            
+            # Look for direct system call instructions
+            if any(syscall in raw_line for syscall in ['int 0x80', 'syscall', 'sysenter']):
+                analysis['system_calls'].append(raw_line)
+            
+            # Look for privilege bit manipulation
+            if any(pattern in raw_line for pattern in ['or', 'and', 'xor']) and any(reg in raw_line for reg in ['eax', 'ebx']):
+                # Potential privilege bit manipulation
+                analysis['escalation_risks'].append({
+                    'type': 'bit_manipulation',
+                    'instruction': raw_line,
+                    'risk': 'low',
+                    'description': 'Bit manipulation that could affect privilege flags'
+                })
+        
+        # Determine overall risk level
+        high_risks = [r for r in analysis['escalation_risks'] if r['risk'] == 'high']
+        medium_risks = [r for r in analysis['escalation_risks'] if r['risk'] == 'medium']
+        
+        if high_risks:
+            analysis['risk_level'] = 'high'
+        elif medium_risks:
+            analysis['risk_level'] = 'medium'
+        elif analysis['escalation_risks']:
+            analysis['risk_level'] = 'low'
+        else:
+            analysis['risk_level'] = 'none_detected'
+        
+        return analysis
     
     def _detect_rop_gadgets(self, instruction_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Detect ROP gadgets"""
-        raise NotImplementedError(
-            "ROP gadget detection not implemented - requires analysis of "
-            "instruction sequences ending in return instructions that could "
-            "be chained for return-oriented programming exploits."
-        )
+        gadgets = []
+        instructions = instruction_analysis.get('instructions', [])
+        
+        if not instructions:
+            return gadgets
+        
+        # Look for potential ROP gadgets (instruction sequences ending in ret)
+        for i, inst in enumerate(instructions):
+            inst_name = inst.get('instruction', '').lower()
+            
+            # Found a return instruction - look backward for useful gadgets
+            if inst_name in ['ret', 'retn', 'retf']:
+                # Check preceding instructions for useful operations
+                gadget_length = min(5, i)  # Look at up to 5 preceding instructions
+                
+                if gadget_length > 0:
+                    gadget_instructions = []
+                    useful_operations = 0
+                    
+                    for j in range(i - gadget_length, i + 1):
+                        if j >= 0:
+                            gadget_inst = instructions[j]
+                            gadget_instructions.append(gadget_inst.get('raw_line', ''))
+                            
+                            # Check if instruction is useful for ROP
+                            if self._is_useful_rop_instruction(gadget_inst):
+                                useful_operations += 1
+                    
+                    # If gadget has useful operations, add it
+                    if useful_operations > 0:
+                        gadget_type = self._classify_rop_gadget(gadget_instructions)
+                        
+                        gadgets.append({
+                            'type': gadget_type,
+                            'instructions': gadget_instructions,
+                            'useful_operations': useful_operations,
+                            'length': len(gadget_instructions),
+                            'end_position': i,
+                            'address_hint': f'instruction_{i}',
+                            'exploitation_potential': self._assess_gadget_potential(gadget_type, useful_operations)
+                        })
+        
+        # Sort gadgets by exploitation potential
+        gadgets.sort(key=lambda g: g['exploitation_potential'], reverse=True)
+        
+        return gadgets[:20]  # Return top 20 gadgets
+    
+    def _is_useful_rop_instruction(self, inst: Dict[str, Any]) -> bool:
+        """Check if instruction is useful for ROP exploitation"""
+        inst_name = inst.get('instruction', '').lower()
+        raw_line = inst.get('raw_line', '').lower()
+        
+        # Useful ROP instruction categories
+        useful_categories = {
+            'data_movement': ['mov', 'lea', 'push', 'pop'],
+            'arithmetic': ['add', 'sub', 'inc', 'dec', 'xor', 'or', 'and'],
+            'control_flow': ['jmp', 'call'],
+            'memory_access': ['mov', 'lea'],
+            'register_manipulation': ['xchg', 'push', 'pop']
+        }
+        
+        for category, instructions in useful_categories.items():
+            if inst_name in instructions:
+                return True
+        
+        # Check for register-to-register operations
+        if any(reg in raw_line for reg in ['eax', 'ebx', 'ecx', 'edx', 'esp', 'ebp']):
+            return True
+        
+        return False
+    
+    def _classify_rop_gadget(self, gadget_instructions: List[str]) -> str:
+        """Classify the type of ROP gadget"""
+        combined = ' '.join(gadget_instructions).lower()
+        
+        if any(pattern in combined for pattern in ['pop', 'ret']):
+            return 'pop_ret_gadget'
+        elif any(pattern in combined for pattern in ['mov', 'ret']):
+            return 'mov_ret_gadget'
+        elif any(pattern in combined for pattern in ['add', 'ret']):
+            return 'add_ret_gadget'
+        elif any(pattern in combined for pattern in ['xor', 'ret']):
+            return 'xor_ret_gadget'
+        elif any(pattern in combined for pattern in ['jmp', 'esp']):
+            return 'jmp_esp_gadget'
+        else:
+            return 'generic_gadget'
+    
+    def _assess_gadget_potential(self, gadget_type: str, useful_operations: int) -> float:
+        """Assess exploitation potential of ROP gadget"""
+        type_scores = {
+            'pop_ret_gadget': 0.9,
+            'jmp_esp_gadget': 0.95,
+            'mov_ret_gadget': 0.7,
+            'add_ret_gadget': 0.6,
+            'xor_ret_gadget': 0.6,
+            'generic_gadget': 0.3
+        }
+        
+        base_score = type_scores.get(gadget_type, 0.2)
+        operation_bonus = min(useful_operations * 0.1, 0.3)
+        
+        return min(base_score + operation_bonus, 1.0)
     
     def _create_instruction_semantics_prompt(self, instruction_analysis: Dict[str, Any]) -> str:
         """Create AI prompt for instruction semantics"""

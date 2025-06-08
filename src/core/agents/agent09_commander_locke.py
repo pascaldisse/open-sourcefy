@@ -164,41 +164,28 @@ class CommanderLockeAgent:
             self.logger.info(f"📈 Completeness: {final_result.completeness:.2f}")
             self.logger.info(f"🔧 Compilation Ready: {final_result.compilation_ready}")
             
-            return AgentResult(
-                agent_id=self.agent_id,
-                agent_name=self.name,
-                matrix_character=self.character if isinstance(self.character, str) else self.character.value,
-                status=StandardAgentStatus.SUCCESS,
-                data={
-                    'reconstruction_result': final_result,
-                    'source_files': final_result.source_files,
-                    'header_files': final_result.header_files,
-                    'build_files': final_result.build_files,
-                    'quality_metrics': {
-                        'quality_score': final_result.quality_score,
-                        'completeness': final_result.completeness,
-                        'compilation_ready': final_result.compilation_ready
-                    },
-                    'dependency_graph': self.dependency_graph,
-                    'reconstruction_stats': self.reconstruction_stats
+            # Return dict from execute_matrix_task - base class will wrap in AgentResult
+            return {
+                'reconstruction_result': final_result,
+                'source_files': final_result.source_files,
+                'header_files': final_result.header_files,
+                'build_files': final_result.build_files,
+                'quality_metrics': {
+                    'quality_score': final_result.quality_score,
+                    'completeness': final_result.completeness,
+                    'compilation_ready': final_result.compilation_ready
                 },
-                metadata={
-                    'agent_name': self.name,
-                    'character': self.character,
-                    'phase': self.current_phase,
-                    'total_files_generated': len(final_result.source_files) + len(final_result.header_files),
-                    'warnings': len(final_result.warnings),
-                    'errors': len(final_result.error_messages),
-                    'execution_time': execution_time
-                }
-            )
+                'dependency_graph': self.dependency_graph,
+                'reconstruction_stats': self.reconstruction_stats
+            }
             
         except Exception as e:
             execution_time = time.time() - start_time
             error_msg = f"Commander Locke reconstruction failed in {self.current_phase}: {str(e)}"
-            self.logger.error(error_msg)
+            self.logger.error(error_msg, exc_info=True)
             
-            return self._create_failure_result(error_msg, execution_time)
+            # Re-raise exception - base class will handle creating AgentResult
+            raise Exception(error_msg) from e
     
     def _validate_dependencies(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Validate that all required agent results are available"""

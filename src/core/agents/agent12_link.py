@@ -181,11 +181,8 @@ class Agent12_Link(ReconstructionAgent):
             self.logger.info(f"🔗 Communication Quality: {final_result.communication_quality:.2f}")
             self.logger.info(f"🎛️ Integration Completeness: {final_result.integration_completeness:.2f}")
             
+            # Return dict from execute_matrix_task - base class will wrap in AgentResult
             return {
-                'agent_id': self.agent_id,
-                'agent_name': self.name,
-                'status': AgentStatus.SUCCESS if final_result.success else AgentStatus.FAILED,
-                'execution_time': execution_time,
                 'integration_result': final_result,
                 'data_integrity_score': final_result.data_integrity_score,
                 'communication_quality': final_result.communication_quality,
@@ -194,22 +191,19 @@ class Agent12_Link(ReconstructionAgent):
                 'data_flows': final_result.data_flows,
                 'validation_results': final_result.validation_results,
                 'communication_stats': self.communication_stats,
-                'metadata': {
-                    'character': getattr(self, 'matrix_character', MatrixCharacter.LINK).value,
-                    'phase': self.current_phase,
-                    'active_bridges': len(self.active_bridges),
-                    'communication_channels': len(self.communication_channels),
-                    'warnings': len(final_result.warnings),
-                    'errors': len(final_result.error_messages)
-                }
+                'active_bridges': len(self.active_bridges),
+                'communication_channels': len(self.communication_channels),
+                'warnings': len(final_result.warnings),
+                'errors': len(final_result.error_messages)
             }
             
         except Exception as e:
             execution_time = time.time() - start_time
             error_msg = f"Link integration failed in {self.current_phase}: {str(e)}"
-            self.logger.error(error_msg)
+            self.logger.error(error_msg, exc_info=True)
             
-            return self._create_failure_result(error_msg, execution_time)
+            # Re-raise exception - base class will handle creating AgentResult
+            raise Exception(error_msg) from e
     
     def _setup_communications(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Setup communication channels and validate Oracle dependency"""

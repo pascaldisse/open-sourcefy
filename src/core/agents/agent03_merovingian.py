@@ -709,14 +709,117 @@ class MerovingianAgent(DecompilerAgent):
         return (size_factor + calls_factor) / 2.0
     
     def _calculate_function_confidence(self, function: Function) -> float:
-        """Calculate confidence in function detection"""
-        # Higher confidence for functions with reasonable size and patterns
-        if self.constants.MIN_FUNCTION_SIZE <= function.size <= 4096:
-            return 0.8
-        elif function.size > 4096:
-            return 0.6  # Very large functions are less certain
+        """
+        Calculate confidence in function detection based on multiple validation criteria
+        
+        Confidence factors:
+        - Function signature patterns (prologue/epilogue detection)
+        - Call graph validation (calls made/received)
+        - Function size and structure analysis
+        - Basic block organization
+        - Statistical validation based on common patterns
+        
+        Returns:
+            float: Confidence score between 0.0 and 1.0
+        """
+        confidence_factors = []
+        
+        # Factor 1: Function signature patterns (prologue/epilogue)
+        signature_confidence = 0.5  # Base confidence
+        if function.signature:
+            # Function has a detected signature
+            signature_confidence += 0.2
+            # Check for common function prologue patterns
+            if any(pattern in function.signature.lower() for pattern in ['push', 'mov', 'sub', 'call']):
+                signature_confidence += 0.1
+            # Check for return patterns
+            if any(pattern in function.signature.lower() for pattern in ['ret', 'pop', 'leave']):
+                signature_confidence += 0.1
+        confidence_factors.append(min(1.0, signature_confidence))
+        
+        # Factor 2: Call graph validation
+        call_confidence = 0.3  # Base confidence for isolated functions
+        if function.calls_made:
+            # Function makes calls (likely real function)
+            call_confidence += 0.3
+            # More calls indicate more complex, likely real function
+            call_confidence += min(len(function.calls_made) * 0.05, 0.2)
+        if function.calls_received > 0:
+            # Function is called by others (strong indicator)
+            call_confidence += 0.3
+            # More callers indicate important function
+            call_confidence += min(function.calls_received * 0.05, 0.2)
+        confidence_factors.append(min(1.0, call_confidence))
+        
+        # Factor 3: Function size and structure analysis
+        size_confidence = 0.2  # Base for very small functions
+        if function.size >= 16:  # Minimum reasonable function size
+            size_confidence += 0.3
+        if function.size >= 64:  # Good-sized function
+            size_confidence += 0.2
+        if function.size >= 256:  # Large function
+            size_confidence += 0.2
+        # Penalize extremely large functions (might be data)
+        if function.size > 4096:
+            size_confidence -= 0.2
+        confidence_factors.append(max(0.1, min(1.0, size_confidence)))
+        
+        # Factor 4: Basic block organization
+        block_confidence = 0.4  # Base confidence
+        if function.basic_blocks > 1:
+            # Multiple basic blocks indicate control flow
+            block_confidence += 0.3
+            # More blocks indicate more complex structure
+            block_confidence += min(function.basic_blocks * 0.05, 0.3)
+        confidence_factors.append(min(1.0, block_confidence))
+        
+        # Factor 5: Complexity score validation
+        complexity_confidence = 0.5  # Base confidence
+        if function.complexity_score > 0.0:
+            # Has calculated complexity (good indicator)
+            complexity_confidence += 0.2
+            # Reasonable complexity indicates real function
+            if 0.1 <= function.complexity_score <= 0.8:
+                complexity_confidence += 0.2
+            # Very high complexity might indicate real complex function
+            elif function.complexity_score > 0.8:
+                complexity_confidence += 0.1
+        confidence_factors.append(min(1.0, complexity_confidence))
+        
+        # Factor 6: Function name validation
+        name_confidence = 0.3  # Base for generated names
+        if function.name and not function.name.startswith('sub_'):
+            # Has meaningful name (strong indicator)
+            name_confidence += 0.4
+            # Check for common function name patterns
+            if any(pattern in function.name.lower() for pattern in ['main', 'init', 'start', 'end', 'create', 'delete', 'process', 'handle']):
+                name_confidence += 0.2
+            # Check for library function patterns
+            elif any(pattern in function.name.lower() for pattern in ['printf', 'malloc', 'free', 'strcpy', 'memcpy']):
+                name_confidence = 0.95  # High confidence for known library functions
+        confidence_factors.append(min(1.0, name_confidence))
+        
+        # Weighted average of all confidence factors
+        # Give more weight to call graph and size factors as they are most reliable
+        weights = [0.15, 0.25, 0.20, 0.15, 0.10, 0.15]  # Sum = 1.0
+        
+        if len(confidence_factors) != len(weights):
+            # Fallback to simple average if mismatch
+            final_confidence = sum(confidence_factors) / len(confidence_factors)
         else:
-            return 0.4  # Small functions might be false positives
+            final_confidence = sum(factor * weight for factor, weight in zip(confidence_factors, weights))
+        
+        # Apply final adjustments
+        # Boost confidence for functions with all good indicators
+        if all(factor > 0.7 for factor in confidence_factors):
+            final_confidence = min(1.0, final_confidence + 0.1)
+        
+        # Reduce confidence for functions with many poor indicators
+        poor_indicators = sum(1 for factor in confidence_factors if factor < 0.4)
+        if poor_indicators >= 3:
+            final_confidence = max(0.1, final_confidence - 0.2)
+        
+        return max(0.0, min(1.0, final_confidence))
     
     def _analyze_control_flow(self, analysis_context: Dict[str, Any], function_results: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze control flow structures"""
