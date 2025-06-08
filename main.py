@@ -367,7 +367,7 @@ class MatrixCLI:
         """Run comprehensive pipeline validation"""
         try:
             # Import validation script
-            from scripts.validate_pipeline import AutomatedPipelineValidator
+            from core.validate_pipeline import AutomatedPipelineValidator
             
             # Create validator
             validator = AutomatedPipelineValidator()
@@ -412,8 +412,8 @@ class MatrixCLI:
     def _run_binary_validation(self, binary_files: str):
         """Run binary comparison validation"""
         try:
-            from src.core.binary_comparison import BinaryValidationTester
-            from src.core.config_manager import ConfigManager
+            from core.binary_comparison import BinaryComparator
+            from core.config_manager import ConfigManager
             
             # Parse binary file paths
             file_paths = [f.strip() for f in binary_files.split(',')]
@@ -424,7 +424,7 @@ class MatrixCLI:
             
             # Create validator
             config = ConfigManager()
-            validator = BinaryValidationTester(config)
+            validator = BinaryComparator(config)
             
             # Run validation between first two files
             original_binary = file_paths[0]
@@ -454,12 +454,13 @@ class MatrixCLI:
     def _run_performance_benchmarks(self):
         """Run performance benchmarks"""
         try:
-            from src.core.performance_monitor import PerformanceMonitor
+            # Performance monitoring temporarily disabled - file missing
+            # from core.performance_monitor import PerformanceMonitor
             
             print("⚡ Running performance benchmarks...")
             
-            # Create performance monitor
-            monitor = PerformanceMonitor()
+            # Performance monitor temporarily disabled due to missing file
+            # monitor = PerformanceMonitor()
             
             # Mock benchmark results
             benchmarks = {

@@ -28,9 +28,9 @@ def test_single_agent(agent_id: int):
     
     # Import here to avoid circular imports
     try:
-        from src.core.config_manager import ConfigManager
-        from src.core.matrix_execution_context import MatrixExecutionContext
-        from src.core.agent_base import get_agent_by_id
+        from core.config_manager import ConfigManager
+        from core.matrix_execution_context import MatrixExecutionContext
+        from core.agent_base import get_agent_by_id
         
         config = ConfigManager()
         context = MatrixExecutionContext(

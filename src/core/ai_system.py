@@ -4,6 +4,9 @@ Complete decoupling - agents simply reference this, no AI imports needed in agen
 """
 
 import logging
+import subprocess
+import tempfile
+import os
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 
@@ -25,20 +28,44 @@ class AISystem:
         self.logger = logging.getLogger("AISystem")
         self.config = ConfigManager()
         
-        # AI configuration
+        # AI configuration - Claude Code only
         self.enabled = self.config.get_value('ai.enabled', True)
-        self.provider = self.config.get_value('ai.provider', 'claude_code')
+        self.provider = 'claude_code'  # Force Claude Code only
+        self.timeout = self.config.get_value('ai.timeout', 30)
         
-        # For now, we'll provide intelligent contextual responses
-        # Claude CLI integration can be added later when subprocess issues are resolved
-        if self.enabled:
-            self.logger.info("AI System initialized with contextual response engine")
+        # Find Claude CLI command
+        self.claude_cmd = self._find_claude_command()
+        
+        if self.enabled and self.claude_cmd:
+            self.logger.info(f"AI System initialized with Claude CLI: {self.claude_cmd}")
         else:
-            self.logger.info("AI System disabled")
+            self.logger.warning("Claude CLI not found - AI disabled")
+            self.enabled = False
+    
+    def _find_claude_command(self) -> Optional[str]:
+        """Find Claude CLI command"""
+        import shutil
+        
+        # Try commands in order
+        commands = ['claude', 'claude-code']
+        
+        for cmd in commands:
+            if shutil.which(cmd):
+                try:
+                    # Quick version check
+                    result = subprocess.run([cmd, '--version'], 
+                                          capture_output=True, timeout=3)
+                    if result.returncode == 0:
+                        self.logger.info(f"Found Claude CLI: {cmd}")
+                        return cmd
+                except:
+                    continue
+        
+        return None
     
     def is_available(self) -> bool:
         """Check if AI system is available for use"""
-        return self.enabled
+        return self.enabled and self.claude_cmd is not None
     
     def analyze(self, prompt: str, system_prompt: Optional[str] = None) -> AIResponse:
         """Main AI analysis function - all agents use this"""
@@ -50,228 +77,185 @@ class AISystem:
             )
         
         try:
-            # Generate contextual response based on prompt analysis
-            response_content = self._generate_contextual_response(prompt, system_prompt)
-            return AIResponse(content=response_content, success=True)
+            # Call Claude CLI directly
+            return self._call_claude_cli(prompt, system_prompt)
             
         except Exception as e:
-            self.logger.error(f"AI analysis failed: {e}")
+            self.logger.error(f"Claude CLI call failed: {e}")
             return AIResponse(
                 content="",
                 success=False,
                 error=str(e)
             )
     
-    def _generate_contextual_response(self, prompt: str, system_prompt: Optional[str] = None) -> str:
-        """Generate intelligent contextual responses based on prompt analysis"""
-        prompt_lower = prompt.lower()
-        
-        # Security analysis
-        if any(word in prompt_lower for word in ['security', 'threat', 'malware', 'vulnerability']):
-            return """Security Analysis:
-
-Based on the provided binary data, here are key security observations:
-
-1. **Risk Assessment**: Medium - Standard Windows PE executable with typical security features
-2. **Security Features**: ASLR enabled, DEP compatible, no obvious packing detected
-3. **Potential Concerns**: 
-   - Monitor for dynamic loading patterns
-   - Verify digital signatures
-   - Check for unusual network activity
-4. **Recommendations**: 
-   - Run in sandboxed environment for testing
-   - Monitor file system and registry changes
-   - Verify against known threat databases
-
-This analysis provides general security guidance for reverse engineering workflows."""
-
-        # Code analysis
-        elif any(word in prompt_lower for word in ['code', 'function', 'compiler', 'optimization']):
-            return """Code Analysis:
-
-Architectural insights for the analyzed binary:
-
-1. **Compiler Patterns**: MSVC-style compilation detected
-2. **Optimization Level**: Appears to be optimized build (Release configuration)
-3. **Code Structure**: 
-   - Standard Windows application framework
-   - Event-driven architecture
-   - Resource management patterns present
-4. **Development Practices**: 
-   - Structured error handling
-   - Standard calling conventions
-   - Organized function layout
-
-Recommendations for reconstruction:
-- Focus on main event loop patterns
-- Identify resource initialization sequences
-- Map API call patterns for functionality understanding"""
-
-        # Binary analysis
-        elif any(word in prompt_lower for word in ['binary', 'format', 'architecture', 'pe', 'elf']):
-            return """Binary Analysis:
-
-Detailed binary structure assessment:
-
-1. **Format**: Windows PE32 executable
-2. **Architecture**: x86 (32-bit)
-3. **Entry Point**: Standard WinMain pattern
-4. **Sections**: 
-   - .text: Executable code
-   - .data: Initialized data
-   - .rsrc: Resources (UI elements, strings)
-5. **Import Analysis**: 
-   - Standard Windows APIs (kernel32, user32, gdi32)
-   - Network libraries present
-   - File I/O operations
-
-This structure is consistent with a standard Windows application."""
-
-        # Code enhancement
-        elif any(word in prompt_lower for word in ['enhance', 'improve', 'reconstruct', 'decompile']):
-            return """Code Enhancement Suggestions:
-
-1. **Variable Naming**: 
-   - Replace generic names (var1, arg2) with descriptive names
-   - Use Hungarian notation where appropriate
-   - Apply semantic meaning to data structures
-
-2. **Function Structure**:
-   - Add meaningful comments for complex algorithms
-   - Break down large functions into smaller components
-   - Identify and document calling conventions
-
-3. **Type Recovery**:
-   - Infer proper data types from usage patterns
-   - Reconstruct structure definitions
-   - Map pointer relationships
-
-4. **Control Flow**:
-   - Simplify nested conditionals
-   - Identify loop patterns
-   - Document error handling paths
-
-These enhancements will improve code readability and maintainability."""
-
-        # Documentation
-        elif any(word in prompt_lower for word in ['document', 'report', 'summary']):
-            return """Documentation Generation:
-
-## Executive Summary
-This reverse-engineered application appears to be a Windows executable with standard functionality patterns.
-
-## Technical Specifications
-- **Platform**: Windows (PE32)
-- **Architecture**: x86
-- **Compiler**: Microsoft Visual C++
-- **Build Type**: Release (optimized)
-
-## Functional Analysis
-The application demonstrates:
-- Standard Windows GUI framework
-- Event-driven architecture
-- Resource management
-- Network communication capabilities
-
-## Reconstruction Notes
-- Core functionality successfully identified
-- Main algorithms reconstructed with high confidence
-- User interface patterns preserved
-- API integration points documented
-
-## Recommendations
-- Further analysis recommended for network protocols
-- Additional testing needed for edge cases
-- Documentation should be updated as analysis progresses"""
-
-        # General analysis
-        else:
-            return f"""Analysis Response:
-
-Processed request: {prompt[:100]}{'...' if len(prompt) > 100 else ''}
-
-General observations:
-- Request successfully processed
-- Analysis framework operational
-- Matrix pipeline integration active
-
-For more specific analysis, please provide:
-- Specific binary data or code samples
-- Target analysis focus areas
-- Expected output format preferences
-
-The Matrix analysis system is ready to provide detailed insights for reverse engineering tasks."""
+    def _call_claude_cli(self, prompt: str, system_prompt: Optional[str] = None) -> AIResponse:
+        """Call Claude CLI directly"""
+        try:
+            # Prepare full prompt
+            full_prompt = prompt
+            if system_prompt:
+                full_prompt = f"System: {system_prompt}\n\nUser: {prompt}"
+            
+            # Create a simple shell script to handle the Claude call
+            # This avoids the TTY issues by using echo piping
+            script_content = f'''#!/bin/bash
+echo {repr(full_prompt)} | {self.claude_cmd} --print --output-format text
+'''
+            
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=False) as script_file:
+                script_file.write(script_content)
+                script_path = script_file.name
+            
+            try:
+                # Make script executable
+                os.chmod(script_path, 0o755)
+                
+                # Execute the script
+                result = subprocess.run(
+                    ['bash', script_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=self.timeout,
+                    env=os.environ.copy()
+                )
+                
+                if result.returncode != 0:
+                    return AIResponse(
+                        content="",
+                        success=False,
+                        error=f"Claude CLI error: {result.stderr}"
+                    )
+                
+                content = result.stdout.strip()
+                if not content:
+                    return AIResponse(
+                        content="",
+                        success=False,
+                        error="Empty response from Claude CLI"
+                    )
+                
+                return AIResponse(content=content, success=True)
+                
+            finally:
+                # Clean up script file
+                try:
+                    os.unlink(script_path)
+                except:
+                    pass
+                    
+        except subprocess.TimeoutExpired:
+            return AIResponse(
+                content="",
+                success=False,
+                error=f"Claude CLI timeout after {self.timeout}s"
+            )
+        except Exception as e:
+            return AIResponse(
+                content="",
+                success=False,
+                error=f"Claude CLI execution failed: {e}"
+            )
     
     def analyze_binary_security(self, binary_info: Dict[str, Any]) -> AIResponse:
         """Analyze binary for security threats"""
         if not self.is_available():
-            return AIResponse("Security analysis unavailable - AI disabled", False)
+            return AIResponse("", False, "Claude CLI not available")
+        
+        system_prompt = "You are a cybersecurity expert analyzing binary files. Provide concise security analysis focusing on potential threats, suspicious patterns, and recommendations. Be factual and specific."
         
         prompt = f"""
-        Analyze this binary for security indicators:
+Analyze this binary file for security indicators:
+
+File: {binary_info.get('file_path', 'unknown')}
+Format: {binary_info.get('format', 'unknown')}
+Architecture: {binary_info.get('architecture', 'unknown')}
+Size: {binary_info.get('file_size', 0)} bytes
+Entropy: {binary_info.get('entropy', 0)}
+
+Sections: {binary_info.get('section_count', 0)}
+Imports: {binary_info.get('import_count', 0)}
+Exports: {binary_info.get('export_count', 0)}
+
+Provide:
+1. Security risk assessment (Low/Medium/High)
+2. Suspicious indicators found
+3. Behavioral predictions
+4. Recommendations for further analysis
+"""
         
-        File: {binary_info.get('file_path', 'unknown')}
-        Format: {binary_info.get('format', 'unknown')}
-        Architecture: {binary_info.get('architecture', 'unknown')}
-        Size: {binary_info.get('file_size', 0)} bytes
-        Entropy: {binary_info.get('entropy', 0)}
-        
-        Provide security risk assessment and recommendations.
-        """
-        
-        return self.analyze(prompt)
+        return self.analyze(prompt, system_prompt)
     
     def analyze_code_patterns(self, code_info: Dict[str, Any]) -> AIResponse:
         """Analyze code patterns and architecture"""
         if not self.is_available():
-            return AIResponse("Code analysis unavailable - AI disabled", False)
+            return AIResponse("", False, "Claude CLI not available")
+        
+        system_prompt = "You are a reverse engineering expert. Analyze code patterns and architectural decisions to understand the original software design and purpose."
         
         prompt = f"""
-        Analyze these code patterns:
+Analyze these code patterns and architectural elements:
+
+Functions detected: {code_info.get('functions_detected', 0)}
+Code quality score: {code_info.get('code_quality', 0)}
+Architecture: {code_info.get('architecture', 'unknown')}
+Compiler indicators: {code_info.get('compiler_info', {})}
+
+Provide insights on:
+1. Original software purpose and design
+2. Development practices and tools used
+3. Code quality and maintainability indicators
+4. Reconstruction recommendations
+"""
         
-        Functions: {code_info.get('functions_count', 0)}
-        Quality score: {code_info.get('quality_score', 0)}
-        Architecture: {code_info.get('architecture', 'unknown')}
-        Compiler: {code_info.get('compiler_info', 'unknown')}
-        
-        Provide architectural insights and reconstruction recommendations.
-        """
-        
-        return self.analyze(prompt)
+        return self.analyze(prompt, system_prompt)
     
     def enhance_decompilation(self, decompiled_code: str, context: Dict[str, Any]) -> AIResponse:
         """Enhance decompiled code quality"""
         if not self.is_available():
-            return AIResponse("Code enhancement unavailable - AI disabled", False)
+            return AIResponse("", False, "Claude CLI not available")
+        
+        system_prompt = "You are a code reconstruction expert. Improve the readability and structure of decompiled code while maintaining functionality."
         
         prompt = f"""
-        Enhance this decompiled code:
+Enhance this decompiled code:
+
+```c
+{decompiled_code[:2000]}  # Limit size
+```
+
+Context: {context.get('function_name', 'unknown function')}
+Architecture: {context.get('architecture', 'unknown')}
+
+Provide improved, more readable version with better variable names and comments.
+"""
         
-        Function: {context.get('function_name', 'unknown function')}
-        Architecture: {context.get('architecture', 'unknown')}
-        
-        Provide improved, more readable version with better variable names and comments.
-        """
-        
-        return self.analyze(prompt)
+        return self.analyze(prompt, system_prompt)
     
     def generate_documentation(self, analysis_data: Dict[str, Any]) -> AIResponse:
         """Generate documentation from analysis results"""
         if not self.is_available():
-            return AIResponse("Documentation generation unavailable - AI disabled", False)
+            return AIResponse("", False, "Claude CLI not available")
+        
+        system_prompt = "You are a technical documentation expert. Create clear, comprehensive documentation for reverse-engineered software based on analysis results."
         
         prompt = f"""
-        Generate documentation for this analysis:
+Generate documentation for this reverse-engineered software:
+
+Analysis Summary:
+- Binary format: {analysis_data.get('format', 'unknown')}
+- Architecture: {analysis_data.get('architecture', 'unknown')}
+- Functions: {analysis_data.get('functions_count', 0)}
+- Quality score: {analysis_data.get('quality_score', 0)}
+
+Create:
+1. Executive summary
+2. Technical specifications
+3. Function descriptions
+4. Usage recommendations
+5. Security considerations
+"""
         
-        Binary: {analysis_data.get('binary_name', 'unknown')}
-        Format: {analysis_data.get('format', 'unknown')}
-        Functions: {analysis_data.get('functions_count', 0)}
-        Quality: {analysis_data.get('quality_score', 0)}
-        
-        Create executive summary, technical specs, and usage recommendations.
-        """
-        
-        return self.analyze(prompt)
+        return self.analyze(prompt, system_prompt)
 
 
 # Global AI system instance
@@ -330,9 +314,9 @@ def ai_request(prompt: str, system: Optional[str] = None) -> str:
 
 
 def ai_request_safe(prompt: str, system: Optional[str] = None, fallback: str = "") -> str:
-    """Safe AI request with fallback"""
+    """AI request with error handling"""
     if not ai_available():
-        return fallback
+        return ""  # No fallback, just empty if Claude not available
     
     response = ai_analyze(prompt, system)
-    return response.content if response.success else fallback
+    return response.content if response.success else ""

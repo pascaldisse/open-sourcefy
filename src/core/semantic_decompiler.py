@@ -38,6 +38,14 @@ except ImportError:
     ADVANCED_TYPE_INFERENCE_AVAILABLE = False
     AdvancedDataTypeInference = None
 
+# Import advanced data structure recovery
+try:
+    from .advanced_data_structure_recovery import AdvancedDataStructureRecovery
+    ADVANCED_STRUCTURE_RECOVERY_AVAILABLE = True
+except ImportError:
+    ADVANCED_STRUCTURE_RECOVERY_AVAILABLE = False
+    AdvancedDataStructureRecovery = None
+
 
 class DataType(Enum):
     """Semantic data types for reconstruction"""
@@ -133,6 +141,14 @@ class SemanticDecompiler:
             self.advanced_type_inference = None
             self.logger.warning("Advanced data type inference not available")
         
+        # Initialize advanced data structure recovery if available
+        if ADVANCED_STRUCTURE_RECOVERY_AVAILABLE:
+            self.advanced_structure_recovery = AdvancedDataStructureRecovery(config_manager)
+            self.logger.info("Advanced data structure recovery enabled")
+        else:
+            self.advanced_structure_recovery = None
+            self.logger.warning("Advanced data structure recovery not available")
+        
     def decompile_semantically(self, ghidra_results: Dict[str, Any], 
                              binary_metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -193,6 +209,15 @@ class SemanticDecompiler:
                 'type_reconstruction_confidence': self._calculate_avg_confidence(self.advanced_type_results)
             }
             self.logger.info("Enhanced results with advanced data type analysis")
+        
+        # Add advanced structure recovery results if available
+        if hasattr(self, 'advanced_structure_results') and self.advanced_structure_results:
+            result['advanced_structure_analysis'] = {
+                'structure_recovery_report': self.advanced_structure_recovery.generate_structure_report() if self.advanced_structure_recovery else {},
+                'detailed_structures': self.advanced_structure_results,
+                'structure_reconstruction_confidence': self._calculate_avg_structure_confidence(self.advanced_structure_results)
+            }
+            self.logger.info("Enhanced results with advanced data structure recovery")
         
         return result
     
@@ -634,10 +659,67 @@ class SemanticDecompiler:
     def _recover_data_structures(self, ghidra_results: Dict[str, Any],
                                inferred_types: Dict[str, DataType],
                                semantic_variables: Dict[str, SemanticVariable]) -> List[SemanticStructure]:
-        """Recover complex data structures from analysis"""
-        # This is a simplified implementation
-        # Real implementation would analyze memory layouts and access patterns
+        """Recover complex data structures from analysis using advanced engine"""
+        structures = []
         
+        # Use advanced data structure recovery if available
+        if self.advanced_structure_recovery:
+            self.logger.info("Using advanced data structure recovery engine")
+            
+            # Convert semantic functions to format expected by advanced engine
+            semantic_functions_list = list(self.semantic_functions.values())
+            
+            # Get advanced type information if available
+            advanced_types = getattr(self, 'advanced_type_results', {})
+            
+            # Run advanced structure recovery
+            recovered_structures = self.advanced_structure_recovery.recover_data_structures(
+                ghidra_results, semantic_functions_list, advanced_types
+            )
+            
+            # Convert advanced structures to semantic structures
+            for struct_name, recovered_struct in recovered_structures.items():
+                # Convert fields from StructureField to SemanticVariable
+                semantic_fields = []
+                for field in recovered_struct.fields:
+                    semantic_var = SemanticVariable(
+                        name=field.name,
+                        data_type=self._map_structure_type_to_datatype(field.type_string),
+                        type_string=field.type_string,
+                        scope='struct_member',
+                        usage_pattern=field.access_pattern.value if field.access_pattern else 'field_access',
+                        confidence=field.confidence,
+                        semantic_meaning=field.semantic_meaning,
+                        inferred_purpose=f"Structure field at offset {field.offset}"
+                    )
+                    semantic_fields.append(semantic_var)
+                
+                structure = SemanticStructure(
+                    name=recovered_struct.name,
+                    structure_type=self._map_structure_type_to_datatype_enum(recovered_struct.structure_type),
+                    fields=semantic_fields,
+                    size_bytes=recovered_struct.size_bytes,
+                    alignment=recovered_struct.alignment,
+                    usage_context=f'advanced_recovery_confidence_{recovered_struct.confidence:.2f}',
+                    confidence=recovered_struct.confidence
+                )
+                structures.append(structure)
+            
+            # Store advanced structure recovery data for reporting
+            if hasattr(self, 'advanced_type_results'):
+                self.advanced_structure_results = recovered_structures
+            
+            self.logger.info(f"Advanced engine recovered {len(structures)} data structures with avg confidence {sum(s.confidence for s in structures) / max(len(structures), 1):.2f}")
+            
+        else:
+            # Fallback to basic structure recovery
+            self.logger.info("Using basic data structure recovery (advanced engine not available)")
+            structures = self._basic_structure_recovery(semantic_variables)
+        
+        return structures
+    
+    def _basic_structure_recovery(self, semantic_variables: Dict[str, SemanticVariable]) -> List[SemanticStructure]:
+        """Fallback basic structure recovery when advanced engine not available"""
         structures = []
         
         # Look for structure-like usage patterns
@@ -654,12 +736,12 @@ class SemanticDecompiler:
                 fields=fields,
                 size_bytes=len(fields) * 8,  # Simplified calculation
                 alignment=8,
-                usage_context='inferred_from_usage',
+                usage_context='basic_inference_from_usage',
                 confidence=0.6
             )
             structures.append(structure)
             
-        self.logger.info(f"Recovered {len(structures)} data structures")
+        self.logger.info(f"Basic recovery found {len(structures)} data structures")
         return structures
     
     def _reconstruct_source_code(self, semantic_functions: List[SemanticFunction],

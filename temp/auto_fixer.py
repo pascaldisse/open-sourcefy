@@ -282,7 +282,7 @@ class MatrixAutoFixer:
                 })
         
         # Issue 3: Check Ghidra script performance
-        ghidra_script = self.project_root / "ghidra_scripts/CompleteDecompiler.java"
+        ghidra_script = self.project_root / "ghidra/CompleteDecompiler.java"
         if ghidra_script.exists():
             content = ghidra_script.read_text()
             if "timeout" not in content or "monitor.isCancelled()" not in content:
@@ -597,7 +597,7 @@ class MatrixAutoFixer:
         changes = []
         
         # Optimize Ghidra script
-        ghidra_script = self.project_root / "ghidra_scripts/CompleteDecompiler.java"
+        ghidra_script = self.project_root / "ghidra/CompleteDecompiler.java"
         if ghidra_script.exists():
             content = ghidra_script.read_text()
             original_content = content

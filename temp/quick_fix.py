@@ -47,7 +47,7 @@ def main():
         print("✅ Fixed Agent 05 quality threshold and timeout")
     
     # Fix 2: Optimize Ghidra Script
-    ghidra_script = Path("ghidra_scripts/CompleteDecompiler.java")
+    ghidra_script = Path("ghidra/CompleteDecompiler.java")
     if ghidra_script.exists():
         content = ghidra_script.read_text()
         
