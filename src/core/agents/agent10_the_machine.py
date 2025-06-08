@@ -251,162 +251,55 @@ class Agent10_TheMachine(BaseAgent):
             }
         }
         
-        # Generate compilation commands
-        build_system['compilation_commands'] = self._generate_compilation_commands(analysis)
+        # Generate compilation commands for MSVC only
+        build_system['compilation_commands'] = self._generate_msvc_commands(analysis)
         
-        # Generate linking commands
-        build_system['linking_commands'] = self._generate_linking_commands(analysis)
+        # Generate linking commands for MSVC
+        build_system['linking_commands'] = self._generate_msvc_linking_commands(analysis)
         
-        # Generate automated build scripts
-        build_system['build_scripts'] = self._generate_build_scripts(analysis)
+        # Generate automated build scripts for Windows
+        build_system['build_scripts'] = self._generate_windows_build_scripts(analysis)
         
         return build_system
 
-    def _generate_cmake_file(self, analysis: Dict[str, Any]) -> str:
-        """Generate CMakeLists.txt file"""
-        project_name = "ReconstructedProject"
+    def _generate_solution_file(self, analysis: Dict[str, Any]) -> str:
+        """Generate Visual Studio solution file"""
+        project_guid = "{12345678-1234-5678-9ABC-123456789012}"
+        solution_guid = "{87654321-4321-8765-CBA9-210987654321}"
         
-        cmake_content = f"""cmake_minimum_required(VERSION 3.10)
-project({project_name})
-
-# Set C standard
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-
-# Set architecture
-if("{analysis['architecture']}" STREQUAL "x64")
-    set(CMAKE_GENERATOR_PLATFORM x64)
-else()
-    set(CMAKE_GENERATOR_PLATFORM Win32)
-endif()
-
-# Set output directories
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${{CMAKE_BINARY_DIR}}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${{CMAKE_BINARY_DIR}}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${{CMAKE_BINARY_DIR}}/lib)
-
-# Compiler-specific options
-if(MSVC)
-    set(CMAKE_C_FLAGS "${{CMAKE_C_FLAGS}} /W3")
-    set(CMAKE_C_FLAGS_DEBUG "${{CMAKE_C_FLAGS_DEBUG}} /Od /Zi")
-    set(CMAKE_C_FLAGS_RELEASE "${{CMAKE_C_FLAGS_RELEASE}} /O2 /DNDEBUG")
-else()
-    set(CMAKE_C_FLAGS "${{CMAKE_C_FLAGS}} -Wall -Wextra")
-    set(CMAKE_C_FLAGS_DEBUG "${{CMAKE_C_FLAGS_DEBUG}} -g -O0")
-    set(CMAKE_C_FLAGS_RELEASE "${{CMAKE_C_FLAGS_RELEASE}} -O2 -DNDEBUG")
-endif()
-
-# Source files
-file(GLOB_RECURSE SOURCES "src/*.c")
-file(GLOB_RECURSE HEADERS "src/*.h")
-
-# Include directories
-include_directories(src)
-
-"""
-        
-        # Add target based on project type
-        if analysis['project_type'] == 'dynamic_library':
-            cmake_content += f"""# Create shared library
-add_library({project_name} SHARED ${{SOURCES}})
-"""
-        elif analysis['project_type'] == 'static_library':
-            cmake_content += f"""# Create static library
-add_library({project_name} STATIC ${{SOURCES}})
-"""
+        if analysis['architecture'] == 'x64':
+            platform = 'x64'
         else:
-            cmake_content += f"""# Create executable
-add_executable({project_name} ${{SOURCES}})
+            platform = 'Win32'
+        
+        sln_content = f"""Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}}") = "ReconstructedProject", "project.vcxproj", "{project_guid}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|{platform} = Debug|{platform}
+		Release|{platform} = Release|{platform}
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{project_guid}.Debug|{platform}.ActiveCfg = Debug|{platform}
+		{project_guid}.Debug|{platform}.Build.0 = Debug|{platform}
+		{project_guid}.Release|{platform}.ActiveCfg = Release|{platform}
+		{project_guid}.Release|{platform}.Build.0 = Release|{platform}
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {solution_guid}
+	EndGlobalSection
+EndGlobal
 """
         
-        # Add dependencies
-        if analysis['dependencies']:
-            cmake_content += "\n# Link libraries\n"
-            for dep in analysis['dependencies']:
-                if dep.endswith('.lib'):
-                    lib_name = dep[:-4]  # Remove .lib extension
-                    cmake_content += f"target_link_libraries({project_name} {lib_name})\n"
-        
-        # Windows-specific settings
-        if analysis['target_platform'] == 'windows':
-            cmake_content += f"""
-# Windows-specific settings
-if(WIN32)
-    target_compile_definitions({project_name} PRIVATE WIN32_LEAN_AND_MEAN)
-    if("{analysis['project_type']}" STREQUAL "windows_gui")
-        set_target_properties({project_name} PROPERTIES
-            WIN32_EXECUTABLE TRUE
-        )
-    endif()
-endif()
-"""
-        
-        return cmake_content
+        return sln_content
 
-    def _generate_makefile(self, analysis: Dict[str, Any]) -> str:
-        """Generate Makefile"""
-        compiler = 'gcc' if analysis['target_platform'] != 'windows' else 'cl'
-        
-        makefile = f"""# Generated Makefile for reconstructed project
-CC = {compiler}
-"""
-        
-        # Set flags based on compiler
-        if compiler == 'gcc':
-            makefile += f"""CFLAGS = -Wall -Wextra -std=c99
-CFLAGS_DEBUG = -g -O0 -DDEBUG
-CFLAGS_RELEASE = -O2 -DNDEBUG
-LDFLAGS = {' '.join(f'-l{dep[:-4]}' for dep in analysis['dependencies'] if dep.endswith('.lib'))}
-"""
-        else:
-            makefile += f"""CFLAGS = /W3 /std:c99
-CFLAGS_DEBUG = /Od /Zi /DDEBUG
-CFLAGS_RELEASE = /O2 /DNDEBUG
-LDFLAGS = {' '.join(analysis['dependencies'])}
-"""
-        
-        makefile += f"""
-# Target executable
-TARGET = reconstructed_project
-SRCDIR = src
-OBJDIR = obj
-
-# Source files (will be populated by build system)
-SOURCES = $(wildcard $(SRCDIR)/*.c)
-OBJECTS = $(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
-
-# Default target
-all: $(TARGET)
-
-# Debug build
-debug: CFLAGS += $(CFLAGS_DEBUG)
-debug: $(TARGET)
-
-# Release build
-release: CFLAGS += $(CFLAGS_RELEASE)
-release: $(TARGET)
-
-# Build target
-$(TARGET): $(OBJECTS)
-	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
-
-# Compile source files
-$(OBJDIR)/%.o: $(SRCDIR)/%.c
-	@mkdir -p $(OBJDIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# Clean build files
-clean:
-	rm -rf $(OBJDIR) $(TARGET)
-
-# Install (placeholder)
-install: $(TARGET)
-	@echo "Installation not configured"
-
-.PHONY: all debug release clean install
-"""
-        
-        return makefile
 
     def _generate_vcxproj_file(self, analysis: Dict[str, Any]) -> str:
         """Generate Visual Studio project file"""
@@ -509,25 +402,11 @@ install: $(TARGET)
         
         return vcxproj
 
-    def _generate_compilation_commands(self, analysis: Dict[str, Any]) -> Dict[str, List[str]]:
-        """Generate compilation commands for different compilers"""
+    def _generate_msvc_commands(self, analysis: Dict[str, Any]) -> Dict[str, List[str]]:
+        """Generate MSVC compilation commands"""
         commands = {}
         
-        # GCC commands
-        gcc_base = ['gcc', '-std=c99', '-Wall', '-Wextra']
-        if analysis['architecture'] == 'x64':
-            gcc_base.append('-m64')
-        else:
-            gcc_base.append('-m32')
-        
-        commands['gcc'] = {
-            'debug': gcc_base + ['-g', '-O0', '-DDEBUG'],
-            'release': gcc_base + ['-O2', '-DNDEBUG'],
-            'includes': ['-Isrc'],
-            'output': ['-o', 'reconstructed_project']
-        }
-        
-        # MSVC commands
+        # MSVC commands only
         msvc_base = ['cl', '/std:c11', '/W3']
         if analysis['architecture'] == 'x64':
             msvc_base.append('/MACHINE:X64')
@@ -541,71 +420,55 @@ install: $(TARGET)
             'output': ['/Fe:reconstructed_project.exe']
         }
         
-        # Clang commands
-        clang_base = ['clang', '-std=c99', '-Wall', '-Wextra']
-        if analysis['architecture'] == 'x64':
-            clang_base.append('-m64')
-        else:
-            clang_base.append('-m32')
-        
-        commands['clang'] = {
-            'debug': clang_base + ['-g', '-O0', '-DDEBUG'],
-            'release': clang_base + ['-O2', '-DNDEBUG'],
-            'includes': ['-Isrc'],
-            'output': ['-o', 'reconstructed_project']
-        }
-        
         return commands
 
-    def _generate_linking_commands(self, analysis: Dict[str, Any]) -> Dict[str, List[str]]:
-        """Generate linking commands"""
+    def _generate_msvc_linking_commands(self, analysis: Dict[str, Any]) -> Dict[str, List[str]]:
+        """Generate MSVC linking commands"""
         commands = {}
         
         # Base libraries
         libs = analysis['dependencies']
         
-        # GCC/Clang linking
-        gcc_libs = [f"-l{lib[:-4]}" if lib.endswith('.lib') else f"-l{lib}" for lib in libs]
-        commands['gcc'] = gcc_libs
-        commands['clang'] = gcc_libs
-        
-        # MSVC linking
+        # MSVC linking only
         commands['msvc'] = [f"/DEFAULTLIB:{lib}" for lib in libs if lib.endswith('.lib')]
         
         return commands
 
-    def _generate_build_scripts(self, analysis: Dict[str, Any]) -> Dict[str, str]:
-        """Generate automated build scripts"""
+    def _generate_windows_build_scripts(self, analysis: Dict[str, Any]) -> Dict[str, str]:
+        """Generate Windows build scripts for MSBuild"""
         scripts = {}
         
-        # Windows batch script
+        # Windows batch script using MSBuild
         batch_script = f"""@echo off
-echo Building reconstructed project...
+echo Building reconstructed project with MSBuild...
 
 REM Create directories
 if not exist "bin" mkdir bin
 if not exist "obj" mkdir obj
+if not exist "Debug" mkdir Debug
+if not exist "Release" mkdir Release
+
+REM Set up Visual Studio environment
+call "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat"
 
 REM Build with different configurations
 echo.
 echo === Debug Build ===
-cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug
-cmake --build build-debug
+msbuild project.sln /p:Configuration=Debug /p:Platform={analysis['architecture']}
 
 echo.
 echo === Release Build ===
-cmake -B build-release -DCMAKE_BUILD_TYPE=Release
-cmake --build build-release
+msbuild project.sln /p:Configuration=Release /p:Platform={analysis['architecture']}
 
 echo.
 echo === Testing builds ===
-if exist "build-debug\\bin\\Debug\\ReconstructedProject.exe" (
+if exist "Debug\\*.exe" (
     echo Debug build: SUCCESS
 ) else (
     echo Debug build: FAILED
 )
 
-if exist "build-release\\bin\\Release\\ReconstructedProject.exe" (
+if exist "Release\\*.exe" (
     echo Release build: SUCCESS
 ) else (
     echo Release build: FAILED
@@ -617,42 +480,47 @@ pause
 """
         scripts['build.bat'] = batch_script
         
-        # Linux shell script
-        shell_script = f"""#!/bin/bash
-echo "Building reconstructed project..."
+        # PowerShell script for more advanced building
+        powershell_script = f"""# PowerShell build script
+Write-Host "Building reconstructed project with MSBuild..." -ForegroundColor Green
 
 # Create directories
-mkdir -p bin obj
+New-Item -ItemType Directory -Force -Path "bin", "obj", "Debug", "Release"
 
-# Build with different configurations
-echo
-echo "=== Debug Build ==="
-cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug
-cmake --build build-debug
+# Import Visual Studio build tools
+Import-Module "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\Tools\\Microsoft.VisualStudio.DevShell.dll"
+Enter-VsDevShell
 
-echo
-echo "=== Release Build ==="
-cmake -B build-release -DCMAKE_BUILD_TYPE=Release
-cmake --build build-release
+try {{
+    # Debug build
+    Write-Host "Building Debug configuration..." -ForegroundColor Yellow
+    & msbuild project.sln /p:Configuration=Debug /p:Platform={analysis['architecture']} /verbosity:minimal
+    
+    # Release build
+    Write-Host "Building Release configuration..." -ForegroundColor Yellow
+    & msbuild project.sln /p:Configuration=Release /p:Platform={analysis['architecture']} /verbosity:minimal
+    
+    # Test builds
+    Write-Host "Testing builds..." -ForegroundColor Cyan
+    if (Get-ChildItem -Path "Debug\\*.exe" -ErrorAction SilentlyContinue) {{
+        Write-Host "Debug build: SUCCESS" -ForegroundColor Green
+    }} else {{
+        Write-Host "Debug build: FAILED" -ForegroundColor Red
+    }}
+    
+    if (Get-ChildItem -Path "Release\\*.exe" -ErrorAction SilentlyContinue) {{
+        Write-Host "Release build: SUCCESS" -ForegroundColor Green
+    }} else {{
+        Write-Host "Release build: FAILED" -ForegroundColor Red
+    }}
+}} catch {{
+    Write-Host "Build failed: ${{$_.Exception.Message}}" -ForegroundColor Red
+    exit 1
+}}
 
-echo
-echo "=== Testing builds ==="
-if [ -f "build-debug/bin/ReconstructedProject" ]; then
-    echo "Debug build: SUCCESS"
-else
-    echo "Debug build: FAILED"
-fi
-
-if [ -f "build-release/bin/ReconstructedProject" ]; then
-    echo "Release build: SUCCESS"
-else
-    echo "Release build: FAILED"
-fi
-
-echo
-echo "Build complete!"
+Write-Host "Build complete!" -ForegroundColor Green
 """
-        scripts['build.sh'] = shell_script
+        scripts['build.ps1'] = powershell_script
         
         return scripts
 
@@ -721,106 +589,7 @@ echo "Build complete!"
         
         return result
 
-    def _build_with_cmake(self, output_dir: str, build_config: Dict[str, Any]) -> Dict[str, Any]:
-        """Build using CMake"""
-        result = {
-            'success': False,
-            'output': '',
-            'error': '',
-            'binary_path': None
-        }
-        
-        try:
-            # Write CMakeLists.txt
-            cmake_file = os.path.join(output_dir, 'CMakeLists.txt')
-            with open(cmake_file, 'w') as f:
-                f.write(build_config['build_files']['CMakeLists.txt'])
-            
-            # Configure with CMake
-            build_dir = os.path.join(output_dir, 'build')
-            configure_cmd = ['cmake', '-B', build_dir, '-S', output_dir]
-            
-            configure_result = subprocess.run(
-                configure_cmd, 
-                capture_output=True, 
-                text=True, 
-                timeout=60
-            )
-            
-            if configure_result.returncode != 0:
-                result['error'] = f"CMake configure failed: {configure_result.stderr}"
-                return result
-            
-            # Build with CMake
-            build_cmd = ['cmake', '--build', build_dir]
-            build_result = subprocess.run(
-                build_cmd,
-                capture_output=True,
-                text=True,
-                timeout=120
-            )
-            
-            result['output'] = configure_result.stdout + "\n" + build_result.stdout
-            
-            if build_result.returncode == 0:
-                result['success'] = True
-                # Try to find the built binary
-                for root, dirs, files in os.walk(build_dir):
-                    for file in files:
-                        if file.endswith('.exe') or (os.name != 'nt' and os.access(os.path.join(root, file), os.X_OK)):
-                            result['binary_path'] = os.path.join(root, file)
-                            break
-            else:
-                result['error'] = f"CMake build failed: {build_result.stderr}"
-            
-        except subprocess.TimeoutExpired:
-            result['error'] = "CMake build timed out"
-        except Exception as e:
-            result['error'] = f"CMake build error: {str(e)}"
-        
-        return result
 
-    def _build_with_make(self, output_dir: str, build_config: Dict[str, Any]) -> Dict[str, Any]:
-        """Build using Make"""
-        result = {
-            'success': False,
-            'output': '',
-            'error': '',
-            'binary_path': None
-        }
-        
-        try:
-            # Write Makefile
-            makefile = os.path.join(output_dir, 'Makefile')
-            with open(makefile, 'w') as f:
-                f.write(build_config['build_files']['Makefile'])
-            
-            # Run make
-            make_cmd = ['make', '-C', output_dir]
-            make_result = subprocess.run(
-                make_cmd,
-                capture_output=True,
-                text=True,
-                timeout=120
-            )
-            
-            result['output'] = make_result.stdout
-            
-            if make_result.returncode == 0:
-                result['success'] = True
-                # Look for binary output
-                binary_path = os.path.join(output_dir, 'reconstructed_project')
-                if os.path.exists(binary_path):
-                    result['binary_path'] = binary_path
-            else:
-                result['error'] = f"Make build failed: {make_result.stderr}"
-            
-        except subprocess.TimeoutExpired:
-            result['error'] = "Make build timed out"
-        except Exception as e:
-            result['error'] = f"Make build error: {str(e)}"
-        
-        return result
 
     def _build_with_msbuild(self, output_dir: str, build_config: Dict[str, Any]) -> Dict[str, Any]:
         """Build using MSBuild"""
@@ -878,24 +647,19 @@ echo "Build complete!"
             'performance_metrics': {}
         }
         
-        # Determine best build system
+        # Determine best build system (MSBuild only)
         successful_builds = compilation_results.get('successful_builds', [])
         if successful_builds:
-            # Prefer CMake, then Make, then MSBuild
-            if 'cmake' in successful_builds:
-                optimization['recommended_system'] = 'cmake'
-            elif 'make' in successful_builds:
-                optimization['recommended_system'] = 'make'
-            else:
-                optimization['recommended_system'] = successful_builds[0]
+            optimization['recommended_system'] = 'msbuild'
         
-        # Generate optimization suggestions
+        # Generate optimization suggestions for Windows/MSBuild
         optimization['optimization_suggestions'] = [
-            "Enable parallel compilation (-j flag for make, /MP for MSBuild)",
+            "Enable parallel compilation (/MP for MSBuild)",
             "Use precompiled headers for large projects",
-            "Implement incremental builds",
-            "Configure build caching (ccache, sccache)",
-            "Optimize linker settings for faster linking"
+            "Implement incremental builds with MSBuild",
+            "Configure build caching with MSBuild",
+            "Optimize linker settings for faster linking (/INCREMENTAL)",
+            "Use link-time code generation (/LTCG) for release builds"
         ]
         
         # Calculate efficiency score

@@ -408,6 +408,14 @@ class SharedValidationTools:
         return missing_keys
     
     @staticmethod
+    def validate_binary_path(binary_path: Path) -> bool:
+        """Validate that binary path exists and is accessible"""
+        try:
+            return binary_path.exists() and binary_path.is_file() and binary_path.stat().st_size > 0
+        except Exception:
+            return False
+    
+    @staticmethod
     def validate_pe_structure(binary_path: Path) -> Dict[str, Any]:
         """Validate PE file structure"""
         try:

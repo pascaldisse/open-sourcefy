@@ -52,8 +52,8 @@ class ArchitectConstants:
 
 @dataclass 
 class CompilerSignature:
-    """Compiler signature detection result"""
-    toolchain: str  # MSVC/GCC/Clang/ICC
+    """Compiler signature detection result - Windows MSVC only"""
+    toolchain: str  # MSVC only (Windows)
     version: Optional[str] = None
     confidence: float = 0.0
     evidence: List[str] = None
@@ -96,70 +96,37 @@ class ArchitectAgent(AnalysisAgent):
     high-level constructs were transformed and optimized during compilation.
     
     Features:
-    - Compiler toolchain detection (MSVC, GCC, Clang, ICC)
+    - Compiler toolchain detection (MSVC only - Windows)
     - Optimization level analysis (O0-O3, Os, Oz)
     - Build system identification
     - Error pattern recognition
     - ABI and calling convention analysis
     """
     
-    # Compiler signature patterns (loaded from configuration in production)
+    # Compiler signature patterns - Windows MSVC only
     COMPILER_SIGNATURES = {
         'MSVC': {
             'patterns': [
                 rb'Microsoft.*C/C\+\+.*Compiler',
                 rb'MSVCRT\.dll',
+                rb'VCRUNTIME\d+\.dll',
+                rb'MSVCP\d+\.dll',
                 rb'__security_cookie',
                 rb'_chkstk',
-                rb'___security_init_cookie'
+                rb'___security_init_cookie',
+                rb'__scrt_common_main',
+                rb'__security_check_cookie',
+                rb'_RTC_CheckEsp',
+                rb'_guard_check_icall'
             ],
             'versions': {
-                '6.0': [rb'Microsoft.*C/C\+\+.*Version 12'],
-                '7.0': [rb'Microsoft.*C/C\+\+.*Version 13\.00'],
-                '7.1': [rb'Microsoft.*C/C\+\+.*Version 13\.10'],
-                '8.0': [rb'Microsoft.*C/C\+\+.*Version 14\.00'],
-                '9.0': [rb'Microsoft.*C/C\+\+.*Version 15\.00'],
+                '12.0': [rb'Microsoft.*C/C\+\+.*Version 18\.00'],  # VS 2013
+                '14.0': [rb'Microsoft.*C/C\+\+.*Version 19\.00'],  # VS 2015
+                '14.1': [rb'Microsoft.*C/C\+\+.*Version 19\.1\d'], # VS 2017
+                '14.2': [rb'Microsoft.*C/C\+\+.*Version 19\.2\d'], # VS 2019
+                '14.3': [rb'Microsoft.*C/C\+\+.*Version 19\.3\d'], # VS 2022
+                'latest': [rb'Microsoft.*C/C\+\+.*Version 19\.\d+']
             }
-        },
-        'GCC': {
-            'patterns': [
-                rb'GCC:.*\(',
-                rb'__gxx_personality_v0',
-                rb'_Unwind_Resume',
-                rb'__stack_chk_fail',
-                rb'__cxa_finalize'
-            ],
-            'versions': {
-                '4.x': [rb'GCC:.*4\.\d+'],
-                '5.x': [rb'GCC:.*5\.\d+'],
-                '6.x': [rb'GCC:.*6\.\d+'],
-                '7.x': [rb'GCC:.*7\.\d+'],
-                '8.x': [rb'GCC:.*8\.\d+'],
-                '9.x': [rb'GCC:.*9\.\d+'],
-            }
-        },
-        'Clang': {
-            'patterns': [
-                rb'clang version',
-                rb'__clang_version__',
-                rb'clang.*LLVM',
-                rb'__cxa_atexit'
-            ],
-            'versions': {
-                '3.x': [rb'clang version 3\.\d+'],
-                '4.x': [rb'clang version 4\.\d+'],
-                '5.x': [rb'clang version 5\.\d+'],
-                '6.x': [rb'clang version 6\.\d+'],
-                '7.x': [rb'clang version 7\.\d+'],
-            }
-        },
-        'ICC': {
-            'patterns': [
-                rb'Intel.*C\+\+.*Compiler',
-                rb'__intel_cpu_indicator',
-                rb'__intel_cpu_features_init'
-            ],
-            'versions': {}
         }
     }
     
@@ -325,7 +292,7 @@ class ArchitectAgent(AnalysisAgent):
         return [
             Tool(
                 name="analyze_compiler_patterns",
-                description="Analyze binary patterns to identify compiler toolchain",
+                description="Analyze binary patterns to identify MSVC compiler version",
                 func=self._ai_compiler_analysis_tool
             ),
             Tool(

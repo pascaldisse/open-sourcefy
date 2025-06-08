@@ -46,19 +46,9 @@ try:
 except ImportError:
     HAS_PEFILE = False
 
-try:
-    from elftools.elf.elffile import ELFFile
-    from elftools.common.exceptions import ELFError
-    HAS_ELFTOOLS = True
-except ImportError:
-    HAS_ELFTOOLS = False
-
-try:
-    from macholib.MachO import MachO
-    from macholib.mach_o import CPU_TYPE_NAMES, MH_MAGIC, MH_MAGIC_64
-    HAS_MACHOLIB = True
-except ImportError:
-    HAS_MACHOLIB = False
+# ELF and Mach-O support removed - Windows PE only
+HAS_ELFTOOLS = False
+HAS_MACHOLIB = False
 
 
 # Configuration constants - NO MAGIC NUMBERS
@@ -80,7 +70,7 @@ class BinaryMetadata:
     """Structured binary metadata for consistent data exchange"""
     file_path: str
     file_size: int
-    format_type: str  # PE/ELF/Mach-O/Unknown
+    format_type: str  # PE/Unknown (Windows only)
     architecture: str  # x86/x64/ARM/etc.
     bitness: int  # 32/64
     endianness: str  # little/big
@@ -147,16 +137,13 @@ class SentinelAgent(AnalysisAgent):
         self._validate_configuration()
     
     def _check_parser_availability(self) -> Dict[str, bool]:
-        """Check which binary analysis libraries are available"""
+        """Check binary analysis libraries - Windows PE only"""
         availability = {
-            'pefile': HAS_PEFILE,
-            'elftools': HAS_ELFTOOLS,
-            'macholib': HAS_MACHOLIB
+            'pefile': HAS_PEFILE
         }
         
-        missing = [name for name, available in availability.items() if not available]
-        if missing:
-            self.logger.warning(f"Missing binary parsers: {missing}")
+        if not HAS_PEFILE:
+            self.logger.warning("pefile library not available - PE analysis will be limited")
         
         return availability
     
@@ -457,21 +444,8 @@ class SentinelAgent(AnalysisAgent):
                     confidence = 0.75  # Lower confidence if PE validation fails
             return {'format': 'PE', 'subtype': 'Windows Executable', 'confidence': confidence}
         
-        # ELF format detection with confidence based on class and data encoding
-        elif header.startswith(b'\x7fELF'):
-            confidence = 0.85  # Base confidence for ELF magic
-            if len(header) >= 16:
-                ei_class = header[4]  # 32/64-bit indicator
-                ei_data = header[5]   # Endianness indicator
-                if ei_class in [1, 2] and ei_data in [1, 2]:  # Valid class and data values
-                    confidence = 0.96
-            return {'format': 'ELF', 'subtype': 'Unix/Linux Executable', 'confidence': confidence}
-        
-        # Mach-O format detection with confidence based on magic number validation
-        elif header.startswith(b'\xfe\xed\xfa\xce') or header.startswith(b'\xce\xfa\xed\xfe'):
-            return {'format': 'Mach-O', 'subtype': 'macOS Executable (32-bit)', 'confidence': 0.94}
-        elif header.startswith(b'\xcf\xfa\xed\xfe') or header.startswith(b'\xfe\xed\xfa\xcf'):
-            return {'format': 'Mach-O', 'subtype': 'macOS Executable (64-bit)', 'confidence': 0.94}
+        # ELF and Mach-O detection removed - Windows PE only
+        # All non-PE formats are unsupported
         
         # Unknown format - calculate confidence based on entropy and patterns
         else:
@@ -489,12 +463,10 @@ class SentinelAgent(AnalysisAgent):
             'base_address': None
         }
         
-        if header.startswith(b'MZ'):  # PE
+        if header.startswith(b'MZ'):  # PE (Windows only)
             arch_info.update(self._analyze_pe_architecture(binary_path))
-        elif header.startswith(b'\x7fELF'):  # ELF
-            arch_info.update(self._analyze_elf_architecture(header))
-        elif b'\xfa\xed' in header[:4] or b'\xed\xfa' in header[:4]:  # Mach-O
-            arch_info.update(self._analyze_macho_architecture(header))
+        else:
+            raise ValueError("Only Windows PE format is supported")
         
         return arch_info
     
@@ -545,61 +517,16 @@ class SentinelAgent(AnalysisAgent):
         
         return {'architecture': 'x86', 'bitness': 32, 'endianness': 'little'}
     
-    def _analyze_elf_architecture(self, header: bytes) -> Dict[str, Any]:
-        """Analyze ELF file architecture"""
-        try:
-            ei_class = header[4]  # 32/64 bit
-            ei_data = header[5]   # Endianness
-            e_machine = struct.unpack('<H' if ei_data == 1 else '>H', header[18:20])[0]
-            
-            bitness = 32 if ei_class == 1 else 64
-            endianness = 'little' if ei_data == 1 else 'big'
-            
-            # Map machine type to architecture
-            machine_map = {
-                0x03: 'x86',      # EM_386
-                0x3e: 'x64',      # EM_X86_64
-                0x28: 'ARM',      # EM_ARM
-                0xb7: 'ARM64',    # EM_AARCH64
-            }
-            
-            architecture = machine_map.get(e_machine, 'Unknown')
-            
-            return {
-                'architecture': architecture,
-                'bitness': bitness,
-                'endianness': endianness
-            }
-        except Exception as e:
-            self.logger.warning(f"ELF architecture analysis failed: {e}")
-        
-        return {'architecture': 'Unknown', 'bitness': 0, 'endianness': 'Unknown'}
+    # ELF architecture analysis removed - Windows PE only
     
-    def _analyze_macho_architecture(self, header: bytes) -> Dict[str, Any]:
-        """Analyze Mach-O file architecture"""
-        try:
-            # Simple Mach-O analysis - could be enhanced with macholib
-            magic = struct.unpack('<I', header[:4])[0]
-            
-            if magic in [0xfeedface, 0xcefaedfe]:  # 32-bit
-                return {'architecture': 'x86', 'bitness': 32, 'endianness': 'little'}
-            elif magic in [0xfeedfacf, 0xcffaedfe]:  # 64-bit
-                return {'architecture': 'x64', 'bitness': 64, 'endianness': 'little'}
-        except Exception as e:
-            self.logger.warning(f"Mach-O architecture analysis failed: {e}")
-        
-        return {'architecture': 'Unknown', 'bitness': 0, 'endianness': 'Unknown'}
+    # Mach-O architecture analysis removed - Windows PE only
     
     def _perform_format_specific_analysis(self, binary_path: Path, format_type: str) -> Dict[str, Any]:
         """Perform format-specific detailed analysis"""
         if format_type == 'PE' and self.available_parsers['pefile']:
             return self._analyze_pe_details(binary_path)
-        elif format_type == 'ELF' and self.available_parsers['elftools']:
-            return self._analyze_elf_details(binary_path)
-        elif format_type == 'Mach-O' and self.available_parsers['macholib']:
-            return self._analyze_macho_details(binary_path)
         else:
-            return {'analysis_type': 'generic', 'details': 'Limited analysis - specific parser not available'}
+            raise ValueError("Only Windows PE format is supported")
     
     def _analyze_pe_details(self, binary_path: Path) -> Dict[str, Any]:
         """Detailed PE analysis using pefile"""
@@ -652,69 +579,9 @@ class SentinelAgent(AnalysisAgent):
             self.logger.warning(f"PE detailed analysis failed: {e}")
             return {'analysis_type': 'pe_failed', 'error': str(e)}
     
-    def _analyze_elf_details(self, binary_path: Path) -> Dict[str, Any]:
-        """Detailed ELF analysis using elftools"""
-        try:
-            with open(binary_path, 'rb') as f:
-                elffile = ELFFile(f)
-                
-                # Extract sections
-                sections = []
-                for section in elffile.iter_sections():
-                    sections.append({
-                        'name': section.name,
-                        'type': section['sh_type'],
-                        'address': section['sh_addr'],
-                        'size': section['sh_size'],
-                        'offset': section['sh_offset']
-                    })
-                
-                # Extract symbols (safely)
-                symbols = []
-                symtab = elffile.get_section_by_name('.symtab')
-                if symtab:
-                    for symbol in list(symtab.iter_symbols())[:100]:  # Limit symbols
-                        if symbol.name:
-                            symbols.append(symbol.name)
-                
-                return {
-                    'analysis_type': 'elf_detailed',
-                    'sections': sections,
-                    'symbols': symbols,
-                    'section_count': len(sections),
-                    'symbol_count': len(symbols)
-                }
-                
-        except Exception as e:
-            self.logger.warning(f"ELF detailed analysis failed: {e}")
-            return {'analysis_type': 'elf_failed', 'error': str(e)}
+    # ELF detailed analysis removed - Windows PE only
     
-    def _analyze_macho_details(self, binary_path: Path) -> Dict[str, Any]:
-        """Detailed Mach-O analysis using macholib"""
-        try:
-            macho = MachO(str(binary_path))
-            
-            segments = []
-            for header in macho.headers:
-                for load_command, cmd, data in header.commands:
-                    if hasattr(cmd, 'segname'):
-                        segments.append({
-                            'name': cmd.segname.decode('utf-8', errors='ignore').rstrip('\x00'),
-                            'vmaddr': getattr(cmd, 'vmaddr', 0),
-                            'vmsize': getattr(cmd, 'vmsize', 0),
-                            'fileoff': getattr(cmd, 'fileoff', 0),
-                            'filesize': getattr(cmd, 'filesize', 0)
-                        })
-            
-            return {
-                'analysis_type': 'macho_detailed',
-                'segments': segments,
-                'segment_count': len(segments)
-            }
-            
-        except Exception as e:
-            self.logger.warning(f"Mach-O detailed analysis failed: {e}")
-            return {'analysis_type': 'macho_failed', 'error': str(e)}
+    # Mach-O detailed analysis removed - Windows PE only
     
     def _extract_comprehensive_metadata(self, analysis_context: Dict[str, Any]) -> Dict[str, Any]:
         """Extract comprehensive metadata including hashes and strings"""

@@ -16,9 +16,8 @@ from .ai_engine_interface import (
     MatrixPromptLibrary, get_ai_manager, get_conversation_manager
 )
 
-# LangChain agent framework
-from .langchain_agent_base import MatrixLangChainAgent
-from .matrix_agent_base import MatrixAgentBase
+# Matrix Agent Framework
+from .matrix_agents_v2 import MatrixAgentV2, AgentResult, AgentStatus, MatrixCharacter
 
 __version__ = "2.0.0-matrix"
 __author__ = "Open-Sourcefy Matrix Team"
@@ -42,5 +41,5 @@ __all__ = [
     "MatrixPromptLibrary", "get_ai_manager", "get_conversation_manager",
     
     # Agent Framework
-    "MatrixLangChainAgent", "MatrixAgentBase"
+    "MatrixAgentV2", "AgentResult", "AgentStatus", "MatrixCharacter"
 ]

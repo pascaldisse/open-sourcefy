@@ -5,149 +5,124 @@ Contains all production-ready implementations of agents 1-16
 
 from typing import Dict, Type, Any
 
-# Import Matrix agents
+# Import Matrix agents individually with error handling
+MATRIX_AGENTS = {}
+failed_imports = []
+
+# Agent 1: Sentinel
 try:
     from .agent01_sentinel import SentinelAgent
-    from .agent02_architect import ArchitectAgent  
-    from .agent03_merovingian import MerovingianAgent
-    from .agent04_agent_smith import AgentSmithAgent
-    from .agent05_neo_advanced_decompiler import Agent5_Neo_AdvancedDecompiler as NeoAgent
-    from .agent06_twins_binary_diff import Agent6_Twins_BinaryDiff as TwinsAgent
-    from .agent07_trainman_assembly_analysis import Agent7_Trainman_AssemblyAnalysis as TrainmanAgent
-    from .agent08_keymaker_resource_reconstruction import Agent8_Keymaker_ResourceReconstruction as KeymakerAgent
-    from .agent09_commander_locke import CommanderLockeAgent
-    from .agent10_the_machine import Agent10_TheMachine
-    from .agent11_the_oracle import Agent11_TheOracle
-    from .agent12_link import Agent12_Link
-    from .agent13_agent_johnson import Agent13_AgentJohnson
-    from .agent14_the_cleaner import Agent14_TheCleaner
-    from .agent15_analyst import Agent15_Analyst
-    from .agent16_agent_brown import Agent16_AgentBrown
-    
-    # Map agent IDs to classes
-    MATRIX_AGENTS = {
-        1: SentinelAgent,
-        2: ArchitectAgent,
-        3: MerovingianAgent,
-        4: AgentSmithAgent,
-        5: NeoAgent,
-        6: TwinsAgent,
-        7: TrainmanAgent,
-        8: KeymakerAgent,
-        9: CommanderLockeAgent,
-        10: Agent10_TheMachine,
-        11: Agent11_TheOracle,
-        12: Agent12_Link,
-        13: Agent13_AgentJohnson,
-        14: Agent14_TheCleaner,
-        15: Agent15_Analyst,
-        16: Agent16_AgentBrown
-    }
-    
-    # Agent metadata for system integration
-    AGENT_METADATA = {
-        1: {
-            'name': 'Sentinel',
-            'character': 'sentinel',
-            'description': 'Binary discovery and metadata analysis',
-            'dependencies': []
-        },
-        2: {
-            'name': 'Architect',
-            'character': 'architect',
-            'description': 'Architecture analysis and design patterns',
-            'dependencies': [1]
-        },
-        3: {
-            'name': 'Merovingian',
-            'character': 'merovingian',
-            'description': 'Basic decompilation and control flow',
-            'dependencies': [1, 2]
-        },
-        4: {
-            'name': 'AgentSmith',
-            'character': 'agent_smith',
-            'description': 'Binary structure analysis and replication',
-            'dependencies': [1, 2]
-        },
-        5: {
-            'name': 'Neo',
-            'character': 'neo',
-            'description': 'Advanced decompilation and code generation',
-            'dependencies': [2, 3, 4]
-        },
-        6: {
-            'name': 'Twins',
-            'character': 'twins',
-            'description': 'Binary differential analysis',
-            'dependencies': [5]
-        },
-        7: {
-            'name': 'Trainman',
-            'character': 'trainman',
-            'description': 'Assembly analysis and transportation',
-            'dependencies': [5, 6]
-        },
-        8: {
-            'name': 'Keymaker',
-            'character': 'keymaker',
-            'description': 'Resource reconstruction and access',
-            'dependencies': [5, 7]
-        },
-        9: {
-            'name': 'CommanderLocke',
-            'character': 'commander_locke',
-            'description': 'Global reconstruction orchestration',
-            'dependencies': [5, 6, 7, 8]
-        },
-        10: {
-            'name': 'TheMachine',
-            'character': 'machine',
-            'description': 'Compilation orchestration and build systems',
-            'dependencies': [8, 9]
-        },
-        11: {
-            'name': 'TheOracle',
-            'character': 'oracle',
-            'description': 'Final validation and truth verification',
-            'dependencies': [10]
-        },
-        12: {
-            'name': 'Link',
-            'character': 'link',
-            'description': 'Cross-reference and linking analysis',
-            'dependencies': [11]
-        },
-        13: {
-            'name': 'AgentJohnson',
-            'character': 'agent_johnson',
-            'description': 'Security analysis and vulnerability detection',
-            'dependencies': [12]
-        },
-        14: {
-            'name': 'TheCleaner',
-            'character': 'cleaner',
-            'description': 'Code cleanup and optimization',
-            'dependencies': [13]
-        },
-        15: {
-            'name': 'Analyst',
-            'character': 'analyst',
-            'description': 'Advanced metadata analysis and intelligence synthesis',
-            'dependencies': [1, 2, 5, 10, 11, 13, 14]
-        },
-        16: {
-            'name': 'AgentBrown',
-            'character': 'agent_brown',
-            'description': 'Final quality assurance and optimization',
-            'dependencies': [1, 2, 5, 10, 11, 13, 14, 15]
-        }
-    }
-    
+    MATRIX_AGENTS[1] = SentinelAgent
 except ImportError as e:
-    print(f"Warning: Failed to import some Matrix agents: {e}")
-    MATRIX_AGENTS = {}
-    AGENT_METADATA = {}
+    failed_imports.append(f"Agent 1 (Sentinel): {e}")
+
+# Agent 2: Architect  
+try:
+    from .agent02_architect import ArchitectAgent
+    MATRIX_AGENTS[2] = ArchitectAgent
+except ImportError as e:
+    failed_imports.append(f"Agent 2 (Architect): {e}")
+
+# Agent 3: Merovingian
+try:
+    from .agent03_merovingian import MerovingianAgent
+    MATRIX_AGENTS[3] = MerovingianAgent
+except ImportError as e:
+    failed_imports.append(f"Agent 3 (Merovingian): {e}")
+
+# Agent 4: Agent Smith
+try:
+    from .agent04_agent_smith import AgentSmithAgent
+    MATRIX_AGENTS[4] = AgentSmithAgent
+except ImportError as e:
+    failed_imports.append(f"Agent 4 (Agent Smith): {e}")
+
+# Agent 5: Neo
+try:
+    from .agent05_neo_advanced_decompiler import Agent5_Neo_AdvancedDecompiler as NeoAgent
+    MATRIX_AGENTS[5] = NeoAgent
+except ImportError as e:
+    failed_imports.append(f"Agent 5 (Neo): {e}")
+
+# Agent 9: Commander Locke  
+try:
+    from .agent09_commander_locke import CommanderLockeAgent
+    MATRIX_AGENTS[9] = CommanderLockeAgent
+except ImportError as e:
+    failed_imports.append(f"Agent 9 (Commander Locke): {e}")
+
+# Agent 12: Link
+try:
+    from .agent12_link import Agent12_Link
+    MATRIX_AGENTS[12] = Agent12_Link
+except ImportError as e:
+    failed_imports.append(f"Agent 12 (Link): {e}")
+
+# Report failed imports
+if failed_imports:
+    print("Warning: Some Matrix agents failed to import:")
+    for failure in failed_imports:
+        print(f"  - {failure}")
+
+# Agent metadata for system integration (only for working agents)
+AGENT_METADATA = {}
+
+# Only add metadata for successfully imported agents
+if 1 in MATRIX_AGENTS:
+    AGENT_METADATA[1] = {
+        'name': 'Sentinel',
+        'character': 'sentinel',
+        'description': 'Binary discovery and metadata analysis',
+        'dependencies': []
+    }
+
+if 2 in MATRIX_AGENTS:
+    AGENT_METADATA[2] = {
+        'name': 'Architect',
+        'character': 'architect',
+        'description': 'Architecture analysis and design patterns',
+        'dependencies': [1]
+    }
+
+if 3 in MATRIX_AGENTS:
+    AGENT_METADATA[3] = {
+        'name': 'Merovingian',
+        'character': 'merovingian',
+        'description': 'Basic decompilation and control flow',
+        'dependencies': [1, 2]
+    }
+
+if 4 in MATRIX_AGENTS:
+    AGENT_METADATA[4] = {
+        'name': 'AgentSmith',
+        'character': 'agent_smith',
+        'description': 'Binary structure analysis and replication',
+        'dependencies': [1, 2]
+    }
+
+if 5 in MATRIX_AGENTS:
+    AGENT_METADATA[5] = {
+        'name': 'Neo',
+        'character': 'neo',
+        'description': 'Advanced decompilation and code generation',
+        'dependencies': [2, 3, 4]
+    }
+
+if 9 in MATRIX_AGENTS:
+    AGENT_METADATA[9] = {
+        'name': 'CommanderLocke',
+        'character': 'commander_locke',
+        'description': 'Global reconstruction orchestration',
+        'dependencies': [1, 2, 3, 4, 5]
+    }
+
+if 12 in MATRIX_AGENTS:
+    AGENT_METADATA[12] = {
+        'name': 'Link',
+        'character': 'link',
+        'description': 'Cross-reference and linking analysis',
+        'dependencies': [1, 2]
+    }
 
 
 def get_available_agents() -> Dict[int, Type]:
@@ -186,6 +161,7 @@ def get_decompile_agents():
     return {aid: MATRIX_AGENTS[aid] for aid in decompile_agent_ids if aid in MATRIX_AGENTS}
 
 
+# Build __all__ list dynamically based on successful imports
 __all__ = [
     'MATRIX_AGENTS',
     'AGENT_METADATA', 
@@ -193,21 +169,21 @@ __all__ = [
     'get_agent_by_id',
     'get_implementation_status',
     'create_all_agents',
-    'get_decompile_agents',
-    'SentinelAgent',
-    'ArchitectAgent', 
-    'MerovingianAgent',
-    'AgentSmithAgent',
-    'NeoAgent',
-    'TwinsAgent',
-    'TrainmanAgent',
-    'KeymakerAgent',
-    'CommanderLockeAgent',
-    'Agent10_TheMachine',
-    'Agent11_TheOracle', 
-    'Agent12_Link',
-    'Agent13_AgentJohnson',
-    'Agent14_TheCleaner',
-    'Agent15_Analyst',
-    'Agent16_AgentBrown'
+    'get_decompile_agents'
 ]
+
+# Add successfully imported agent classes to __all__
+if 1 in MATRIX_AGENTS:
+    __all__.append('SentinelAgent')
+if 2 in MATRIX_AGENTS:
+    __all__.append('ArchitectAgent')
+if 3 in MATRIX_AGENTS:
+    __all__.append('MerovingianAgent')
+if 4 in MATRIX_AGENTS:
+    __all__.append('AgentSmithAgent')
+if 5 in MATRIX_AGENTS:
+    __all__.append('NeoAgent')
+if 9 in MATRIX_AGENTS:
+    __all__.append('CommanderLockeAgent')
+if 12 in MATRIX_AGENTS:
+    __all__.append('Agent12_Link')

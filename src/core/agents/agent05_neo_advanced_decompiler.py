@@ -28,11 +28,11 @@ import re
 import time
 
 # Matrix framework imports
-from ..agent_base import BaseAgent, AgentResult, AgentStatus
+from ..matrix_agents_v2 import MatrixAgentV2, AgentResult, AgentStatus, MatrixCharacter
 from ..config_manager import ConfigManager
 from ..ghidra_headless import GhidraHeadless
-from ..performance_monitor import PerformanceMonitor
-from ..error_handler import MatrixErrorHandler
+from ..shared_utils import LoggingUtils
+from ..shared_components import MatrixErrorHandler
 
 # AI enhancement imports
 try:
@@ -75,7 +75,7 @@ class NeoAnalysisResult:
     matrix_annotations: Optional[Dict[str, Any]] = None
 
 
-class Agent5_Neo_AdvancedDecompiler(BaseAgent):
+class Agent5_Neo_AdvancedDecompiler(MatrixAgentV2):
     """
     Agent 5: Neo (Glitch) - Advanced Decompilation and Ghidra Integration
     
@@ -96,12 +96,11 @@ class Agent5_Neo_AdvancedDecompiler(BaseAgent):
     def __init__(self):
         super().__init__(
             agent_id=5,
-            name="Neo_AdvancedDecompiler",
+            matrix_character=MatrixCharacter.NEO,
             dependencies=[1, 2, 4]  # Depends on Binary Discovery, Arch Analysis, and Basic Decompiler
         )
         
-        # Initialize configuration
-        self.config = ConfigManager()
+        # Load Neo-specific configuration from parent config
         
         # Load Neo-specific configuration  
         self.quality_threshold = self.config.get_value('agents.agent_05.quality_threshold', 0.6)  # Lower for testing
@@ -110,7 +109,7 @@ class Agent5_Neo_AdvancedDecompiler(BaseAgent):
         self.ghidra_memory_limit = self.config.get_value('agents.agent_05.ghidra_memory', '4G')
         
         # Initialize components
-        self.performance_monitor = PerformanceMonitor("Neo_Agent")
+        self.start_time = None
         self.error_handler = MatrixErrorHandler("Neo", max_retries=3)
         
         # Initialize Ghidra integration
@@ -206,7 +205,7 @@ class Agent5_Neo_AdvancedDecompiler(BaseAgent):
             self.logger.error(f"Failed to setup Neo AI agent: {e}")
             self.ai_enabled = False
 
-    def execute(self, context: Dict[str, Any]) -> AgentResult:
+    def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute Neo's advanced decompilation with Matrix-level insight
         
@@ -217,7 +216,7 @@ class Agent5_Neo_AdvancedDecompiler(BaseAgent):
         4. Validate quality and iterate if necessary
         5. Provide Matrix-themed insights and annotations
         """
-        self.performance_monitor.start_operation("neo_decompilation")
+        self.start_time = time.time()
         
         try:
             # Validate prerequisites - Neo needs the foundation
@@ -287,7 +286,7 @@ class Agent5_Neo_AdvancedDecompiler(BaseAgent):
             if output_paths:
                 self._save_neo_results(neo_result, output_paths)
             
-            self.performance_monitor.end_operation("neo_decompilation")
+            execution_time = time.time() - self.start_time
             
             return AgentResult(
                 agent_id=self.agent_id,
@@ -315,13 +314,13 @@ class Agent5_Neo_AdvancedDecompiler(BaseAgent):
                     'analysis_passes': self.retry_count + 1,
                     'ghidra_version': getattr(self.ghidra_analyzer, 'version', 'Mock') if self.ghidra_analyzer else 'Not Available',
                     'ai_enabled': self.ai_enabled,
-                    'execution_time': self.performance_monitor.get_execution_time(),
+                    'execution_time': execution_time,
                     'quality_achieved': quality_metrics.overall_score >= self.quality_threshold
                 }
             )
             
         except Exception as e:
-            self.performance_monitor.end_operation("neo_decompilation")
+            execution_time = time.time() - self.start_time
             error_msg = f"Neo's advanced decompilation failed: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             

@@ -5,32 +5,36 @@
 packaging>=21.0
 setuptools>=60.0
 
+# Optional dependencies for enhanced functionality
+# PE file analysis (Windows binaries)
+# pefile>=2022.5.30
+
+# Disassembly engine
+# capstone>=5.0.0
+
 # System monitoring and performance
 psutil>=5.9.0
 
-# Configuration management
-PyYAML>=6.0
+# Machine learning and AI enhancements (optional)
+# numpy>=1.21.0
+# scikit-learn>=1.1.0
 
-# PE file analysis (Windows binaries)
-pefile>=2022.5.30
-
-# Disassembly engine
-capstone>=5.0.0
-
-# Machine learning and AI enhancements
-numpy>=1.21.0
-scikit-learn>=1.1.0
+# LangChain for agent framework
+langchain>=0.1.0
+langchain-core>=0.1.0
+langchain-community>=0.0.20
 
 # Binary analysis tools (optional)
-lief>=0.12.0
-pyelftools>=0.29
+# lief>=0.12.0
+# pyelftools>=0.29
 
 # Development and testing (optional)
-pytest>=7.0.0
-pytest-cov>=4.0.0
+# pytest>=7.0.0
+# pytest-cov>=4.0.0
 
 # Documentation (optional)  
-sphinx>=5.0.0
-sphinx-rtd-theme>=1.0.0
+# sphinx>=5.0.0
+# sphinx-rtd-theme>=1.0.0
 
-# Note: All dependencies are now uncommented for full functionality
+# Note: Commented dependencies are optional and will be installed
+# automatically if available, but the system works without them

@@ -628,25 +628,29 @@ class Agent16_AgentBrown(BaseAgent):
                             f.write(code)
                         test_files.append(file_path)
                 
-                # Attempt compilation with gcc
+                # Attempt compilation with MSVC (Windows only)
                 if test_files:
                     for file_path in test_files:
                         try:
+                            # Use cl.exe (MSVC compiler) instead of gcc
                             result = subprocess.run(
-                                ['gcc', '-c', str(file_path), '-o', str(file_path.with_suffix('.o'))],
+                                ['cl', '/c', str(file_path), f'/Fo{file_path.with_suffix(".obj")}'],
                                 capture_output=True,
                                 text=True,
                                 timeout=30
                             )
                             
                             if result.returncode == 0:
-                                compilation_result['details'].append(f"✓ {file_path.name} compiled successfully")
+                                compilation_result['details'].append(f"✓ {file_path.name} compiled successfully with MSVC")
                             else:
                                 compilation_result['details'].append(f"✗ {file_path.name} failed: {result.stderr[:200]}")
                                 compilation_result['status'] = 'partial'
                                 
                         except (subprocess.TimeoutExpired, FileNotFoundError) as e:
                             compilation_result['details'].append(f"⚠ {file_path.name} compilation skipped: {e}")
+                        except Exception as e:
+                            compilation_result['details'].append(f"⚠ MSVC compiler not available: {e}")
+                            compilation_result['status'] = 'failed'
                 
         except Exception as e:
             compilation_result = {

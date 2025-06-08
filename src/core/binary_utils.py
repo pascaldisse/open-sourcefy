@@ -25,19 +25,13 @@ try:
 except ImportError:
     HAS_PEFILE = False
 
-try:
-    from elftools.elf.elffile import ELFFile
-    from elftools.common.py3compat import bytes2str
-    HAS_PYELFTOOLS = True
-except ImportError:
-    HAS_PYELFTOOLS = False
+# ELF support removed - Windows PE only
+HAS_PYELFTOOLS = False
 
 
 class BinaryFormat(Enum):
-    """Binary file format enumeration"""
+    """Binary file format enumeration - Windows PE only"""
     PE = "pe"
-    ELF = "elf"
-    MACH_O = "mach-o"
     UNKNOWN = "unknown"
 
 
@@ -96,13 +90,11 @@ class BinaryAnalyzer:
         # Detect binary format
         info.format = self.detect_format(file_path)
         
-        # Extract format-specific information
+        # Extract PE-specific information (Windows only)
         if info.format == BinaryFormat.PE:
             self._analyze_pe_file(file_path, info)
-        elif info.format == BinaryFormat.ELF:
-            self._analyze_elf_file(file_path, info)
-        elif info.format == BinaryFormat.MACH_O:
-            self._analyze_macho_file(file_path, info)
+        else:
+            raise ValueError("Only Windows PE format is supported")
         
         # Extract strings
         info.strings = self.extract_strings(file_path)
@@ -132,14 +124,8 @@ class BinaryAnalyzer:
                             if pe_sig == b'PE\x00\x00':
                                 return BinaryFormat.PE
             
-            # ELF format detection
-            if header.startswith(b'\x7fELF'):
-                return BinaryFormat.ELF
-            
-            # Mach-O format detection
-            if header.startswith((b'\xfe\xed\xfa\xce', b'\xfe\xed\xfa\xcf',
-                               b'\xce\xfa\xed\xfe', b'\xcf\xfa\xed\xfe')):
-                return BinaryFormat.MACH_O
+            # Only PE format supported
+            # ELF and Mach-O detection removed
             
             # Additional format detection using python-magic if available
             if HAS_MAGIC:
@@ -149,10 +135,7 @@ class BinaryAnalyzer:
                     file_type = magic.from_file(str(file_path))
                     if 'PE32' in file_type or 'MS-DOS executable' in file_type:
                         return BinaryFormat.PE
-                    elif 'ELF' in file_type:
-                        return BinaryFormat.ELF
-                    elif 'Mach-O' in file_type:
-                        return BinaryFormat.MACH_O
+                    # ELF and Mach-O detection removed - Windows PE only
             
         except Exception as e:
             self.logger.warning(f"Error detecting format for {file_path}: {e}")
@@ -267,134 +250,11 @@ class BinaryAnalyzer:
         except Exception as e:
             self.logger.error(f"Error in basic PE analysis for {file_path}: {e}")
     
-    def _analyze_elf_file(self, file_path: Path, info: BinaryInfo):
-        """Analyze ELF file format"""
-        if not HAS_PYELFTOOLS:
-            self.logger.warning("pyelftools not available, ELF analysis limited")
-            self._analyze_elf_basic(file_path, info)
-            return
-        
-        try:
-            with open(file_path, 'rb') as f:
-                elf = ELFFile(f)
-                
-                # Basic ELF information
-                info.entry_point = elf.header['e_entry']
-                info.is_64bit = elf.elfclass == 64
-                
-                # Architecture detection
-                machine = elf.header['e_machine']
-                if machine == 'EM_386':
-                    info.architecture = Architecture.X86
-                elif machine == 'EM_X86_64':
-                    info.architecture = Architecture.X64
-                elif machine == 'EM_ARM':
-                    info.architecture = Architecture.ARM
-                elif machine == 'EM_AARCH64':
-                    info.architecture = Architecture.ARM64
-                elif machine == 'EM_MIPS':
-                    info.architecture = Architecture.MIPS
-                elif machine == 'EM_RISCV':
-                    info.architecture = Architecture.RISC_V
-                
-                # Sections
-                for section in elf.iter_sections():
-                    section_info = {
-                        'name': section.name,
-                        'type': section['sh_type'],
-                        'address': section['sh_addr'],
-                        'offset': section['sh_offset'],
-                        'size': section['sh_size'],
-                        'flags': section['sh_flags']
-                    }
-                    info.sections.append(section_info)
-                
-                # Dynamic symbols (imports/exports)
-                symbol_tables = [s for s in elf.iter_sections() if s.name in ('.dynsym', '.symtab')]
-                for symtab in symbol_tables:
-                    for symbol in symtab.iter_symbols():
-                        if symbol.name:
-                            symbol_name = bytes2str(symbol.name)
-                            if symbol['st_shndx'] == 'SHN_UNDEF':
-                                info.imports.append(symbol_name)
-                            else:
-                                info.exports.append(symbol_name)
-                
-        except Exception as e:
-            self.logger.error(f"Error analyzing ELF file {file_path}: {e}")
-            self._analyze_elf_basic(file_path, info)
+    # ELF analysis removed - Windows PE only
     
-    def _analyze_elf_basic(self, file_path: Path, info: BinaryInfo):
-        """Basic ELF analysis without pyelftools"""
-        try:
-            with open(file_path, 'rb') as f:
-                header = f.read(64)
-                
-                if len(header) < 16:
-                    return
-                
-                # ELF class (32/64-bit)
-                info.is_64bit = (header[4] == 2)
-                
-                # Architecture from e_machine field
-                machine_offset = 18
-                if len(header) > machine_offset + 1:
-                    machine = struct.unpack('<H', header[machine_offset:machine_offset+2])[0]
-                    
-                    if machine == 3:  # EM_386
-                        info.architecture = Architecture.X86
-                    elif machine == 62:  # EM_X86_64
-                        info.architecture = Architecture.X64
-                    elif machine == 40:  # EM_ARM
-                        info.architecture = Architecture.ARM
-                    elif machine == 183:  # EM_AARCH64
-                        info.architecture = Architecture.ARM64
-                    elif machine == 8:  # EM_MIPS
-                        info.architecture = Architecture.MIPS
-                    elif machine == 243:  # EM_RISCV
-                        info.architecture = Architecture.RISC_V
-                
-                # Entry point
-                entry_offset = 24 if info.is_64bit else 24
-                if len(header) >= entry_offset + (8 if info.is_64bit else 4):
-                    if info.is_64bit:
-                        info.entry_point = struct.unpack('<Q', header[entry_offset:entry_offset+8])[0]
-                    else:
-                        info.entry_point = struct.unpack('<I', header[entry_offset:entry_offset+4])[0]
-                
-        except Exception as e:
-            self.logger.error(f"Error in basic ELF analysis for {file_path}: {e}")
+    # ELF basic analysis removed - Windows PE only
     
-    def _analyze_macho_file(self, file_path: Path, info: BinaryInfo):
-        """Analyze Mach-O file format (basic implementation)"""
-        try:
-            with open(file_path, 'rb') as f:
-                header = f.read(32)
-                
-                if len(header) < 28:
-                    return
-                
-                # Mach-O magic numbers
-                magic = struct.unpack('<I', header[:4])[0]
-                
-                if magic in (0xfeedface, 0xfeedfacf):  # 32-bit and 64-bit little endian
-                    info.is_64bit = (magic == 0xfeedfacf)
-                elif magic in (0xcefaedfe, 0xcffaedfe):  # 32-bit and 64-bit big endian
-                    info.is_64bit = (magic == 0xcffaedfe)
-                
-                # CPU type
-                cpu_type = struct.unpack('<I', header[4:8])[0]
-                if cpu_type == 7:  # CPU_TYPE_X86
-                    info.architecture = Architecture.X86
-                elif cpu_type == 16777223:  # CPU_TYPE_X86_64
-                    info.architecture = Architecture.X64
-                elif cpu_type == 12:  # CPU_TYPE_ARM
-                    info.architecture = Architecture.ARM
-                elif cpu_type == 16777228:  # CPU_TYPE_ARM64
-                    info.architecture = Architecture.ARM64
-                
-        except Exception as e:
-            self.logger.error(f"Error analyzing Mach-O file {file_path}: {e}")
+    # Mach-O analysis removed - Windows PE only
     
     def calculate_hashes(self, file_path: Path) -> Dict[str, str]:
         """Calculate various hashes for the binary file"""
@@ -550,28 +410,17 @@ def is_executable_file(file_path: Union[str, Path]) -> bool:
     """Check if file appears to be an executable"""
     file_path = Path(file_path)
     
-    # Check file extension
+    # Check Windows executable extensions only
     executable_extensions = {'.exe', '.dll', '.sys', '.scr', '.com', '.bat', '.cmd'}
     if file_path.suffix.lower() in executable_extensions:
         return True
     
-    # Check file permissions (Unix-like systems)
-    if hasattr(os, 'access') and os.access(file_path, os.X_OK):
-        return True
-    
-    # Check magic bytes
+    # Check PE magic bytes only (Windows)
     try:
         with open(file_path, 'rb') as f:
             header = f.read(4)
-            # PE signature
+            # PE signature only
             if header.startswith(b'MZ'):
-                return True
-            # ELF signature
-            if header.startswith(b'\x7fELF'):
-                return True
-            # Mach-O signatures
-            if header.startswith((b'\xfe\xed\xfa\xce', b'\xfe\xed\xfa\xcf',
-                               b'\xce\xfa\xed\xfe', b'\xcf\xfa\xed\xfe')):
                 return True
     except Exception:
         pass

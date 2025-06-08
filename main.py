@@ -41,8 +41,8 @@ except ImportError as e:
 
 # Import agents
 try:
-    from core.agents import create_all_agents
-    from core.agent_base import BaseAgent
+    from core.agents import create_all_agents, get_available_agents
+    from core.matrix_agents_v2 import MatrixAgentV2
     AGENTS_AVAILABLE = True
 except ImportError as e:
     print(f"Agent modules not available: {e}")

@@ -269,11 +269,13 @@ class MatrixPipelineOrchestrator:
                 )
                 agent_results[agent_id] = result
                 
-                if result.success:
+                from .matrix_agents_v2 import AgentStatus
+                if result.status == AgentStatus.SUCCESS:
                     completed_count += 1
                     self.logger.info(f"✅ Agent {agent_id} completed successfully")
                 else:
-                    self.logger.warning(f"⚠️ Agent {agent_id} failed: {result.error}")
+                    error_msg = result.error_message or "Unknown error"
+                    self.logger.warning(f"⚠️ Agent {agent_id} failed: {error_msg}")
                 
             except asyncio.TimeoutError:
                 self.logger.error(f"⏱️ Agent {agent_id} timed out")
