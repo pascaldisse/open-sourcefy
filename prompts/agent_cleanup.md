@@ -334,7 +334,26 @@ if file_size > 10 * 1024 * 1024:  # Arbitrary threshold
 
 ## Automated Tools and Commands
 
-### Finding Dummy Code
+**🤖 AUTOMATION AVAILABLE**: Use the provided automation scripts in `scripts/` directory for these tasks.
+
+### Environment Validation (AUTOMATED)
+```bash
+# Use automation script for environment validation
+./scripts/environment_validator.py
+./scripts/environment_validator.py --setup-help  # Get setup instructions
+./scripts/environment_validator.py --json        # JSON output for scripting
+```
+
+### File Operations (AUTOMATED)
+```bash
+# Use automation script for file operations
+./scripts/file_operations.py create-structure output/cleanup_session
+./scripts/file_operations.py clean-temp output/temp --max-age 24
+./scripts/file_operations.py directory-report . cleanup_report.json
+./scripts/file_operations.py find-files src "*.py"
+```
+
+### Manual Finding Dummy Code (when automation isn't sufficient)
 ```bash
 # Search for common dummy patterns
 grep -r "confidence.*0\." src/
@@ -365,9 +384,12 @@ python -m mypy src/
 python -m pylint src/ --disable=all --enable=duplicate-code
 ```
 
-### Project Structure Analysis
+### Project Structure Analysis (AUTOMATED + Manual)
 ```bash
-# Find duplicate files
+# Use automation for comprehensive analysis
+./scripts/file_operations.py directory-report src/ src_analysis.json
+
+# Manual commands for specific needs
 find . -name "*.py" -exec basename {} \; | sort | uniq -d
 
 # Analyze import dependencies

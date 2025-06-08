@@ -381,28 +381,56 @@ _parse_macho_sections()          → Implement Mach-O section parsing
 
 ## Getting Started
 
-1. **Setup Development Environment**:
+**🤖 AUTOMATION AVAILABLE**: Use the provided automation scripts to streamline the implementation process.
+
+1. **Setup Development Environment (AUTOMATED)**:
    ```bash
+   # Use automation for comprehensive environment validation
+   ./scripts/environment_validator.py
+   ./scripts/environment_validator.py --setup-help  # Get specific setup instructions
+   
+   # Manual fallback
    pip install -r requirements.txt
    # Install Ghidra and set GHIDRA_HOME
    # Install build tools (CMake, MSBuild, etc.)
    ```
 
-2. **Run Current State Analysis** (OUTPUT TO `/output/` ONLY):
+2. **Run Current State Analysis (AUTOMATED)**:
    ```bash
+   # Use automation for pipeline execution and analysis
+   ./scripts/pipeline_helper.py validate-env  # First validate environment
+   ./scripts/pipeline_helper.py run launcher.exe --mode full --debug
+   ./scripts/pipeline_helper.py analyze output/[timestamp]
+   
+   # Manual fallback (OUTPUT TO `/output/` ONLY):
    python main.py launcher.exe --output-dir output/test_implementation
    # Identify which NotImplementedErrors are hit first
    # VERIFY: All files created under output/ directory only
    ls -la | grep -v "output/" | grep -E "\.(log|tmp|json|xml)$"  # Should be empty
    ```
 
-3. **Pick Implementation Order Based on Dependencies**:
+3. **File and Directory Management (AUTOMATED)**:
+   ```bash
+   # Use automation for file operations
+   ./scripts/file_operations.py create-structure output/implementation_session
+   ./scripts/file_operations.py directory-report src/ src_analysis.json
+   ./scripts/file_operations.py find-files src "*.py" | grep -E "(agent|core)"
+   ```
+
+4. **Pick Implementation Order Based on Dependencies**:
    - Start with Agent 1 (BinaryDiscovery) - foundation for all others
    - Move to Agent 5 (BinaryStructureAnalyzer) - needed by most agents
    - Implement Agent 7 (AdvancedDecompiler) - core functionality
    - Continue based on dependency graph
 
-4. **Implement Test-Driven Development**:
+5. **Build System Testing (AUTOMATED)**:
+   ```bash
+   # Use automation for build system testing
+   ./scripts/build_system_automation.py --output-dir output/test cmake --project-name test --sources src/*.c
+   ./scripts/build_system_automation.py --output-dir output/test test --build-system auto
+   ```
+
+6. **Implement Test-Driven Development**:
    - Write tests for each function before implementing
    - Use real binary samples for testing
    - Validate outputs against known good results

@@ -17,8 +17,15 @@ Execute the complete open-sourcefy pipeline from start to finish and systematica
 Run the full 15-agent pipeline and capture all failures, errors, and issues that occur during execution.
 
 #### 1.1 Initial Pipeline Run
+
+**🤖 AUTOMATION AVAILABLE**: Use the pipeline helper script for automated execution and monitoring.
+
 ```bash
-# Execute full pipeline with comprehensive logging
+# AUTOMATED: Use pipeline helper for full execution
+./scripts/pipeline_helper.py validate-env  # First validate environment
+./scripts/pipeline_helper.py run launcher.exe --mode full --debug
+
+# MANUAL: Direct execution (if automation not available)
 python main.py launcher.exe --output-dir full_pipeline_test --debug --log-level DEBUG
 
 # Expected output structure:
@@ -408,7 +415,30 @@ def implement_error_recovery():
 
 ## Usage Instructions
 
-### Running the Complete Workflow
+**🤖 AUTOMATION AVAILABLE**: Use the provided automation scripts for streamlined workflow.
+
+### Running the Complete Workflow (AUTOMATED)
+```bash
+# 1. Validate environment first
+./scripts/environment_validator.py
+
+# 2. Execute full pipeline with automation
+./scripts/pipeline_helper.py run launcher.exe --mode full --debug
+
+# 3. Analyze pipeline results automatically  
+./scripts/pipeline_helper.py analyze output/[timestamp]
+
+# 4. Test compilation using automation
+./scripts/pipeline_helper.py test-compile output/[timestamp] --build-system auto
+
+# 5. Generate comprehensive report
+./scripts/pipeline_helper.py report output/[timestamp]
+
+# 6. Clean up old outputs when done
+./scripts/pipeline_helper.py cleanup --max-age 7
+```
+
+### Manual Workflow (when automation isn't sufficient)
 ```bash
 # 1. Execute full pipeline with comprehensive logging
 python main.py launcher.exe --output-dir full_test --debug
@@ -419,7 +449,10 @@ cat full_test/logs/pipeline_execution.log | grep -E "(ERROR|NotImplementedError|
 # 3. Fix identified issues systematically (start with blocking issues)
 # Implement missing functions, fix import errors, resolve path issues
 
-# 4. Test compilation of generated code
+# 4. Test compilation of generated code using automation
+./scripts/build_system_automation.py --output-dir full_test test --build-system auto
+
+# Alternative manual compilation:
 cd full_test/compilation
 msbuild launcher-new.sln  # Windows
 # OR

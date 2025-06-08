@@ -348,7 +348,7 @@ class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
             
             return AgentResult(
                 agent_id=self.agent_id,
-                status=AgentStatus.SUCCESS,
+                status=AgentStatus.COMPLETED,
                 data={
                     'instruction_analysis': trainman_result.instruction_analysis,
                     'calling_conventions': [
@@ -421,7 +421,7 @@ class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
         required_agents = [1, 2, 5]
         for agent_id in required_agents:
             agent_result = context['agent_results'].get(agent_id)
-            if not agent_result or agent_result.status != AgentStatus.SUCCESS:
+            if not agent_result or agent_result.status != AgentStatus.COMPLETED:
                 raise ValueError(f"Agent {agent_id} dependency not satisfied for Trainman's analysis")
         
         # Check binary path

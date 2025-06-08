@@ -600,8 +600,21 @@ python -c "from pathlib import Path; print(Path('output/test').resolve())"
 ```
 
 ### Debug Mode Execution
+
+**🤖 AUTOMATION AVAILABLE**: Use the pipeline helper for automated debugging and monitoring.
+
 ```bash
-# Run with verbose logging (OUTPUT TO /output/ ONLY)
+# AUTOMATED: Use pipeline helper for comprehensive debugging
+./scripts/pipeline_helper.py validate-env                    # Validate environment first
+./scripts/pipeline_helper.py run target.exe --debug         # Run with debug logging
+./scripts/pipeline_helper.py analyze output/[timestamp]     # Analyze results
+./scripts/pipeline_helper.py test-compile output/[timestamp] # Test compilation
+
+# AUTOMATED: Environment and build system validation
+./scripts/environment_validator.py --json                   # JSON output for scripting
+./scripts/build_system_automation.py --output-dir output/test test --build-system auto
+
+# Manual debugging (when automation isn't sufficient)
 python main.py target.exe --output-dir output/debug_test --debug --log-level DEBUG
 
 # Single agent execution for testing (OUTPUT TO /output/ ONLY)
