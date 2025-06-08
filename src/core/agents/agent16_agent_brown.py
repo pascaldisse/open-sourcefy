@@ -598,42 +598,49 @@ class Agent16_AgentBrown(ValidationAgent):
         }
         
         try:
-            # Create temporary directory for compilation test
-            with tempfile.TemporaryDirectory() as temp_dir:
-                temp_path = Path(temp_dir)
-                
-                # Write source files
-                test_files = []
-                for agent_id, code in source_codes.items():
-                    if isinstance(code, str) and code.strip():
-                        file_path = temp_path / f"agent_{agent_id}_output.c"
-                        with open(file_path, 'w', encoding='utf-8') as f:
-                            f.write(code)
-                        test_files.append(file_path)
-                
-                # Attempt compilation with MSVC (Windows only)
-                if test_files:
-                    for file_path in test_files:
-                        try:
-                            # Use cl.exe (MSVC compiler) instead of gcc
-                            result = subprocess.run(
-                                ['cl', '/c', str(file_path), f'/Fo{file_path.with_suffix(".obj")}'],
-                                capture_output=True,
-                                text=True,
-                                timeout=30
-                            )
+            # Create temporary directory in the output path for compilation test
+            output_paths = context.get('output_paths', {})
+            temp_dir = output_paths.get('temp', Path('./output/temp'))
+            if isinstance(temp_dir, str):
+                temp_dir = Path(temp_dir)
+            
+            # Create agent-specific temp directory
+            agent_temp_dir = temp_dir / f"agent_brown_compile_{int(time.time())}"
+            agent_temp_dir.mkdir(parents=True, exist_ok=True)
+            temp_path = agent_temp_dir
+            
+            # Write source files
+            test_files = []
+            for agent_id, code in source_codes.items():
+                if isinstance(code, str) and code.strip():
+                    file_path = temp_path / f"agent_{agent_id}_output.c"
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(code)
+                    test_files.append(file_path)
+            
+            # Attempt compilation with MSVC (Windows only)
+            if test_files:
+                for file_path in test_files:
+                    try:
+                        # Use cl.exe (MSVC compiler) instead of gcc
+                        result = subprocess.run(
+                            ['cl', '/c', str(file_path), f'/Fo{file_path.with_suffix(".obj")}'],
+                            capture_output=True,
+                            text=True,
+                            timeout=30
+                        )
+                        
+                        if result.returncode == 0:
+                            compilation_result['details'].append(f"✓ {file_path.name} compiled successfully with MSVC")
+                        else:
+                            compilation_result['details'].append(f"✗ {file_path.name} failed: {result.stderr[:200]}")
+                            compilation_result['status'] = 'partial'
                             
-                            if result.returncode == 0:
-                                compilation_result['details'].append(f"✓ {file_path.name} compiled successfully with MSVC")
-                            else:
-                                compilation_result['details'].append(f"✗ {file_path.name} failed: {result.stderr[:200]}")
-                                compilation_result['status'] = 'partial'
-                                
-                        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-                            compilation_result['details'].append(f"⚠ {file_path.name} compilation skipped: {e}")
-                        except Exception as e:
-                            compilation_result['details'].append(f"⚠ MSVC compiler not available: {e}")
-                            compilation_result['status'] = 'failed'
+                    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+                        compilation_result['details'].append(f"⚠ {file_path.name} compilation skipped: {e}")
+                    except Exception as e:
+                        compilation_result['details'].append(f"⚠ MSVC compiler not available: {e}")
+                        compilation_result['status'] = 'failed'
                 
         except Exception as e:
             compilation_result = {
@@ -642,6 +649,14 @@ class Agent16_AgentBrown(ValidationAgent):
                 'compiler_output': '',
                 'success_rate': 0.0
             }
+        finally:
+            # Cleanup temporary directory
+            try:
+                import shutil
+                if 'agent_temp_dir' in locals():
+                    shutil.rmtree(agent_temp_dir, ignore_errors=True)
+            except Exception as cleanup_e:
+                self.logger.warning(f"Failed to cleanup temp directory: {cleanup_e}")
         
         return compilation_result
 

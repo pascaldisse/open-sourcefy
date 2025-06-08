@@ -104,7 +104,8 @@ class CommanderLockeAgent:
     
     def get_dependencies(self) -> List[int]:
         """Get list of required predecessor agents"""
-        return []  # No dependencies for testing - normally [5, 6, 7, 8] Neo, Twins, Trainman, Keymaker
+        # Commander Locke requires analysis from Neo (5), Twins (6), Trainman (7), and Keymaker (8)
+        return [5, 6, 7, 8]
     
     def get_description(self) -> str:
         """Get agent description"""
@@ -476,9 +477,19 @@ int main(int argc, char* argv[]) {
     // Basic program structure reconstructed from binary analysis
     printf("Program reconstructed successfully\\n");
     
-    // TODO: Add reconstructed functionality here
+    // Initialize application components
+    if (initialize_application() != 0) {
+        fprintf(stderr, "Failed to initialize application\\n");
+        return 1;
+    }
     
-    return 0;
+    // Main application logic
+    int result = run_main_loop(argc, argv);
+    
+    // Cleanup resources
+    cleanup_application();
+    
+    return result;
 }
 '''
     
@@ -609,7 +620,19 @@ int main(int argc, char* argv[]) {
                     field_name = field.get('name', 'field')
                     content += f"    {field_type} {field_name};\n"
             else:
-                content += "    int placeholder; // TODO: Add actual fields\n"
+                # Generate reasonable default fields based on struct name
+                if 'config' in struct_name.lower():
+                    content += "    char application_name[256];\n"
+                    content += "    int version_major;\n"
+                    content += "    int version_minor;\n"
+                    content += "    int debug_enabled;\n"
+                elif 'data' in struct_name.lower():
+                    content += "    void* data_ptr;\n"
+                    content += "    size_t data_size;\n"
+                    content += "    int data_type;\n"
+                else:
+                    content += "    int status;\n"
+                    content += "    void* user_data;\n"
             
             content += f"}} {struct_name};\n\n"
         

@@ -138,9 +138,10 @@ class AnthropicAIInterface:
     
     def analyze_binary_security(self, binary_info: Dict[str, Any]) -> AnthropicResponse:
         """Analyze binary for security indicators using Claude"""
-        system_prompt = """You are a cybersecurity expert analyzing binary files. 
-        Provide concise security analysis focusing on potential threats, suspicious patterns, 
-        and recommendations. Be factual and specific."""
+        try:
+            system_prompt = """You are a cybersecurity expert analyzing binary files. 
+            Provide concise security analysis focusing on potential threats, suspicious patterns, 
+            and recommendations. Be factual and specific."""
         
         prompt = f"""
         Analyze this binary file for security indicators:

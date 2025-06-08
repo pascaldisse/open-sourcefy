@@ -740,7 +740,7 @@ class ArchitectAgent(AnalysisAgent):
         return {
             'detected_systems': detected_systems,
             'primary_system': detected_systems[0] if detected_systems else 'Unknown',
-            'confidence': 0.8 if detected_systems else 0.0
+            'confidence': self._calculate_build_system_confidence(detected_systems, binary_content)
         }
     
     def _determine_target_platform(self, binary_info) -> str:
@@ -794,7 +794,7 @@ class ArchitectAgent(AnalysisAgent):
             
             return {
                 'ai_insights': ai_result,
-                'ai_confidence': self.config.get_value('ai.confidence_threshold', 0.7),
+                'ai_confidence': self._calculate_ai_confidence(ai_result, compiler_analysis, optimization_analysis),
                 'ai_enabled': True
             }
         except Exception as e:
@@ -806,6 +806,46 @@ class ArchitectAgent(AnalysisAgent):
         merged = core_results.copy()
         merged['ai_analysis'] = ai_results
         return merged
+    
+    def _calculate_build_system_confidence(self, detected_systems: List[str], binary_content: bytes) -> float:
+        """Calculate confidence score for build system detection based on evidence strength"""
+        if not detected_systems:
+            return 0.0
+        
+        # Base confidence for detection
+        base_confidence = 0.6
+        
+        # Additional confidence for multiple indicators
+        if len(detected_systems) > 1:
+            base_confidence += 0.1
+        
+        # Boost confidence based on strength of evidence
+        strong_indicators = [b'Makefile', b'make', b'Visual Studio', b'MSBuild']
+        for indicator in strong_indicators:
+            if indicator in binary_content:
+                base_confidence += 0.1
+                
+        return min(base_confidence, 1.0)
+    
+    def _calculate_ai_confidence(self, ai_result: str, compiler_analysis, optimization_analysis) -> float:
+        """Calculate AI analysis confidence based on input data quality and response quality"""
+        confidence_factors = []
+        
+        # Factor 1: Input data quality
+        if compiler_analysis and compiler_analysis.confidence > 0.5:
+            confidence_factors.append(0.3)
+        if optimization_analysis and optimization_analysis.confidence > 0.5:
+            confidence_factors.append(0.3)
+            
+        # Factor 2: AI response quality indicators
+        if ai_result and len(ai_result) > 100:  # Substantial response
+            confidence_factors.append(0.2)
+        if 'analysis' in ai_result.lower():  # Contains analysis keywords
+            confidence_factors.append(0.1)
+        if any(word in ai_result.lower() for word in ['pattern', 'architecture', 'optimization']):
+            confidence_factors.append(0.1)
+            
+        return sum(confidence_factors)
     
     def _validate_results(self, results: Dict[str, Any]) -> ArchitectValidationResult:
         """Validate results meet Architect quality thresholds"""
