@@ -374,17 +374,43 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
         try:
             # Create temporary output directory for Ghidra analysis
             import tempfile
-            with tempfile.TemporaryDirectory() as temp_output:
-                # Run enhanced Ghidra analysis using correct method
-                success, output = self.ghidra_analyzer.run_ghidra_analysis(
-                    binary_path=binary_path,
-                    output_dir=temp_output,
-                    script_name="CompleteDecompiler.java",
-                    timeout=120  # Extended timeout for Neo's thorough analysis
-                )
+            import signal
+            from contextlib import contextmanager
+            
+            @contextmanager
+            def timeout_context(seconds):
+                """Context manager for timeout handling"""
+                def timeout_handler(signum, frame):
+                    raise TimeoutError(f"Operation timed out after {seconds} seconds")
                 
-                if not success:
-                    raise RuntimeError(f"Ghidra analysis failed: {output}")
+                old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(seconds)
+                try:
+                    yield
+                finally:
+                    signal.alarm(0)
+                    signal.signal(signal.SIGALRM, old_handler)
+            
+            with tempfile.TemporaryDirectory() as temp_output:
+                try:
+                    # Run enhanced Ghidra analysis with timeout protection
+                    with timeout_context(60):  # Reduced timeout to prevent hanging
+                        success, output = self.ghidra_analyzer.run_ghidra_analysis(
+                            binary_path=binary_path,
+                            output_dir=temp_output,
+                            script_name="CompleteDecompiler.java",
+                            timeout=45  # Shorter internal timeout
+                        )
+                        
+                        if not success:
+                            raise RuntimeError(f"Ghidra analysis failed: {output}")
+                            
+                except TimeoutError:
+                    self.logger.warning("Ghidra analysis timed out, using fallback analysis")
+                    return self._fallback_ghidra_analysis(binary_path, binary_info, arch_info, basic_decompilation)
+                except Exception as e:
+                    self.logger.warning(f"Ghidra analysis failed: {e}, using fallback")
+                    return self._fallback_ghidra_analysis(binary_path, binary_info, arch_info, basic_decompilation)
                 
                 # Mock analysis results since actual Ghidra integration is complex
                 analysis_results = {
