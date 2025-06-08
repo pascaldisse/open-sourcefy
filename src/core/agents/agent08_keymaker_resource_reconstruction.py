@@ -925,15 +925,27 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
     
     def _extract_pe_resources(self, binary_path: str, containers: Dict[str, Any]) -> List[ResourceItem]:
         """Extract PE resources"""
-        return []
+        raise NotImplementedError(
+            "PE resource extraction not implemented - requires parsing PE resource "
+            "directory, extracting icons, strings, dialogs, bitmaps, version info, "
+            "and manifests from Windows PE executables using pefile library."
+        )
     
     def _extract_elf_resources(self, binary_path: str, containers: Dict[str, Any]) -> List[ResourceItem]:
         """Extract ELF resources"""
-        return []
+        raise NotImplementedError(
+            "ELF resource extraction not implemented - requires parsing ELF "
+            "sections (.rodata, .data), extracting embedded resources, strings, "
+            "and data structures from Linux/Unix executables."
+        )
     
     def _extract_macho_resources(self, binary_path: str, containers: Dict[str, Any]) -> List[ResourceItem]:
         """Extract Mach-O resources"""
-        return []
+        raise NotImplementedError(
+            "Mach-O resource extraction not implemented - requires parsing Mach-O "
+            "load commands, extracting resources from __DATA segments, and "
+            "handling macOS application bundles and frameworks."
+        )
     
     def _extract_string_resources(self, binary_path: str, containers: Dict[str, Any]) -> List[ResourceItem]:
         """Extract string resources"""
@@ -998,7 +1010,11 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
     
     def _detect_embedded_files(self, binary_path: str, containers: Dict[str, Any]) -> List[ResourceItem]:
         """Detect embedded files"""
-        return []
+        raise NotImplementedError(
+            "Embedded file detection not implemented - requires entropy analysis, "
+            "file signature scanning, and data carving techniques to find files "
+            "embedded within binary executables."
+        )
     
     def _deduplicate_resources(self, resources: List[ResourceItem]) -> List[ResourceItem]:
         """Remove duplicate resources"""

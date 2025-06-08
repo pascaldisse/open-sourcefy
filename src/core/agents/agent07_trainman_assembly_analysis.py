@@ -944,32 +944,50 @@ class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
     
     def _find_pattern_occurrences(self, instructions: List[Dict[str, Any]], pattern_name: str, pattern_regexes: List[str]) -> List[InstructionPattern]:
         """Find occurrences of instruction patterns"""
-        return []
+        raise NotImplementedError(
+            "Pattern occurrence detection not implemented - requires regex matching "
+            "against instruction sequences to identify specific assembly patterns. "
+            "Would need pattern database and efficient string matching algorithms."
+        )
     
     def _detect_performance_patterns(self, instructions: List[Dict[str, Any]]) -> List[InstructionPattern]:
         """Detect performance-critical patterns"""
-        return []
+        raise NotImplementedError(
+            "Performance pattern detection not implemented - requires analysis of "
+            "instruction sequences for vectorization, loop unrolling, cache "
+            "optimization, and other performance-critical code patterns."
+        )
     
     def _detect_loop_patterns(self, instructions: List[Dict[str, Any]]) -> List[InstructionPattern]:
         """Detect loop patterns"""
-        return []
+        raise NotImplementedError(
+            "Loop pattern detection not implemented - requires control flow analysis "
+            "to identify loop structures, loop invariants, and optimization patterns "
+            "like loop unrolling and vectorization."
+        )
     
     def _detect_function_boundaries(self, instructions: List[Dict[str, Any]]) -> List[InstructionPattern]:
         """Detect function boundaries"""
-        return []
+        raise NotImplementedError(
+            "Function boundary detection not implemented - requires analysis of "
+            "prologue/epilogue patterns, call/return instructions, and stack "
+            "frame setup to identify function start/end points."
+        )
     
     def _analyze_call_patterns(self, instructions: List[Dict[str, Any]], architecture: str) -> List[Dict[str, Any]]:
         """Analyze function call patterns"""
-        return []
+        raise NotImplementedError(
+            "Call pattern analysis not implemented - requires analysis of function "
+            "call instructions, parameter passing conventions, and stack cleanup "
+            "patterns to identify calling conventions and function signatures."
+        )
     
     def _identify_calling_convention(self, pattern: Dict[str, Any], architecture: str) -> Optional[CallingConvention]:
         """Identify calling convention from pattern"""
-        return CallingConvention(
-            convention_type='cdecl',
-            parameter_passing='stack',
-            stack_cleanup='caller',
-            confidence=0.8,
-            evidence=['placeholder']
+        raise NotImplementedError(
+            "Calling convention identification not implemented - requires analysis "
+            "of function prologue/epilogue patterns, parameter passing mechanisms, "
+            "and stack cleanup behavior to determine calling conventions."
         )
     
     def _merge_calling_conventions(self, conventions: List[CallingConvention]) -> List[CallingConvention]:
@@ -978,19 +996,35 @@ class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
     
     def _identify_basic_blocks(self, instructions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Identify basic blocks"""
-        return []
+        raise NotImplementedError(
+            "Basic block identification not implemented - requires analysis of "
+            "control flow instructions (jumps, branches, calls) to partition "
+            "instruction sequences into basic blocks for CFG construction."
+        )
     
     def _build_control_flow_graph(self, basic_blocks: List[Dict[str, Any]], instructions: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Build control flow graph"""
-        return {'nodes': [], 'edges': []}
+        raise NotImplementedError(
+            "Control flow graph construction not implemented - requires building "
+            "graph structure from basic blocks with edges representing control "
+            "transfer instructions (jumps, calls, returns)."
+        )
     
     def _calculate_register_pressure(self, instruction_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate register pressure"""
-        return {'pressure': 'medium'}
+        raise NotImplementedError(
+            "Register pressure calculation not implemented - requires tracking "
+            "register usage across instruction sequences to identify register "
+            "allocation pressure and optimization opportunities."
+        )
     
     def _analyze_memory_access_patterns(self, instruction_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze memory access patterns"""
-        return {'pattern': 'sequential'}
+        raise NotImplementedError(
+            "Memory access pattern analysis not implemented - requires tracking "
+            "memory addressing patterns, stride detection, and cache behavior "
+            "analysis for performance optimization identification."
+        )
     
     def _estimate_cache_efficiency(self, instruction_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Estimate cache efficiency"""
@@ -1006,23 +1040,43 @@ class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
     
     def _detect_buffer_overflow_risks(self, instruction_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Detect buffer overflow risks"""
-        return []
+        raise NotImplementedError(
+            "Buffer overflow risk detection not implemented - requires analysis of "
+            "unsafe memory operations, unchecked buffer accesses, and string "
+            "manipulation functions for security vulnerability assessment."
+        )
     
     def _analyze_stack_protection(self, instruction_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze stack protection mechanisms"""
-        return {'protection': 'minimal'}
+        raise NotImplementedError(
+            "Stack protection analysis not implemented - requires detection of "
+            "stack canaries, ASLR, DEP/NX bit usage, and other stack protection "
+            "mechanisms for security assessment."
+        )
     
     def _detect_code_injection_risks(self, instruction_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Detect code injection vulnerabilities"""
-        return []
+        raise NotImplementedError(
+            "Code injection risk detection not implemented - requires analysis of "
+            "dynamic code generation, eval functions, and user input handling "
+            "for security vulnerability assessment."
+        )
     
     def _analyze_privilege_escalation(self, instruction_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze privilege escalation risks"""
-        return {'risk': 'low'}
+        raise NotImplementedError(
+            "Privilege escalation analysis not implemented - requires detection of "
+            "unsafe privilege operations, SETUID usage, and system call patterns "
+            "that could be exploited for privilege escalation."
+        )
     
     def _detect_rop_gadgets(self, instruction_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Detect ROP gadgets"""
-        return []
+        raise NotImplementedError(
+            "ROP gadget detection not implemented - requires analysis of "
+            "instruction sequences ending in return instructions that could "
+            "be chained for return-oriented programming exploits."
+        )
     
     def _create_instruction_semantics_prompt(self, instruction_analysis: Dict[str, Any]) -> str:
         """Create AI prompt for instruction semantics"""

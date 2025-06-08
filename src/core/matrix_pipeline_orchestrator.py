@@ -172,8 +172,14 @@ class MatrixPipelineOrchestrator:
                     execution_time=time.time() - self.execution_start_time
                 )
             
-            # Step 2: Execute selected agents in parallel
-            agent_results = await self._execute_parallel_agents()
+            # Step 2: Execute selected agents in parallel (or use master agent results)
+            if 'agent_results' in self.global_context and self.global_context['agent_results']:
+                # Master agent already executed agents, use those results
+                agent_results = self.global_context['agent_results']
+                self.logger.info("📋 Using agent results from Deus Ex Machina execution")
+            else:
+                # Execute agents independently
+                agent_results = await self._execute_parallel_agents()
             
             # Step 3: Generate final results
             result = self._generate_pipeline_result(agent_results)
@@ -378,9 +384,14 @@ class MatrixPipelineOrchestrator:
             if 'analysis_results' not in current_shared_memory:
                 current_shared_memory['analysis_results'] = {}
             
-            # Copy completed agent results into shared_memory for dependency access
+            # CRITICAL FIX: Copy completed agent results into shared_memory for dependency access
+            # Store both as agent_id keys and formatted agent_XX keys for backward compatibility
             for completed_agent_id, completed_result in self.agent_results.items():
-                current_shared_memory['analysis_results'][completed_agent_id] = completed_result
+                # Store with agent_id as key for direct lookup
+                current_shared_memory['analysis_results'][completed_agent_id] = completed_result.data if hasattr(completed_result, 'data') else completed_result
+                # Store with formatted key for agents expecting agent_XX format
+                agent_key = f'agent_{completed_agent_id:02d}'
+                current_shared_memory['analysis_results'][agent_key] = completed_result.data if hasattr(completed_result, 'data') else completed_result
             
             # Update global context with updated shared_memory
             self.global_context['shared_memory'] = current_shared_memory
@@ -389,7 +400,7 @@ class MatrixPipelineOrchestrator:
             agent_context = {
                 **self.global_context,
                 'agent_id': agent_id,
-                'agent_results': self.agent_results.copy(),
+                'agent_results': self.agent_results.copy(),  # CRITICAL: Pass ALL completed agent results
                 'pipeline_config': self.config,
                 'shared_memory': current_shared_memory,  # Use updated shared_memory
                 # Add global_data alias for agents that expect it
@@ -400,9 +411,13 @@ class MatrixPipelineOrchestrator:
                 }
             }
             
+            # CRITICAL FIX: Ensure agent can access dependency results
+            self.logger.debug(f"Agent {agent_id} context contains agent_results for agents: {list(self.agent_results.keys())}")
+            self.logger.debug(f"Agent {agent_id} shared_memory analysis_results keys: {list(current_shared_memory['analysis_results'].keys())}")
+            
             result = agent.execute(agent_context)
             
-            # Update global context with any shared memory changes
+            # Update global context with any shared memory changes from agent execution
             if 'shared_memory' in agent_context:
                 self.global_context['shared_memory'] = agent_context['shared_memory']
             

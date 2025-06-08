@@ -366,15 +366,7 @@ class SentinelAgent(AnalysisAgent):
             
         # PE format detection with confidence based on header validation
         if header.startswith(b'MZ'):
-            confidence = 0.85  # Base confidence for MZ header
-            # Validate PE signature at offset 0x3c if header is long enough
-            if len(header) >= 64:
-                try:
-                    pe_offset = struct.unpack('<L', header[60:64])[0]
-                    if len(header) > pe_offset + 4 and header[pe_offset:pe_offset+4] == b'PE\x00\x00':
-                        confidence = 0.98  # High confidence with valid PE signature
-                except (struct.error, IndexError):
-                    confidence = 0.75  # Lower confidence if PE validation fails
+            confidence = self._calculate_pe_confidence(header)
             return {'format': 'PE', 'subtype': 'Windows Executable', 'confidence': confidence}
         
         # ELF and Mach-O detection removed - Windows PE only
@@ -781,3 +773,35 @@ class SentinelAgent(AnalysisAgent):
         context['shared_memory']['analysis_results'][self.agent_id] = results
     
     # AI analysis complete - using centralized AI setup
+    
+    def _calculate_pe_confidence(self, header: bytes) -> float:
+        """Calculate PE format confidence based on header validation"""
+        confidence_factors = []
+        
+        # Base confidence for MZ header
+        if header.startswith(b'MZ'):
+            confidence_factors.append(0.6)  # Base score for MZ signature
+        
+        # PE signature validation
+        if len(header) >= 64:
+            try:
+                pe_offset = struct.unpack('<L', header[60:64])[0]
+                if len(header) > pe_offset + 4:
+                    if header[pe_offset:pe_offset+4] == b'PE\x00\x00':
+                        confidence_factors.append(0.35)  # High bonus for valid PE signature
+                    else:
+                        confidence_factors.append(-0.1)  # Penalty for invalid PE signature
+                else:
+                    confidence_factors.append(-0.05)  # Small penalty for truncated header
+            except (struct.error, IndexError):
+                confidence_factors.append(-0.1)  # Penalty for malformed header
+        else:
+            confidence_factors.append(-0.2)  # Larger penalty for insufficient header data
+        
+        # Additional validation - DOS stub presence
+        if len(header) >= 128 and b'This program cannot be run in DOS mode' in header[:128]:
+            confidence_factors.append(0.05)  # Small bonus for DOS stub
+        
+        # Calculate final confidence (sum factors, clamp to 0.0-1.0)
+        final_confidence = max(0.0, min(1.0, sum(confidence_factors)))
+        return final_confidence
