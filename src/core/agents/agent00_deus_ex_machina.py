@@ -19,6 +19,24 @@ from ..shared_components import MatrixLogger, MatrixFileManager, MatrixValidator
 from ..exceptions import MatrixAgentError, ValidationError
 from ..config_manager import get_config_manager
 
+# Import actual agent implementations
+from .agent01_sentinel import SentinelAgent
+from .agent02_architect import ArchitectAgent  
+from .agent03_merovingian import MerovingianAgent
+from .agent04_agent_smith import AgentSmithAgent
+from .agent05_neo_advanced_decompiler import Agent5_Neo_AdvancedDecompiler
+from .agent06_twins_binary_diff import Agent6_Twins_BinaryDiff
+from .agent07_trainman_assembly_analysis import Agent7_Trainman_AssemblyAnalysis
+from .agent08_keymaker_resource_reconstruction import Agent8_Keymaker_ResourceReconstruction
+from .agent09_commander_locke import CommanderLockeAgent
+from .agent10_the_machine import Agent10_TheMachine
+from .agent11_the_oracle import Agent11_TheOracle
+from .agent12_link import Agent12_Link
+from .agent13_agent_johnson import Agent13_AgentJohnson
+from .agent14_the_cleaner import Agent14_TheCleaner
+from .agent15_analyst import Agent15_Analyst
+from .agent16_agent_brown import Agent16_AgentBrown
+
 
 @dataclass
 class PipelineExecutionPlan:
@@ -61,6 +79,26 @@ class DeusExMachinaAgent(MatrixAgent):
         self.execution_plan: Optional[PipelineExecutionPlan] = None
         self.agent_results: Dict[int, AgentResult] = {}
         self.execution_start_time = 0.0
+        
+        # Agent class mapping
+        self.agent_classes = {
+            1: SentinelAgent,
+            2: ArchitectAgent,
+            3: MerovingianAgent,
+            4: AgentSmithAgent,
+            5: Agent5_Neo_AdvancedDecompiler,
+            6: Agent6_Twins_BinaryDiff,
+            7: Agent7_Trainman_AssemblyAnalysis,
+            8: Agent8_Keymaker_ResourceReconstruction,
+            9: CommanderLockeAgent,
+            10: Agent10_TheMachine,
+            11: Agent11_TheOracle,
+            12: Agent12_Link,
+            13: Agent13_AgentJohnson,
+            14: Agent14_TheCleaner,
+            15: Agent15_Analyst,
+            16: Agent16_AgentBrown
+        }
         
     def get_matrix_description(self) -> str:
         """Get description of the master orchestrator"""
@@ -245,7 +283,7 @@ class DeusExMachinaAgent(MatrixAgent):
                 batch_result = self._execute_agent_batch(agent_batch, context)
                 orchestration_results['batch_results'].append(batch_result)
                 
-                # Update agent results
+                # Update agent results and context
                 for agent_id, result in batch_result.items():
                     self.agent_results[agent_id] = result
                     
@@ -255,6 +293,9 @@ class DeusExMachinaAgent(MatrixAgent):
                         orchestration_results['failed_agents'].append(agent_id)
                     else:
                         orchestration_results['skipped_agents'].append(agent_id)
+                
+                # Update context with agent results for dependency validation
+                context['agent_results'] = self.agent_results
                 
                 # Check for critical failures
                 if self._should_abort_pipeline(batch_result):
@@ -276,18 +317,21 @@ class DeusExMachinaAgent(MatrixAgent):
             try:
                 self.logger.info(f"🤖 Executing Agent {agent_id:02d}...")
                 
-                # Create mock result for now - actual agent execution would go here
-                result = AgentResult(
-                    agent_id=agent_id,
-                    agent_name=f"Agent{agent_id:02d}",
-                    matrix_character=f"agent_{agent_id:02d}",
-                    status=AgentStatus.SUCCESS,
-                    data={'mock_execution': True, 'agent_id': agent_id},
-                    execution_time=5.0  # Mock execution time
-                )
+                # Get agent class and instantiate
+                if agent_id not in self.agent_classes:
+                    raise MatrixAgentError(f"Agent {agent_id} not found in agent registry")
                 
+                agent_class = self.agent_classes[agent_id]
+                agent_instance = agent_class()
+                
+                # Execute the agent
+                result = agent_instance.execute(context)
                 batch_results[agent_id] = result
-                self.logger.info(f"✅ Agent {agent_id:02d} completed successfully")
+                
+                if result.status == AgentStatus.SUCCESS:
+                    self.logger.info(f"✅ Agent {agent_id:02d} completed successfully")
+                else:
+                    self.logger.warning(f"⚠️ Agent {agent_id:02d} failed: {result.error_message}")
                 
             except Exception as e:
                 self.logger.error(f"❌ Agent {agent_id:02d} failed: {str(e)}")

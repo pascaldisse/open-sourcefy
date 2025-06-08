@@ -245,53 +245,118 @@ class MatrixPipelineOrchestrator:
             return False
     
     async def _execute_parallel_agents(self) -> Dict[int, Any]:
-        """Execute selected agents in parallel"""
-        self.logger.info(f"⚡ Executing {len(self.selected_agents)} agents in parallel...")
+        """Execute selected agents in dependency-based batches"""
+        # Calculate execution batches based on dependencies
+        execution_batches = self._calculate_execution_batches(self.selected_agents)
         
-        # Create agent execution tasks
+        self.logger.info(f"⚡ Executing {len(self.selected_agents)} agents in {len(execution_batches)} batches...")
+        
+        agent_results = {}
+        total_completed = 0
+        
+        # Execute batches sequentially, agents within batches in parallel
+        for batch_idx, batch_agents in enumerate(execution_batches):
+            self.logger.info(f"🚀 Executing batch {batch_idx + 1}/{len(execution_batches)}: Agents {batch_agents}")
+            
+            batch_results = await self._execute_agent_batch(batch_agents)
+            
+            # Update results and count successes
+            batch_completed = 0
+            for agent_id, result in batch_results.items():
+                agent_results[agent_id] = result
+                self.agent_results[agent_id] = result  # Update shared state for subsequent batches
+                
+                from .matrix_agents import AgentStatus
+                if result.status == AgentStatus.SUCCESS:
+                    batch_completed += 1
+                    total_completed += 1
+                    self.logger.info(f"✅ Agent {agent_id} completed successfully")
+                else:
+                    error_msg = result.error_message or "Unknown error"
+                    self.logger.warning(f"⚠️ Agent {agent_id} failed: {error_msg}")
+            
+            self.logger.info(f"📊 Batch {batch_idx + 1} complete: {batch_completed}/{len(batch_agents)} successful")
+            
+            # Check if we should continue or abort on critical failures
+            if not self.config.continue_on_failure and batch_completed < len(batch_agents):
+                remaining_batches = len(execution_batches) - batch_idx - 1
+                if remaining_batches > 0:
+                    self.logger.warning(f"⚠️ Stopping execution due to failures (continue_on_failure=False)")
+                    break
+        
+        self.logger.info(f"🎯 Batch execution complete: {total_completed}/{len(self.selected_agents)} successful")
+        return agent_results
+    
+    def _calculate_execution_batches(self, selected_agents: List[int]) -> List[List[int]]:
+        """Calculate execution batches for selected agents based on dependencies"""
+        from .matrix_agents import MATRIX_DEPENDENCIES
+        
+        # Filter dependencies to only include selected agents
+        filtered_deps = {agent_id: [dep for dep in deps if dep in selected_agents] 
+                        for agent_id, deps in MATRIX_DEPENDENCIES.items() 
+                        if agent_id in selected_agents}
+        
+        completed = set()
+        batches = []
+        
+        while len(completed) < len(selected_agents):
+            current_batch = []
+            
+            for agent_id in selected_agents:
+                if agent_id in completed:
+                    continue
+                    
+                # Check if all dependencies are completed
+                dependencies = filtered_deps.get(agent_id, [])
+                if all(dep in completed for dep in dependencies):
+                    current_batch.append(agent_id)
+            
+            if not current_batch:
+                remaining = set(selected_agents) - completed
+                raise ValueError(f"Cannot resolve dependencies for agents: {remaining}")
+            
+            batches.append(sorted(current_batch))  # Sort for consistent ordering
+            completed.update(current_batch)
+        
+        return batches
+    
+    async def _execute_agent_batch(self, batch_agents: List[int]) -> Dict[int, Any]:
+        """Execute a batch of agents in parallel"""
+        if len(batch_agents) == 1:
+            # Single agent - execute directly
+            agent_id = batch_agents[0]
+            result = await self._execute_single_agent(agent_id)
+            return {agent_id: result}
+        
+        # Multiple agents - execute in parallel
         tasks = []
-        for agent_id in self.selected_agents:
+        for agent_id in batch_agents:
             task = asyncio.create_task(
                 self._execute_single_agent(agent_id),
                 name=f"agent_{agent_id}"
             )
             tasks.append((agent_id, task))
         
-        # Execute agents with resource limits
-        agent_results = {}
-        completed_count = 0
+        batch_results = {}
         
+        # Wait for all agents in batch to complete
         for agent_id, task in tasks:
             try:
                 result = await asyncio.wait_for(
                     task, 
                     timeout=self.config.resource_limits.timeout_agent
                 )
-                agent_results[agent_id] = result
-                self.agent_results[agent_id] = result  # Update shared state for subsequent agents
-                
-                from .matrix_agents import AgentStatus
-                if result.status == AgentStatus.SUCCESS:
-                    completed_count += 1
-                    self.logger.info(f"✅ Agent {agent_id} completed successfully")
-                else:
-                    error_msg = result.error_message or "Unknown error"
-                    self.logger.warning(f"⚠️ Agent {agent_id} failed: {error_msg}")
+                batch_results[agent_id] = result
                 
             except asyncio.TimeoutError:
                 self.logger.error(f"⏱️ Agent {agent_id} timed out")
-                timeout_result = self._create_timeout_result(agent_id)
-                agent_results[agent_id] = timeout_result
-                self.agent_results[agent_id] = timeout_result
+                batch_results[agent_id] = self._create_timeout_result(agent_id)
                 
             except Exception as e:
                 self.logger.error(f"❌ Agent {agent_id} error: {e}")
-                error_result = self._create_error_result(agent_id, str(e))
-                agent_results[agent_id] = error_result
-                self.agent_results[agent_id] = error_result
+                batch_results[agent_id] = self._create_error_result(agent_id, str(e))
         
-        self.logger.info(f"🎯 Parallel execution complete: {completed_count}/{len(self.selected_agents)} successful")
-        return agent_results
+        return batch_results
     
     async def _execute_single_agent(self, agent_id: int):
         """Execute a single agent with context"""
@@ -300,8 +365,25 @@ class MatrixPipelineOrchestrator:
             from .agents import get_agent_by_id
             agent = get_agent_by_id(agent_id)
             
-            # Debug: log current agent results state
-            self.logger.debug(f"Agent {agent_id} context: self.agent_results = {list(self.agent_results.keys())}")
+            # Get current shared_memory state from global context or initialize
+            current_shared_memory = self.global_context.get('shared_memory', {
+                'binary_metadata': {},
+                'analysis_results': {},
+                'decompilation_data': {},
+                'reconstruction_info': {},
+                'validation_status': {}
+            })
+            
+            # Ensure analysis_results section exists and is populated
+            if 'analysis_results' not in current_shared_memory:
+                current_shared_memory['analysis_results'] = {}
+            
+            # Copy completed agent results into shared_memory for dependency access
+            for completed_agent_id, completed_result in self.agent_results.items():
+                current_shared_memory['analysis_results'][completed_agent_id] = completed_result
+            
+            # Update global context with updated shared_memory
+            self.global_context['shared_memory'] = current_shared_memory
             
             # Prepare agent context with unified structure
             agent_context = {
@@ -309,14 +391,7 @@ class MatrixPipelineOrchestrator:
                 'agent_id': agent_id,
                 'agent_results': self.agent_results.copy(),
                 'pipeline_config': self.config,
-                # Initialize shared_memory if not present
-                'shared_memory': self.global_context.get('shared_memory', {
-                    'binary_metadata': {},
-                    'analysis_results': {},
-                    'decompilation_data': {},
-                    'reconstruction_info': {},
-                    'validation_status': {}
-                }),
+                'shared_memory': current_shared_memory,  # Use updated shared_memory
                 # Add global_data alias for agents that expect it
                 'global_data': {
                     'binary_path': self.global_context.get('binary_path'),
@@ -325,7 +400,13 @@ class MatrixPipelineOrchestrator:
                 }
             }
             
-            return agent.execute(agent_context)
+            result = agent.execute(agent_context)
+            
+            # Update global context with any shared memory changes
+            if 'shared_memory' in agent_context:
+                self.global_context['shared_memory'] = agent_context['shared_memory']
+            
+            return result
             
         except Exception as e:
             self.logger.error(f"Agent {agent_id} execution failed: {e}")

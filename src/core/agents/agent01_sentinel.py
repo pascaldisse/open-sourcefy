@@ -749,9 +749,26 @@ class SentinelAgent(AnalysisAgent):
                 'validation_status': {}
             }
         
-        # Store binary metadata for other agents
+        # Store binary metadata for other agents (convert dataclass to dict)
+        binary_metadata = results.get('binary_metadata')
+        binary_info_dict = None
+        if binary_metadata:
+            # Convert BinaryMetadata dataclass to dictionary for Agent 2 compatibility
+            binary_info_dict = {
+                'file_path': binary_metadata.file_path,
+                'file_size': binary_metadata.file_size,
+                'format_type': binary_metadata.format_type,
+                'architecture': binary_metadata.architecture,
+                'bitness': binary_metadata.bitness,
+                'endianness': binary_metadata.endianness,
+                'entry_point': binary_metadata.entry_point,
+                'base_address': binary_metadata.base_address,
+                'is_packed': binary_metadata.is_packed,
+                'confidence_score': binary_metadata.confidence_score
+            }
+        
         context['shared_memory']['binary_metadata']['discovery'] = {
-            'binary_info': results.get('binary_metadata'),
+            'binary_info': binary_info_dict,
             'format_analysis': results.get('format_analysis', {}),
             'hashes': results.get('hashes', {}),
             'entropy': results.get('entropy', {}),

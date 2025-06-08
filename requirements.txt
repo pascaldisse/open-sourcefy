@@ -20,9 +20,14 @@ psutil>=5.9.0
 # scikit-learn>=1.1.0
 
 # AI Integration (choose one)
-anthropic>=0.3.0  # For Claude 3.5 Sonnet
-# openai>=1.0.0  # Uncomment for OpenAI GPT support
-# LangChain for local LLM support (optional)
+# Default: Claude Code CLI (uses your Claude Max subscription)
+# Install with: npm install -g @anthropic-ai/claude-code
+# No Python packages needed for Claude Code CLI
+
+# Alternative AI providers:
+# anthropic>=0.3.0  # For direct Claude API access
+# openai>=1.0.0  # For OpenAI GPT support
+# LangChain for local LLM support:
 # langchain>=0.1.0
 # langchain-core>=0.1.0  
 # langchain-community>=0.0.20

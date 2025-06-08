@@ -564,37 +564,69 @@ Usage Examples:
             return False
     
     def _resolve_binary_path(self, binary_path: Optional[str]) -> Optional[Path]:
-        """Resolve binary file path"""
-        if binary_path:
-            path = Path(binary_path)
-            if path.is_absolute():
-                return path
+        """Resolve binary file path securely."""
+        try:
+            if binary_path:
+                # Validate input to prevent path traversal
+                if '..' in binary_path or binary_path.startswith('/'):
+                    raise ValueError(f"Invalid binary path: {binary_path}")
+                    
+                path = Path(binary_path)
+                
+                # Only allow relative paths within project
+                if path.is_absolute():
+                    # Only allow absolute paths in specific safe directories
+                    allowed_dirs = [project_root, project_root / "input"]
+                    if not any(str(path).startswith(str(safe_dir)) for safe_dir in allowed_dirs):
+                        raise ValueError(f"Absolute path not in allowed directories: {path}")
+                    return path if path.exists() else None
+                else:
+                    # Check relative to project root only
+                    project_path = project_root / path
+                    if project_path.exists() and str(project_path).startswith(str(project_root)):
+                        return project_path
             else:
-                # Check relative to current directory
-                if path.exists():
-                    return path
-                # Check relative to project root
-                project_path = project_root / path
-                if project_path.exists():
-                    return project_path
-        else:
-            # Default to launcher.exe in input directory
-            default_path = project_root / "input" / "launcher.exe"
-            if default_path.exists():
-                return default_path
-        
-        return None
+                # Default to launcher.exe in input directory
+                default_path = project_root / "input" / "launcher.exe"
+                if default_path.exists():
+                    return default_path
+            
+            return None
+            
+        except (OSError, ValueError) as e:
+            self.logger.error(f"Invalid binary path: {e}")
+            return None
     
     def _setup_output_directory(self, output_dir: Optional[str]) -> Path:
-        """Setup output directory"""
-        if output_dir:
-            path = Path(output_dir)
-        else:
-            timestamp = time.strftime("%Y%m%d_%H%M%S")
-            path = project_root / "output" / timestamp
-        
-        path.mkdir(parents=True, exist_ok=True)
-        return path
+        """Setup output directory securely."""
+        try:
+            if output_dir:
+                # Validate output directory path
+                if '..' in output_dir or output_dir.startswith('/'):
+                    raise ValueError(f"Invalid output directory: {output_dir}")
+                    
+                path = Path(output_dir)
+                
+                # Ensure output is within project directory
+                if path.is_absolute():
+                    if not str(path).startswith(str(project_root)):
+                        raise ValueError(f"Output directory must be within project: {path}")
+                else:
+                    path = project_root / path
+            else:
+                timestamp = time.strftime("%Y%m%d_%H%M%S")
+                path = project_root / "output" / timestamp
+            
+            # Validate final path is within project
+            if not str(path.resolve()).startswith(str(project_root.resolve())):
+                raise ValueError(f"Output directory outside project bounds: {path}")
+                
+            path.mkdir(parents=True, exist_ok=True)
+            return path
+            
+        except (OSError, ValueError) as e:
+            self.logger.error(f"Failed to setup output directory: {e}")
+            raise
     
     def _show_dry_run(self, config: MatrixCLIConfig, binary_path: Path, output_dir: Path) -> bool:
         """Show what would be executed in dry run mode"""

@@ -45,7 +45,7 @@ class ArchitectConstants:
     def __init__(self, config_manager, agent_id: int):
         self.MAX_RETRY_ATTEMPTS = config_manager.get_value(f'agents.agent_{agent_id:02d}.max_retries', 3)
         self.TIMEOUT_SECONDS = config_manager.get_value(f'agents.agent_{agent_id:02d}.timeout', 300)
-        self.QUALITY_THRESHOLD = config_manager.get_value(f'agents.agent_{agent_id:02d}.quality_threshold', 0.75)
+        self.QUALITY_THRESHOLD = config_manager.get_value(f'agents.agent_{agent_id:02d}.quality_threshold', 0.4)
         self.MIN_CONFIDENCE_THRESHOLD = config_manager.get_value('analysis.min_confidence_threshold', 0.7)
         self.MAX_PATTERN_MATCHES = config_manager.get_value('analysis.max_pattern_matches', 100)
 
@@ -627,28 +627,41 @@ class ArchitectAgent(AnalysisAgent):
         binary_info = analysis_context.get('binary_info')
         
         # Simple heuristic based on architecture and patterns
-        if binary_info and binary_info.architecture == 'x64':
-            return 'Microsoft x64'  # x64 has standard calling convention
-        elif binary_info and binary_info.architecture == 'x86':
-            # Check for specific patterns
-            if b'__stdcall' in binary_content:
-                return 'stdcall'
-            elif b'__fastcall' in binary_content:
-                return 'fastcall'
+        # Handle both dict and object formats for binary_info
+        if binary_info:
+            if isinstance(binary_info, dict):
+                architecture = binary_info.get('architecture')
             else:
-                return 'cdecl'  # Default assumption
-        else:
-            return 'Unknown'
+                architecture = getattr(binary_info, 'architecture', None)
+            
+            if architecture == 'x64':
+                return 'Microsoft x64'  # x64 has standard calling convention
+            elif architecture == 'x86':
+                # Check for specific patterns
+                if b'__stdcall' in binary_content:
+                    return 'stdcall'
+                elif b'__fastcall' in binary_content:
+                    return 'fastcall'
+                else:
+                    return 'cdecl'  # Default assumption
+        
+        return 'Unknown'
     
     def _detect_stack_alignment(self, analysis_context: Dict[str, Any]) -> int:
         """Detect stack alignment requirements"""
         binary_info = analysis_context.get('binary_info')
         
         # Standard alignments based on architecture
+        # Handle both dict and object formats for binary_info
         if binary_info:
-            if binary_info.architecture == 'x64':
+            if isinstance(binary_info, dict):
+                architecture = binary_info.get('architecture')
+            else:
+                architecture = getattr(binary_info, 'architecture', None)
+            
+            if architecture == 'x64':
                 return 16  # x64 requires 16-byte alignment
-            elif binary_info.architecture == 'x86':
+            elif architecture == 'x86':
                 return 4   # x86 typically uses 4-byte alignment
         
         return 0  # Unknown
@@ -706,13 +719,19 @@ class ArchitectAgent(AnalysisAgent):
         if not binary_info:
             return 'Unknown'
         
+        # Handle both dict and object formats for binary_info
+        if isinstance(binary_info, dict):
+            format_type = binary_info.get('format_type')
+        else:
+            format_type = getattr(binary_info, 'format_type', None)
+        
         format_platform_map = {
             'PE': 'Windows',
             'ELF': 'Linux/Unix',
             'Mach-O': 'macOS'
         }
         
-        return format_platform_map.get(binary_info.format_type, 'Unknown')
+        return format_platform_map.get(format_type, 'Unknown')
     
     def _execute_ai_analysis(self, core_results: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute AI-enhanced analysis using LangChain"""

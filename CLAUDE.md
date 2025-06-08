@@ -346,3 +346,487 @@ python3 main.py --decompile-only
 
 **Custom Scripts**: Located in agent implementations for enhanced accuracy
 **Integration Points**: Agents 3, 5, 7, 14 leverage Ghidra for decompilation tasks
+
+## Code Quality Standards & Style Guidelines
+
+### NSA-Level Production Code Quality
+
+This project enforces **NSA-level security and production standards** with zero tolerance for security vulnerabilities, hardcoded values, or poor code practices.
+
+#### Core Quality Principles
+
+1. **SOLID Principles Mandatory**:
+   - Single Responsibility: Each class/function has ONE clear purpose
+   - Open/Closed: Extensible without modification
+   - Liskov Substitution: Proper inheritance hierarchies
+   - Interface Segregation: Minimal, focused interfaces
+   - Dependency Inversion: Depend on abstractions, not concretions
+
+2. **Security-First Development**:
+   - NO hardcoded secrets, API keys, or sensitive data
+   - ALL file paths must be configurable and validated
+   - Input validation and sanitization mandatory
+   - Error messages must not leak sensitive information
+   - Proper exception handling with fail-safe defaults
+
+3. **Configuration-Driven Architecture**:
+   - ZERO hardcoded values in production code
+   - All settings via environment variables or config files
+   - Hierarchical configuration: env vars > config files > defaults
+   - Runtime configuration validation and graceful degradation
+
+#### Code Organization Standards
+
+**Project Structure**:
+```
+src/
+├── core/                    # Core framework components
+│   ├── agents/             # Matrix agent implementations
+│   ├── config_manager.py   # Configuration management
+│   ├── agent_base.py       # Base classes and interfaces
+│   └── shared_utils.py     # Shared utilities
+├── interfaces/             # External service interfaces
+├── utils/                  # Pure utility functions
+└── exceptions/             # Custom exception classes
+```
+
+**Separation of Concerns**:
+- **UI Logic**: Separated from business logic (CLI in main.py)
+- **Business Logic**: Core functionality in src/core/
+- **Data Access**: Configuration and file operations isolated
+- **External Services**: Ghidra, AI engines in separate modules
+
+#### Coding Standards
+
+**Python Code Quality**:
+```python
+# ✅ CORRECT: Production-ready class
+class MatrixAgent(ABC):
+    """Production-ready agent base class with full documentation."""
+    
+    def __init__(self, agent_id: int, config: Optional[ConfigManager] = None):
+        self._agent_id = self._validate_agent_id(agent_id)
+        self._config = config or get_config_manager()
+        self._logger = self._setup_logging()
+        
+    def _validate_agent_id(self, agent_id: int) -> int:
+        """Validate agent ID is within acceptable range."""
+        if not isinstance(agent_id, int) or agent_id < 0:
+            raise ValueError(f"Invalid agent ID: {agent_id}")
+        return agent_id
+        
+    @abstractmethod
+    def execute(self, context: ExecutionContext) -> AgentResult:
+        """Execute agent task with comprehensive error handling."""
+        pass
+
+# ❌ INCORRECT: Poor quality code
+class Agent:
+    def __init__(self, id):
+        self.id = id
+        self.config = "/hardcoded/path"  # NEVER do this
+        
+    def run(self, data):  # No type hints, no validation
+        return data  # No error handling
+```
+
+**Function Design**:
+```python
+# ✅ CORRECT: Small, focused, well-documented
+def validate_binary_format(
+    binary_path: Path, 
+    expected_formats: List[str],
+    config: ConfigManager
+) -> BinaryValidationResult:
+    """
+    Validate binary file format against expected formats.
+    
+    Args:
+        binary_path: Path to binary file to validate
+        expected_formats: List of acceptable formats (PE, ELF, etc.)
+        config: Configuration manager for validation settings
+        
+    Returns:
+        BinaryValidationResult with validation status and metadata
+        
+    Raises:
+        ValidationError: If binary format is invalid or unsupported
+        FileNotFoundError: If binary file doesn't exist
+    """
+    if not binary_path.exists():
+        raise FileNotFoundError(f"Binary not found: {binary_path}")
+        
+    # Implementation with proper error handling
+    # ...
+
+# ❌ INCORRECT: Large, complex, poorly documented
+def process_stuff(data, flag=True):  # Vague naming, no types
+    # No docstring, unclear purpose
+    if flag:
+        # Complex logic without error handling
+        return data * 2
+    else:
+        return None  # Inconsistent return types
+```
+
+**Error Handling**:
+```python
+# ✅ CORRECT: Comprehensive error handling
+class MatrixPipelineError(Exception):
+    """Base exception for Matrix pipeline errors."""
+    pass
+
+class ValidationError(MatrixPipelineError):
+    """Raised when validation fails."""
+    pass
+
+def execute_agent(agent: MatrixAgent, context: ExecutionContext) -> AgentResult:
+    """Execute agent with full error handling and logging."""
+    try:
+        # Validate inputs
+        if not isinstance(agent, MatrixAgent):
+            raise TypeError(f"Expected MatrixAgent, got {type(agent)}")
+            
+        # Execute with timeout
+        with timeout_context(agent.timeout_seconds):
+            result = agent.execute(context)
+            
+        return result
+        
+    except ValidationError as e:
+        logger.error(f"Validation failed for {agent.agent_name}: {e}")
+        raise
+    except TimeoutError as e:
+        logger.error(f"Agent {agent.agent_name} timed out: {e}")
+        return AgentResult.failed(agent.agent_id, f"Timeout: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error in {agent.agent_name}: {e}", exc_info=True)
+        return AgentResult.failed(agent.agent_id, f"Execution error: {e}")
+
+# ❌ INCORRECT: Poor error handling
+def run_agent(agent):
+    try:
+        return agent.run()  # What if this fails?
+    except:  # Too broad exception handling
+        print("Error")  # No logging, no context
+        return None  # Unclear failure mode
+```
+
+#### Documentation Standards
+
+**Class Documentation**:
+```python
+class BinaryAnalyzer:
+    """
+    Advanced binary analysis engine for reverse engineering.
+    
+    Provides comprehensive binary analysis including:
+    - Format detection (PE, ELF, Mach-O)
+    - Architecture identification (x86, x64, ARM)
+    - Compiler detection and optimization analysis
+    - Security feature analysis (ASLR, DEP, etc.)
+    
+    Thread-safe and production-ready with extensive error handling.
+    
+    Example:
+        analyzer = BinaryAnalyzer(config_manager)
+        result = analyzer.analyze_binary(Path("target.exe"))
+        print(f"Format: {result.format}, Arch: {result.architecture}")
+    
+    Attributes:
+        config: Configuration manager for analysis settings
+        supported_formats: List of supported binary formats
+        
+    Note:
+        Requires appropriate permissions for binary file access.
+        Some analysis features may require additional tools (objdump, etc.).
+    """
+```
+
+**Function Documentation**:
+```python
+def calculate_entropy(data: bytes, block_size: int = 256) -> float:
+    """
+    Calculate Shannon entropy of binary data for analysis.
+    
+    Entropy calculation helps identify:
+    - Packed/compressed sections (high entropy)
+    - Code sections (medium entropy) 
+    - Data sections (low entropy)
+    - Encrypted content (high entropy)
+    
+    Args:
+        data: Binary data to analyze
+        block_size: Size of analysis blocks in bytes (default: 256)
+        
+    Returns:
+        Float between 0.0 (no entropy) and 8.0 (maximum entropy)
+        
+    Raises:
+        ValueError: If data is empty or block_size is invalid
+        
+    Example:
+        entropy = calculate_entropy(binary_data)
+        if entropy > 7.5:
+            print("Likely packed or encrypted")
+    """
+```
+
+#### Configuration Management
+
+**Environment Variables**:
+```bash
+# Required environment variables
+GHIDRA_HOME=/path/to/ghidra
+JAVA_HOME=/path/to/java
+MATRIX_AI_API_KEY=your_api_key_here
+
+# Optional configuration
+MATRIX_DEBUG=true
+MATRIX_LOG_LEVEL=INFO
+MATRIX_PARALLEL_AGENTS=8
+```
+
+**Configuration Files** (YAML preferred):
+```yaml
+# matrix_config.yaml
+pipeline:
+  parallel_mode: thread
+  batch_size: 4
+  timeout_agent: 300
+  max_retries: 3
+  
+ghidra:
+  max_memory: "4G"
+  timeout: 600
+  
+ai_engine:
+  provider: langchain
+  model: gpt-4
+  temperature: 0.1
+  max_tokens: 2048
+```
+
+#### Performance & Resource Management
+
+**Memory Management**:
+```python
+# ✅ CORRECT: Proper resource management
+class GhidraProcessor:
+    def __init__(self, config: ConfigManager):
+        self._config = config
+        self._process: Optional[subprocess.Popen] = None
+        
+    def __enter__(self):
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.cleanup()
+        
+    def cleanup(self):
+        """Clean up Ghidra processes and temporary files."""
+        if self._process:
+            try:
+                self._process.terminate()
+                self._process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self._process.kill()
+            finally:
+                self._process = None
+
+# Usage
+with GhidraProcessor(config) as processor:
+    result = processor.analyze_binary(binary_path)
+# Automatic cleanup on exit
+```
+
+**Async Programming**:
+```python
+# ✅ CORRECT: Proper async implementation
+class AsyncAgentExecutor:
+    async def execute_agent_batch(
+        self, 
+        agents: List[MatrixAgent], 
+        context: ExecutionContext
+    ) -> Dict[int, AgentResult]:
+        """Execute agents concurrently with proper error handling."""
+        tasks = []
+        
+        for agent in agents:
+            task = asyncio.create_task(
+                self._execute_single_agent(agent, context),
+                name=f"Agent_{agent.agent_id}"
+            )
+            tasks.append(task)
+        
+        # Wait for all tasks with timeout
+        try:
+            results = await asyncio.wait_for(
+                asyncio.gather(*tasks, return_exceptions=True),
+                timeout=self._config.get_timeout('batch', 600)
+            )
+            
+            return self._process_batch_results(agents, results)
+            
+        except asyncio.TimeoutError:
+            # Cancel remaining tasks
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            raise TimeoutError("Batch execution timed out")
+```
+
+#### Testing Standards
+
+**Unit Tests**:
+```python
+class TestBinaryAnalyzer:
+    """Comprehensive test suite for BinaryAnalyzer."""
+    
+    @pytest.fixture
+    def analyzer(self, mock_config):
+        """Create analyzer instance with mocked configuration."""
+        return BinaryAnalyzer(mock_config)
+        
+    @pytest.fixture
+    def sample_pe_binary(self, tmp_path):
+        """Create sample PE binary for testing."""
+        binary_path = tmp_path / "test.exe"
+        # Create minimal valid PE structure
+        binary_path.write_bytes(PE_HEADER + b"test_data")
+        return binary_path
+        
+    def test_analyze_valid_pe_binary(self, analyzer, sample_pe_binary):
+        """Test analysis of valid PE binary."""
+        result = analyzer.analyze_binary(sample_pe_binary)
+        
+        assert result.format == BinaryFormat.PE
+        assert result.architecture == Architecture.X86_64
+        assert result.confidence > 0.9
+        assert len(result.sections) > 0
+        
+    def test_analyze_nonexistent_file(self, analyzer):
+        """Test proper error handling for missing files."""
+        with pytest.raises(FileNotFoundError, match="Binary not found"):
+            analyzer.analyze_binary(Path("nonexistent.exe"))
+            
+    def test_analyze_invalid_binary(self, analyzer, tmp_path):
+        """Test handling of invalid binary format."""
+        invalid_file = tmp_path / "invalid.txt"
+        invalid_file.write_text("This is not a binary")
+        
+        with pytest.raises(ValidationError, match="Invalid binary format"):
+            analyzer.analyze_binary(invalid_file)
+```
+
+#### Security Requirements
+
+**Input Validation**:
+```python
+def validate_file_path(path: Union[str, Path], base_dir: Path) -> Path:
+    """
+    Validate file path to prevent directory traversal attacks.
+    
+    Args:
+        path: User-provided file path
+        base_dir: Base directory to restrict access
+        
+    Returns:
+        Validated Path object within base_dir
+        
+    Raises:
+        SecurityError: If path attempts directory traversal
+        ValidationError: If path is invalid
+    """
+    try:
+        path_obj = Path(path).resolve()
+        base_dir_resolved = base_dir.resolve()
+        
+        # Ensure path is within base directory
+        if not str(path_obj).startswith(str(base_dir_resolved)):
+            raise SecurityError(f"Path traversal detected: {path}")
+            
+        return path_obj
+        
+    except (OSError, ValueError) as e:
+        raise ValidationError(f"Invalid path: {path}") from e
+```
+
+**Logging Security**:
+```python
+class SecurityAwareLogger:
+    """Logger that sanitizes sensitive information."""
+    
+    SENSITIVE_PATTERNS = [
+        r'\b[A-Za-z0-9+/]{40,}\b',  # API keys
+        r'\b(?:password|pwd|token)=\S+',  # Credentials
+        r'\b\d{4}-\d{4}-\d{4}-\d{4}\b',  # Credit cards
+    ]
+    
+    def sanitize_message(self, message: str) -> str:
+        """Remove sensitive information from log messages."""
+        for pattern in self.SENSITIVE_PATTERNS:
+            message = re.sub(pattern, '[REDACTED]', message, flags=re.IGNORECASE)
+        return message
+        
+    def info(self, message: str, *args, **kwargs):
+        """Log info message with sanitization."""
+        sanitized = self.sanitize_message(message)
+        self._logger.info(sanitized, *args, **kwargs)
+```
+
+#### Code Review Checklist
+
+**Pre-Commit Requirements**:
+- [ ] No hardcoded values or secrets
+- [ ] All functions have type hints and docstrings
+- [ ] Comprehensive error handling with specific exceptions
+- [ ] Input validation for all external data
+- [ ] Resource cleanup (files, processes, connections)
+- [ ] Unit tests with >90% coverage
+- [ ] Security review for input validation
+- [ ] Performance analysis for critical paths
+- [ ] Memory leak analysis
+- [ ] Configuration externalization
+
+**Quality Gates**:
+- [ ] Code passes all linting (flake8, black, mypy)
+- [ ] Security scan passes (bandit)
+- [ ] Unit tests pass with coverage >90%
+- [ ] Integration tests pass
+- [ ] Performance benchmarks within acceptable limits
+- [ ] Documentation updated and accurate
+- [ ] Configuration properly externalized
+- [ ] Error handling comprehensive and tested
+
+This level of quality ensures the codebase meets NSA-level production standards with no security vulnerabilities, optimal maintainability, and bulletproof reliability.
+
+## CRITICAL PROTECTION RULES - NEVER VIOLATE
+
+### PROMPTS DIRECTORY PROTECTION
+**NEVER DELETE ANYTHING IN prompts/ DIRECTORY**
+- The prompts/ directory contains critical project documentation and instructions
+- NEVER use `git rm`, `rm`, `del`, or any deletion commands on prompts/ files
+- NEVER suggest or implement cleanup that removes prompts/ files
+- ALWAYS preserve all files in prompts/ regardless of apparent duplication or obsolescence
+- If prompts/ files seem outdated, UPDATE them instead of deleting them
+- If cleanup is requested for prompts/, only organize/rename, never delete
+
+### FILE PROTECTION HIERARCHY
+1. **CRITICAL (NEVER DELETE)**: prompts/, CLAUDE.md, main.py, src/core/
+2. **IMPORTANT (CAREFUL)**: docs/, requirements.txt, configuration files
+3. **SAFE TO MODIFY**: temp/, output/, logs/, cache/
+
+### DELETION SAFETY PROTOCOL
+Before any deletion operation:
+1. Verify the file/directory is NOT in the CRITICAL protection list
+2. Check if it's referenced in CLAUDE.md or project documentation
+3. Ask user for explicit confirmation if uncertain
+4. Use git status to ensure no important tracked files are affected
+
+### IMPORTANT INSTRUCTION REMINDERS
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+**NEVER DELETE FILES IN prompts/ DIRECTORY UNDER ANY CIRCUMSTANCES.**

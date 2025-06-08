@@ -64,7 +64,7 @@ class Agent10_TheMachine(ReconstructionAgent):
             
             return AgentResult(
                 agent_id=self.agent_id,
-                status=AgentStatus.COMPLETED,
+                status=AgentStatus.SUCCESS,
                 data=machine_result,
                 metadata={
                     'depends_on': [8, 9],
@@ -96,7 +96,7 @@ class Agent10_TheMachine(ReconstructionAgent):
         }
         
         # Gather from Global Reconstructor (Agent 9)
-        if 9 in all_results and hasattr(all_results[9], 'status') and all_results[9].status == AgentStatus.COMPLETED:
+        if 9 in all_results and hasattr(all_results[9], 'status') and all_results[9].status == AgentStatus.SUCCESS:
             global_data = all_results[9].data
             if isinstance(global_data, dict):
                 reconstructed_source = global_data.get('reconstructed_source', {})
@@ -112,13 +112,13 @@ class Agent10_TheMachine(ReconstructionAgent):
                     sources['dependencies'].extend(build_config.get('dependencies', []))
         
         # Gather from Resource Reconstructor (Agent 8)
-        if 8 in all_results and hasattr(all_results[8], 'status') and all_results[8].status == AgentStatus.COMPLETED:
+        if 8 in all_results and hasattr(all_results[8], 'status') and all_results[8].status == AgentStatus.SUCCESS:
             resource_data = all_results[8].data
             if isinstance(resource_data, dict):
                 sources['resource_files'].update(resource_data.get('resource_files', {}))
         
         # Gather from Advanced Decompiler (Agent 7)
-        if 7 in all_results and hasattr(all_results[7], 'status') and all_results[7].status == AgentStatus.COMPLETED:
+        if 7 in all_results and hasattr(all_results[7], 'status') and all_results[7].status == AgentStatus.SUCCESS:
             decompiler_data = all_results[7].data
             if isinstance(decompiler_data, dict):
                 enhanced_functions = decompiler_data.get('enhanced_functions', {})
@@ -127,7 +127,7 @@ class Agent10_TheMachine(ReconstructionAgent):
                         sources['source_files'][f"{func_name}.c"] = func_data['code']
         
         # Gather from Basic Decompiler (Agent 4)
-        if 4 in all_results and hasattr(all_results[4], 'status') and all_results[4].status == AgentStatus.COMPLETED:
+        if 4 in all_results and hasattr(all_results[4], 'status') and all_results[4].status == AgentStatus.SUCCESS:
             basic_data = all_results[4].data
             if isinstance(basic_data, dict):
                 decompiled_functions = basic_data.get('decompiled_functions', {})

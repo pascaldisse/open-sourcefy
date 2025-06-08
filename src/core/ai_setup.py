@@ -14,7 +14,8 @@ from .config_manager import ConfigManager
 
 class AIProvider(Enum):
     """Available AI providers"""
-    ANTHROPIC = "anthropic"
+    CLAUDE_CODE = "claude_code"  # Claude Code CLI using Max subscription
+    ANTHROPIC = "anthropic"      # Direct API access
     OPENAI = "openai" 
     LOCAL_LLM = "local_llm"
     DISABLED = "disabled"
@@ -73,6 +74,7 @@ class AISetup:
     def _get_default_model(self, provider: AIProvider) -> str:
         """Get default model for provider"""
         defaults = {
+            AIProvider.CLAUDE_CODE: "claude-3-5-sonnet",  # Claude Code uses subscription model
             AIProvider.ANTHROPIC: "claude-3-5-sonnet-20241022",
             AIProvider.OPENAI: "gpt-4",
             AIProvider.LOCAL_LLM: "llama-2-7b-chat",
@@ -83,6 +85,7 @@ class AISetup:
     def _get_default_api_key_env(self, provider: AIProvider) -> str:
         """Get default API key environment variable for provider"""
         defaults = {
+            AIProvider.CLAUDE_CODE: "NONE",  # Claude Code uses subscription, no API key needed
             AIProvider.ANTHROPIC: "ANTHROPIC_API_KEY",
             AIProvider.OPENAI: "OPENAI_API_KEY", 
             AIProvider.LOCAL_LLM: "LOCAL_LLM_API_KEY",
@@ -97,7 +100,9 @@ class AISetup:
             return
         
         try:
-            if self.ai_config.provider == AIProvider.ANTHROPIC:
+            if self.ai_config.provider == AIProvider.CLAUDE_CODE:
+                self.ai_interface = self._setup_claude_code()
+            elif self.ai_config.provider == AIProvider.ANTHROPIC:
                 self.ai_interface = self._setup_anthropic()
             elif self.ai_config.provider == AIProvider.OPENAI:
                 self.ai_interface = self._setup_openai()
@@ -109,6 +114,29 @@ class AISetup:
         except Exception as e:
             self.logger.error(f"Failed to initialize AI interface: {e}")
             self.ai_interface = None
+    
+    def _setup_claude_code(self):
+        """Setup Claude Code CLI interface"""
+        import subprocess
+        import shutil
+        
+        # Check if claude-code CLI is available
+        if not shutil.which('claude-code'):
+            raise ImportError("Claude Code CLI not found. Install with: npm install -g @anthropic-ai/claude-code")
+        
+        # Test claude-code accessibility
+        try:
+            result = subprocess.run(['claude-code', '--version'], 
+                                  capture_output=True, text=True, timeout=10)
+            if result.returncode != 0:
+                raise RuntimeError("Claude Code CLI not working properly")
+        except subprocess.TimeoutExpired:
+            raise RuntimeError("Claude Code CLI timeout - may not be properly authenticated")
+        except FileNotFoundError:
+            raise ImportError("Claude Code CLI not found in PATH")
+        
+        self.logger.info(f"Claude Code CLI initialized using subscription model")
+        return ClaudeCodeInterface(self.ai_config)
     
     def _setup_anthropic(self):
         """Setup Anthropic Claude interface"""
@@ -296,8 +324,91 @@ class AIInterface:
         """
 
 
+class ClaudeCodeInterface(AIInterface):
+    """Claude Code CLI interface using Max subscription"""
+    
+    def generate_response(self, prompt: str, system_prompt: Optional[str] = None) -> AIResponse:
+        """Generate response using Claude Code CLI"""
+        import subprocess
+        import tempfile
+        import json
+        
+        try:
+            # Prepare the full prompt
+            full_prompt = prompt
+            if system_prompt:
+                full_prompt = f"System: {system_prompt}\n\nUser: {prompt}"
+            
+            # Create temporary file for the prompt
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as tmp_file:
+                tmp_file.write(full_prompt)
+                tmp_file_path = tmp_file.name
+            
+            try:
+                # Call claude-code CLI with the prompt file
+                cmd = [
+                    'claude-code', 
+                    '--prompt-file', tmp_file_path,
+                    '--max-tokens', str(self.config.max_tokens),
+                    '--temperature', str(self.config.temperature),
+                    '--output-format', 'json'
+                ]
+                
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=self.config.timeout
+                )
+                
+                if result.returncode != 0:
+                    error_msg = result.stderr or "Claude Code CLI failed"
+                    return AIResponse(
+                        content="", model=self.config.model, usage={}, success=False,
+                        error=error_msg, provider="claude_code"
+                    )
+                
+                # Parse response
+                try:
+                    response_data = json.loads(result.stdout)
+                    content = response_data.get('content', result.stdout)
+                    usage = response_data.get('usage', {})
+                except json.JSONDecodeError:
+                    # Fallback to plain text if JSON parsing fails
+                    content = result.stdout.strip()
+                    usage = {}
+                
+                return AIResponse(
+                    content=content,
+                    model=self.config.model,
+                    usage=usage,
+                    success=True,
+                    provider="claude_code"
+                )
+                
+            finally:
+                # Clean up temporary file
+                import os
+                try:
+                    os.unlink(tmp_file_path)
+                except OSError:
+                    pass
+                
+        except subprocess.TimeoutExpired:
+            return AIResponse(
+                content="", model=self.config.model, usage={}, success=False,
+                error="Claude Code CLI timeout", provider="claude_code"
+            )
+        except Exception as e:
+            self.logger.error(f"Claude Code CLI call failed: {e}")
+            return AIResponse(
+                content="", model=self.config.model, usage={}, success=False,
+                error=str(e), provider="claude_code"
+            )
+
+
 class AnthropicInterface(AIInterface):
-    """Anthropic Claude AI interface"""
+    """Anthropic Claude API interface"""
     
     def generate_response(self, prompt: str, system_prompt: Optional[str] = None) -> AIResponse:
         """Generate response using Anthropic Claude"""

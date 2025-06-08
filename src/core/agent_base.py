@@ -142,11 +142,15 @@ class AgentBase(ABC):
         if not logger.handlers:
             handler = logging.StreamHandler()
             formatter = logging.Formatter(
-                f'%(asctime)s - {logger_name} - %(levelname)s - %(message)s'
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
             )
             handler.setFormatter(formatter)
             logger.addHandler(handler)
             logger.setLevel(logging.INFO)
+            
+            # Prevent log injection by sanitizing logger name
+            if not logger_name.replace('_', '').replace('Agent', '').isalnum():
+                raise ValueError(f"Invalid logger name: {logger_name}")
         
         return logger
     
@@ -292,12 +296,12 @@ class AgentBase(ABC):
         }
     
     def get_status_info(self) -> Dict[str, Any]:
-        """Get current status information for the agent"""
+        """Get current status information for the agent."""
         return {
             'agent_id': self.agent_id,
             'agent_name': self.agent_name,
             'agent_type': self.agent_type.value,
-            'dependencies': self.dependencies,
+            'dependencies': self.dependencies.copy(),  # Return copy to prevent mutation
             'is_running': self._start_time is not None and self._end_time is None,
             'last_execution': self._end_time.isoformat() if self._end_time else None
         }

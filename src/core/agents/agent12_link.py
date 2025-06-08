@@ -195,7 +195,7 @@ class Agent12_Link(ReconstructionAgent):
                 'validation_results': final_result.validation_results,
                 'communication_stats': self.communication_stats,
                 'metadata': {
-                    'character': self.character,
+                    'character': getattr(self, 'matrix_character', MatrixCharacter.LINK).value,
                     'phase': self.current_phase,
                     'active_bridges': len(self.active_bridges),
                     'communication_channels': len(self.communication_channels),
@@ -1115,17 +1115,19 @@ class Agent12_Link(ReconstructionAgent):
             }
         }
     
-    def _create_failure_result(self, error_message: str, execution_time: float = 0.0) -> Dict[str, Any]:
+    def _create_failure_result(self, error_message: str, start_time: float, execution_time: float = None) -> Dict[str, Any]:
         """Create failure result"""
+        if execution_time is None:
+            execution_time = time.time() - start_time
         return {
             'agent_id': self.agent_id,
-            'agent_name': self.name,
+            'agent_name': getattr(self, 'agent_name', 'Link'),
             'status': AgentStatus.FAILED if HAS_MATRIX_FRAMEWORK else 'failed',
             'execution_time': execution_time,
             'error_message': error_message,
             'integration_result': IntegrationResult(),
             'metadata': {
-                'character': self.character,
+                'character': getattr(self, 'matrix_character', MatrixCharacter.LINK).value,
                 'phase': self.current_phase,
                 'failure_point': self.current_phase
             }

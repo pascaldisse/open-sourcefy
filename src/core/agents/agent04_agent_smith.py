@@ -443,6 +443,11 @@ class AgentSmithAgent(AnalysisAgent):
         
         # Setup output directories for resource extraction
         resources_dir = self.config.get_path('paths.resources_directory')
+        if resources_dir is None:
+            # Fallback to temp directory if resources_directory not configured
+            resources_dir = context.get('output_paths', {}).get('temp')
+            if resources_dir is None:
+                resources_dir = Path.cwd() / 'temp'
         resources_dir.mkdir(exist_ok=True)
         
         return {
@@ -496,11 +501,21 @@ class AgentSmithAgent(AnalysisAgent):
                                for s in resource_sections]
         }
         
-        # Memory layout summary
+        # Memory layout summary - handle both dict and object formats
+        base_address = 0
+        entry_point = 0
+        if binary_info:
+            if isinstance(binary_info, dict):
+                base_address = binary_info.get('base_address', 0)
+                entry_point = binary_info.get('entry_point', 0)
+            else:
+                base_address = getattr(binary_info, 'base_address', 0)
+                entry_point = getattr(binary_info, 'entry_point', 0)
+        
         memory_layout = {
-            'base_address': binary_info.base_address if binary_info else 0,
+            'base_address': base_address,
             'virtual_size': sum(s.get('virtual_size', 0) for s in sections),
-            'entry_point': binary_info.entry_point if binary_info else 0,
+            'entry_point': entry_point,
             'sections': sections,
             'section_count': len(sections)
         }
@@ -570,7 +585,14 @@ class AgentSmithAgent(AnalysisAgent):
         vtables = []
         binary_info = analysis_context.get('binary_info')
         
-        if not binary_info or binary_info.format_type != 'PE':
+        format_type = None
+        if binary_info:
+            if isinstance(binary_info, dict):
+                format_type = binary_info.get('format_type')
+            else:
+                format_type = getattr(binary_info, 'format_type', None)
+        
+        if not binary_info or format_type != 'PE':
             return vtables  # Currently only supports PE
         
         # Simple heuristic: look for sequences of addresses in data sections
@@ -650,7 +672,12 @@ class AgentSmithAgent(AnalysisAgent):
             return False
         
         # Check if address is within reasonable range for code
-        base_address = binary_info.base_address or 0x400000
+        base_address = 0x400000
+        if binary_info:
+            if isinstance(binary_info, dict):
+                base_address = binary_info.get('base_address', 0x400000)
+            else:
+                base_address = getattr(binary_info, 'base_address', 0x400000)
         max_address = base_address + analysis_context['file_size']
         
         return base_address <= address <= max_address
@@ -807,9 +834,16 @@ class AgentSmithAgent(AnalysisAgent):
         instrumentation_points = []
         
         # Add entry point instrumentation
-        if binary_info and binary_info.entry_point:
+        entry_point_addr = None
+        if binary_info:
+            if isinstance(binary_info, dict):
+                entry_point_addr = binary_info.get('entry_point')
+            else:
+                entry_point_addr = getattr(binary_info, 'entry_point', None)
+        
+        if entry_point_addr:
             entry_point = InstrumentationPoint(
-                address=binary_info.entry_point,
+                address=entry_point_addr,
                 type='function_entry',
                 purpose='main_entry_monitoring'
             )

@@ -133,13 +133,32 @@ class ConfigManager:
             self.logger.error(f"Failed to load config file {self.config_file}: {e}")
     
     def _parse_simple_config(self, content: str) -> Dict[str, Any]:
-        """Parse simple key=value configuration format"""
+        """Parse simple key=value configuration format with validation."""
         config = {}
-        for line in content.split('\n'):
+        for line_num, line in enumerate(content.split('\n'), 1):
             line = line.strip()
             if line and not line.startswith('#') and '=' in line:
-                key, value = line.split('=', 1)
-                config[key.strip()] = value.strip()
+                try:
+                    key, value = line.split('=', 1)
+                    key = key.strip()
+                    value = value.strip()
+                    
+                    # Validate key format
+                    if not key.replace('.', '').replace('_', '').isalnum():
+                        self.logger.warning(f"Invalid config key format at line {line_num}: {key}")
+                        continue
+                        
+                    # Basic value sanitization
+                    if len(value) > 1000:  # Prevent extremely long values
+                        self.logger.warning(f"Config value too long at line {line_num}, truncating")
+                        value = value[:1000]
+                    
+                    config[key] = value
+                    
+                except ValueError:
+                    self.logger.warning(f"Invalid config line format at line {line_num}: {line}")
+                    continue
+                    
         return config
     
     def _load_environment_variables(self):
@@ -200,7 +219,11 @@ class ConfigManager:
                 self.config_values[full_key] = ConfigValue(value, source, f"From {source.value}")
     
     def _convert_env_value(self, value: str, config_key: str) -> Any:
-        """Convert environment variable string to appropriate type"""
+        """Convert environment variable string to appropriate type with validation."""
+        # Sanitize input value
+        if not isinstance(value, str):
+            raise ValueError(f"Invalid environment value type: {type(value)}")
+            
         # Boolean conversion
         if value.lower() in ('true', 'false'):
             return value.lower() == 'true'
@@ -245,13 +268,19 @@ class ConfigManager:
                 )
     
     def _auto_detect_ghidra(self) -> Optional[str]:
-        """Auto-detect Ghidra installation"""
+        """Auto-detect Ghidra installation safely."""
+        # Only check relative to project root for security
         possible_locations = [
-            self.project_root / "ghidra",
-            Path("C:\\ghidra"),
-            Path("C:\\Program Files\\ghidra"),
-            Path("C:\\Program Files (x86)\\ghidra")
+            self.project_root / "ghidra"
         ]
+        
+        # Add system paths only if explicitly allowed via environment
+        if os.environ.get('MATRIX_ALLOW_SYSTEM_GHIDRA', '').lower() == 'true':
+            possible_locations.extend([
+                Path("C:\\ghidra"),
+                Path("C:\\Program Files\\ghidra"),
+                Path("C:\\Program Files (x86)\\ghidra")
+            ])
         
         for location in possible_locations:
             if location and location.exists():
@@ -263,7 +292,11 @@ class ConfigManager:
         return None
     
     def get_value(self, key: str, default: Any = None) -> Any:
-        """Get configuration value by key"""
+        """Get configuration value by key with validation."""
+        # Validate key format to prevent injection
+        if not isinstance(key, str) or not key.replace('.', '').replace('_', '').isalnum():
+            raise ValueError(f"Invalid configuration key format: {key}")
+            
         config_value = self.config_values.get(key)
         return config_value.value if config_value else default
     
