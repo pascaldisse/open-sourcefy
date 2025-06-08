@@ -234,14 +234,7 @@ def ai_generate_docs(analysis_data: Dict[str, Any]) -> AIResponse:
     return get_ai_system().generate_documentation(analysis_data)
 
 
-    def _classify_prompt(self, prompt: str) -> str:
-        """Classify the type of prompt for contextual responses"""
-        prompt_lower = prompt.lower()
-        
-        if any(word in prompt_lower for word in ['security', 'threat', 'malware', 'vulnerability']):
-            return 'security_analysis'
-        elif any(word in prompt_lower for word in ['code', 'function', 'compiler', 'optimization']):
-            return 'code_analysis'
+# Agent convenience functions - everything agents need for AI
         elif any(word in prompt_lower for word in ['binary', 'format', 'architecture', 'pe', 'elf']):
             return 'binary_analysis'
         elif any(word in prompt_lower for word in ['enhance', 'improve', 'reconstruct', 'decompile']):

@@ -635,6 +635,39 @@ class AdvancedFunctionSignatureRecovery:
         else:
             return 'Local working variable'
     
+    def _calculate_parameter_confidence(self, name: str, param_type: str, usage_pattern: str) -> float:
+        """Calculate confidence score for parameter analysis"""
+        confidence_factors = []
+        
+        # Name quality factor
+        if len(name) > 3 and not name.startswith('param'):
+            confidence_factors.append(0.3)
+        elif len(name) > 1:
+            confidence_factors.append(0.1)
+        
+        # Type quality factor
+        if param_type and param_type != 'unknown':
+            if any(known_type in param_type.lower() for known_type in ['int', 'char', 'dword', 'handle', 'lp']):
+                confidence_factors.append(0.4)
+            else:
+                confidence_factors.append(0.2)
+        
+        # Usage pattern factor
+        if usage_pattern and usage_pattern != 'unknown':
+            pattern_confidence = {
+                'array_access': 0.2,
+                'pointer_dereference': 0.2, 
+                'structure_access': 0.15,
+                'direct_usage': 0.1
+            }
+            confidence_factors.append(pattern_confidence.get(usage_pattern, 0.05))
+        
+        # Windows API parameter boost
+        if any(api_indicator in param_type.upper() for api_indicator in ['LP', 'HANDLE', 'DWORD', 'HWND']):
+            confidence_factors.append(0.1)
+        
+        return min(sum(confidence_factors), 1.0)
+    
     # Database initialization methods
     def _initialize_windows_api_database(self) -> Dict[str, Dict[str, Any]]:
         """Initialize Windows API signature database"""
