@@ -1114,3 +1114,50 @@ class SemanticDecompiler:
             semantic_vars.append(semantic_var)
         
         return semantic_vars
+    
+    def _map_structure_type_to_datatype(self, type_string: str) -> DataType:
+        """Map structure field type string to DataType enum"""
+        type_lower = type_string.lower()
+        
+        if 'void' in type_lower:
+            return DataType.VOID
+        elif 'char' in type_lower:
+            return DataType.CHAR
+        elif 'short' in type_lower:
+            return DataType.SHORT
+        elif 'long' in type_lower:
+            return DataType.LONG
+        elif 'float' in type_lower:
+            return DataType.FLOAT
+        elif 'double' in type_lower:
+            return DataType.DOUBLE
+        elif 'int' in type_lower:
+            return DataType.INT
+        elif '*' in type_lower:
+            return DataType.POINTER
+        elif '[' in type_lower:
+            return DataType.ARRAY
+        else:
+            return DataType.UNKNOWN
+    
+    def _map_structure_type_to_datatype_enum(self, structure_type) -> DataType:
+        """Map StructureType enum to DataType enum"""
+        if hasattr(structure_type, 'value'):
+            struct_type_str = structure_type.value
+        else:
+            struct_type_str = str(structure_type)
+        
+        if 'union' in struct_type_str.lower():
+            return DataType.UNION
+        elif 'struct' in struct_type_str.lower():
+            return DataType.STRUCT
+        else:
+            return DataType.STRUCT  # Default to struct
+    
+    def _calculate_avg_structure_confidence(self, advanced_structures: Dict[str, Any]) -> float:
+        """Calculate average confidence of advanced structures"""
+        if not advanced_structures:
+            return 0.0
+        
+        confidences = [s.confidence for s in advanced_structures.values() if hasattr(s, 'confidence')]
+        return sum(confidences) / len(confidences) if confidences else 0.0
