@@ -630,7 +630,7 @@ Usage Examples:
                 return False
             
             # Setup output directory
-            output_dir = self._setup_output_directory(config.output_dir)
+            output_dir = self._setup_output_directory(config.output_dir, binary_path)
             
             # Setup logging
             if config.debug:
@@ -769,7 +769,7 @@ Usage Examples:
             self.logger.error(f"Invalid binary path: {e}")
             return None
     
-    def _setup_output_directory(self, output_dir: Optional[str]) -> Path:
+    def _setup_output_directory(self, output_dir: Optional[str], binary_path: Optional[Path] = None) -> Path:
         """Setup output directory securely."""
         try:
             if output_dir:
@@ -786,8 +786,15 @@ Usage Examples:
                 else:
                     path = project_root / path
             else:
-                timestamp = time.strftime("%Y%m%d_%H%M%S")
-                path = project_root / "output" / timestamp
+                # Use new path structure with config manager
+                binary_name = binary_path.stem if binary_path else 'unknown_binary'
+                if hasattr(self, 'config_manager'):
+                    path = self.config_manager.get_output_path(binary_name)
+                else:
+                    # Fallback for initialization phase
+                    from core.config_manager import get_config_manager
+                    config_manager = get_config_manager()
+                    path = config_manager.get_output_path(binary_name)
             
             # Validate final path is within project
             if not str(path.resolve()).startswith(str(project_root.resolve())):

@@ -255,7 +255,10 @@ class Agent15_Analyst(ReconstructionAgent):
             if output_paths:
                 self._save_analyst_results(analyst_result, output_paths)
             
-            self.performance_monitor.end_operation("analyst_metadata_analysis")
+            try:
+                self.performance_monitor.end_operation("analyst_metadata_analysis")
+            except:
+                pass  # Ignore performance monitor errors
             
             # Return dict from execute_matrix_task - base class will wrap in AgentResult
             return {
@@ -274,8 +277,11 @@ class Agent15_Analyst(ReconstructionAgent):
             }
             
         except Exception as e:
-            self.performance_monitor.end_operation("analyst_metadata_analysis")
-            error_msg = f"The Analyst's metadata analysis failed: {str(e)}"
+            try:
+                self.performance_monitor.end_operation("analyst_metadata_analysis")
+            except:
+                pass  # Ignore performance monitor errors during exception handling
+            error_msg = f"Matrix breach detected: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             
             # Re-raise exception - base class will handle creating AgentResult
@@ -327,7 +333,7 @@ class Agent15_Analyst(ReconstructionAgent):
         """Generate comprehensive metadata for the entire project"""
         metadata = {
             'project_info': {
-                'binary_path': context['global_data'].get('binary_path'),
+                'binary_path': context.get('binary_path', 'unknown'),
                 'analysis_timestamp': time.time(),
                 'pipeline_version': '2.0',
                 'agents_executed': list(synthesis['agent_outputs'].keys())
@@ -643,7 +649,7 @@ Analysis Timestamp: {metadata.get('project_info', {}).get('analysis_timestamp', 
 - **Pattern Correlations**: {len(intelligence.get('pattern_correlations', {}))} patterns identified
 - **Confidence Analysis**: {intelligence.get('confidence_analysis', {}).get('average_confidence', 0):.1%} average confidence
 - **Consistency Check**: {intelligence.get('confidence_analysis', {}).get('consistency', 0):.1%} data consistency
-- **Cross-References**: {len(result.cross_references.get('function_references', {}))} function mappings
+- **Cross-References**: {len(result.cross_references.get('function_references', {})) if isinstance(result.cross_references, dict) else 0} function mappings
 
 ---
 
@@ -654,7 +660,7 @@ Analysis Timestamp: {metadata.get('project_info', {}).get('analysis_timestamp', 
 Format: {binary_chars.get('format', 'Unknown')}
 Architecture: {binary_chars.get('architecture', 'Unknown')}
 Size: {binary_chars.get('size', 0):,} bytes ({binary_chars.get('size', 0)/1024/1024:.1f} MB)
-Entropy: {binary_chars.get('entropy', 0):.3f}
+Entropy: {str(binary_chars.get('entropy', 'Unknown'))}
 Sections: {len(binary_chars.get('sections', []))} sections detected
 ```
 
@@ -678,7 +684,7 @@ Decompilation Confidence: {metadata.get('code_structure', {}).get('decompilation
 ```
 
 ### Function Mappings
-{self._format_function_mappings(result.cross_references)}
+{self._format_function_mappings(result.cross_references) if isinstance(result.cross_references, dict) else "No function mappings available"}
 
 ---
 

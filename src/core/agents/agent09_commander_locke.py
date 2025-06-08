@@ -47,7 +47,7 @@ class ReconstructionResult:
     metrics: Dict[str, Any] = field(default_factory=dict)
 
 
-class CommanderLockeAgent:
+class CommanderLockeAgent(ReconstructionAgent):
     """
     Agent 09: Commander Locke - Global Reconstruction Orchestrator
     
@@ -60,12 +60,13 @@ class CommanderLockeAgent:
     """
     
     def __init__(self):
-        self.agent_id = 9
-        self.name = "Commander Locke"
-        self.character = MatrixCharacter.COMMANDER_LOCKE if HAS_MATRIX_FRAMEWORK else "commander_locke"
+        super().__init__(
+            agent_id=9,
+            matrix_character=MatrixCharacter.COMMANDER_LOCKE if HAS_MATRIX_FRAMEWORK else "commander_locke",
+            dependencies=[5, 6, 7, 8]  # Depends on Neo, Twins, Trainman, Keymaker
+        )
         
-        # Core components
-        self.logger = self._setup_logging()
+        # Core components (logger inherited from parent class)
         if HAS_MATRIX_FRAMEWORK:
             # File manager will be initialized with proper output paths from context in execute()
             self.file_manager = None
@@ -87,32 +88,8 @@ class CommanderLockeAgent:
         # State tracking
         self.current_phase = "initialization"
         self.reconstruction_stats = {}
-        
-    def _setup_logging(self) -> logging.Logger:
-        """Setup agent-specific logging"""
-        logger = logging.getLogger(f"Matrix.CommanderLocke")
-        if not logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter(
-                '[Commander Locke] %(asctime)s - %(levelname)s - %(message)s',
-                datefmt='%H:%M:%S'
-            )
-            handler.setFormatter(formatter)
-            logger.addHandler(handler)
-            logger.setLevel(logging.INFO)
-        return logger
     
-    def get_dependencies(self) -> List[int]:
-        """Get list of required predecessor agents"""
-        # Commander Locke requires analysis from Neo (5), Twins (6), Trainman (7), and Keymaker (8)
-        return [5, 6, 7, 8]
-    
-    def get_description(self) -> str:
-        """Get agent description"""
-        return ("Commander Locke coordinates the global reconstruction of the entire codebase, "
-                "integrating all analysis results into a coherent, compilation-ready source structure.")
-    
-    def execute(self, context: Dict[str, Any]) -> AgentResult:
+    def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute global reconstruction orchestration"""
         self.logger.info("🎖️ Commander Locke initiating global reconstruction protocol...")
         
@@ -129,9 +106,9 @@ class CommanderLockeAgent:
             validation_result = self._validate_dependencies(context)
             
             if not validation_result['valid']:
-                return self._create_failure_result(
-                    f"Dependency validation failed: {validation_result['error']}"
-                )
+                error_msg = f"Dependency validation failed: {validation_result['error']}"
+                self.logger.error(error_msg)
+                raise Exception(error_msg)
             
             # Phase 2: Analyze all available data sources
             self.current_phase = "analysis"
@@ -190,7 +167,7 @@ class CommanderLockeAgent:
     
     def _validate_dependencies(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Validate that all required agent results are available"""
-        required_agents = self.get_dependencies()
+        required_agents = self.dependencies
         agent_results = context.get('agent_results', {})
         
         missing_agents = []
@@ -201,15 +178,7 @@ class CommanderLockeAgent:
                 missing_agents.append(agent_id)
             else:
                 result = agent_results[agent_id]
-                # Handle both AgentResult objects and dict results
-                if hasattr(result, 'status'):
-                    status = result.status
-                else:
-                    status = result.get('status', 'unknown')
-                    
-                if (status != StandardAgentStatus.COMPLETED and 
-                    status != 'success' and 
-                    status != AgentStatus.SUCCESS if HAS_MATRIX_FRAMEWORK else False):
+                if not self.is_agent_successful(result):
                     invalid_agents.append(agent_id)
         
         if missing_agents or invalid_agents:
@@ -943,22 +912,3 @@ EndGlobal
             }
         }
     
-    def _create_failure_result(self, error_message: str, execution_time: float = 0.0) -> AgentResult:
-        """Create failure result"""
-        return AgentResult(
-            agent_id=self.agent_id,
-            agent_name=self.name,
-            matrix_character=self.character if isinstance(self.character, str) else self.character.value,
-            status=StandardAgentStatus.FAILED,
-            data={
-                'reconstruction_result': ReconstructionResult()
-            },
-            error_message=error_message,
-            metadata={
-                'agent_name': self.name,
-                'character': self.character,
-                'phase': self.current_phase,
-                'failure_point': self.current_phase,
-                'execution_time': execution_time
-            }
-        )

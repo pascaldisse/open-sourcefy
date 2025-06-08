@@ -143,7 +143,8 @@ class Agent12_Link(ReconstructionAgent):
             
             if not comm_setup_result['success']:
                 return self._create_failure_result(
-                    f"Communication setup failed: {comm_setup_result['error']}"
+                    f"Communication setup failed: {comm_setup_result['error']}", 
+                    start_time
                 )
             
             # Phase 2: Validate data integrity across all components
@@ -1109,23 +1110,22 @@ class Agent12_Link(ReconstructionAgent):
             }
         }
     
-    def _create_failure_result(self, error_message: str, start_time: float, execution_time: float = None) -> Dict[str, Any]:
-        """Create failure result"""
+    def _create_failure_result(self, error_message: str, start_time: float, execution_time: float = None) -> 'AgentResult':
+        """Create failure result using base class method with Link-specific data"""
         if execution_time is None:
             execution_time = time.time() - start_time
-        return {
-            'agent_id': self.agent_id,
-            'agent_name': getattr(self, 'agent_name', 'Link'),
-            'status': AgentStatus.FAILED if HAS_MATRIX_FRAMEWORK else 'failed',
-            'execution_time': execution_time,
-            'error_message': error_message,
+        
+        # Create failure result using base class method
+        base_result = super()._create_failure_result(error_message, start_time, execution_time)
+        
+        # Add Link-specific data
+        base_result.data.update({
             'integration_result': IntegrationResult(),
-            'metadata': {
-                'character': getattr(self, 'matrix_character', MatrixCharacter.LINK).value,
-                'phase': self.current_phase,
-                'failure_point': self.current_phase
-            }
-        }
+            'phase': self.current_phase,
+            'failure_point': self.current_phase
+        })
+        
+        return base_result
 
 
 # For backward compatibility

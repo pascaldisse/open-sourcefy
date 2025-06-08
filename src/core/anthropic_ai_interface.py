@@ -142,30 +142,39 @@ class AnthropicAIInterface:
             system_prompt = """You are a cybersecurity expert analyzing binary files. 
             Provide concise security analysis focusing on potential threats, suspicious patterns, 
             and recommendations. Be factual and specific."""
-        
-        prompt = f"""
-        Analyze this binary file for security indicators:
-        
-        File: {binary_info.get('file_path', 'unknown')}
-        Format: {binary_info.get('format_type', 'unknown')}
-        Architecture: {binary_info.get('architecture', 'unknown')}
-        Size: {binary_info.get('file_size', 0)} bytes
-        Entropy: {binary_info.get('entropy', 0)}
-        
-        Sections: {binary_info.get('section_count', 0)}
-        Imports: {binary_info.get('import_count', 0)}
-        Exports: {binary_info.get('export_count', 0)}
-        
-        Notable strings: {binary_info.get('notable_strings', [])}
-        
-        Provide:
-        1. Security risk assessment (Low/Medium/High)
-        2. Suspicious indicators found
-        3. Behavioral predictions
-        4. Recommendations for further analysis
-        """
-        
-        return self.generate_response(prompt, system_prompt)
+            
+            prompt = f"""
+            Analyze this binary file for security indicators:
+            
+            File: {binary_info.get('file_path', 'unknown')}
+            Format: {binary_info.get('format_type', 'unknown')}
+            Architecture: {binary_info.get('architecture', 'unknown')}
+            Size: {binary_info.get('file_size', 0)} bytes
+            Entropy: {binary_info.get('entropy', 0)}
+            
+            Sections: {binary_info.get('section_count', 0)}
+            Imports: {binary_info.get('import_count', 0)}
+            Exports: {binary_info.get('export_count', 0)}
+            
+            Notable strings: {binary_info.get('notable_strings', [])}
+            
+            Provide:
+            1. Security risk assessment (Low/Medium/High)
+            2. Suspicious indicators found
+            3. Behavioral predictions
+            4. Recommendations for further analysis
+            """
+            
+            return self.generate_response(prompt, system_prompt)
+        except Exception as e:
+            self.logger.error(f"Binary security analysis failed: {e}")
+            return AnthropicResponse(
+                content="Security analysis unavailable due to AI error",
+                usage={},
+                model=self.model,
+                success=False,
+                error=str(e)
+            )
     
     def analyze_code_patterns(self, code_analysis: Dict[str, Any]) -> AnthropicResponse:
         """Analyze code patterns and provide insights"""

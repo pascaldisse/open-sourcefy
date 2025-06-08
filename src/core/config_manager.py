@@ -99,6 +99,7 @@ class ConfigManager:
             "paths.default_output_dir": ("output", "Default output directory"),
             "paths.temp_dir": ("temp", "Temporary files directory"),
             "paths.log_dir": ("logs", "Log files directory"),
+            "paths.timestamp_format": ("%Y%m%d-%H%M%S", "Timestamp format for output directories"),
             
             # Matrix defaults
             "matrix.master_agent": ("deus_ex_machina", "Master agent name"),
@@ -350,8 +351,50 @@ class ConfigManager:
             'reports': 'reports',
             'logs': 'logs',
             'temp': 'temp',
-            'tests': 'tests'
+            'tests': 'tests',
+            'docs': 'docs'
         }
+    
+    def get_output_path(self, binary_name: str, timestamp: Optional[str] = None) -> Path:
+        """
+        Get output path with new structure: output/{binary_name}/{yyyymmdd-hhmmss}/
+        
+        Args:
+            binary_name: Name of the binary being analyzed
+            timestamp: Optional timestamp, if not provided, current time is used
+            
+        Returns:
+            Path object for the output directory
+        """
+        import time
+        from pathlib import Path
+        
+        if timestamp is None:
+            timestamp_format = self.get_value('paths.timestamp_format', '%Y%m%d-%H%M%S')
+            timestamp = time.strftime(timestamp_format)
+        
+        base_output_dir = self.get_path('default_output_dir', 'output')
+        return Path(base_output_dir) / binary_name / timestamp
+    
+    def get_structured_output_path(self, binary_name: str, subdir: str, timestamp: Optional[str] = None) -> Path:
+        """
+        Get structured output path for specific subdirectory
+        
+        Args:
+            binary_name: Name of the binary being analyzed
+            subdir: Subdirectory name (agents, ghidra, compilation, etc.)
+            timestamp: Optional timestamp, if not provided, current time is used
+            
+        Returns:
+            Path object for the specific output subdirectory
+        """
+        base_path = self.get_output_path(binary_name, timestamp)
+        structure = self.get_output_structure()
+        
+        if subdir not in structure:
+            raise ValueError(f"Invalid subdirectory: {subdir}. Valid options: {list(structure.keys())}")
+            
+        return base_path / structure[subdir]
     
     def print_configuration_summary(self):
         """Print configuration summary for debugging"""

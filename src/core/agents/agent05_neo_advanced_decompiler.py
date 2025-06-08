@@ -381,7 +381,13 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
             
             # Use output temp directory instead of system temp
             output_paths = context.get('output_paths', {})
-            temp_dir = output_paths.get('temp', Path('./output/temp'))
+            temp_dir = output_paths.get('temp')
+            if not temp_dir:
+                # Fallback using config manager
+                from ..config_manager import get_config_manager
+                config_manager = get_config_manager()
+                binary_name = context.get('binary_name', 'unknown_binary')
+                temp_dir = config_manager.get_structured_output_path(binary_name, 'temp')
             if isinstance(temp_dir, str):
                 temp_dir = Path(temp_dir)
             
@@ -395,7 +401,7 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
                     success, output = self.ghidra_analyzer.run_ghidra_analysis(
                         binary_path=binary_path,
                         output_dir=str(neo_temp_dir),
-                        script_name="EnhancedDecompiler.java",
+                        script_name="CompleteDecompiler.java",
                         timeout=240  # Extended internal timeout
                     )
                     

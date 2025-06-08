@@ -42,10 +42,10 @@ class Agent10_TheMachine(ReconstructionAgent):
         
         # Also check for any source code from previous agents 
         available_sources = any(
-            agent_data.get('data', {}).get('source_files') or 
-            agent_data.get('data', {}).get('decompiled_code')
+            self._get_agent_data_safely(agent_data, 'source_files') or 
+            self._get_agent_data_safely(agent_data, 'decompiled_code')
             for agent_data in agent_results.values()
-            if hasattr(agent_data, 'data') and agent_data.data
+            if agent_data
         )
         
         if available_sources:
@@ -53,6 +53,16 @@ class Agent10_TheMachine(ReconstructionAgent):
         
         if not dependencies_met:
             self.logger.warning("No source code dependencies found - proceeding with basic compilation setup")
+
+    def _get_agent_data_safely(self, agent_data: Any, key: str) -> Any:
+        """Safely get data from agent result, handling both dict and AgentResult objects"""
+        if hasattr(agent_data, 'data') and hasattr(agent_data.data, 'get'):
+            return agent_data.data.get(key)
+        elif hasattr(agent_data, 'get'):
+            data = agent_data.get('data', {})
+            if hasattr(data, 'get'):
+                return data.get(key)
+        return None
 
     def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute compilation orchestration"""
@@ -596,7 +606,13 @@ Write-Host "Build complete!" -ForegroundColor Green
         
         try:
             # Create temporary build directory
-            output_dir = context.get('output_paths', {}).get('compilation', 'output/compilation')
+            output_dir = context.get('output_paths', {}).get('compilation')
+            if not output_dir:
+                # Fallback using config manager
+                from ..config_manager import get_config_manager
+                config_manager = get_config_manager()
+                binary_name = context.get('binary_name', 'unknown_binary')
+                output_dir = config_manager.get_structured_output_path(binary_name, 'compilation')
             os.makedirs(output_dir, exist_ok=True)
             
             import time

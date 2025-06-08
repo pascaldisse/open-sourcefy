@@ -23,6 +23,16 @@ class Agent11_TheOracle(ValidationAgent):
             dependencies=[10]  # Depends on The Machine (compilation)
         )
 
+    def _get_agent_data_safely(self, agent_data: Any, key: str) -> Any:
+        """Safely get data from agent result, handling both dict and AgentResult objects"""
+        if hasattr(agent_data, 'data') and hasattr(agent_data.data, 'get'):
+            return agent_data.data.get(key)
+        elif hasattr(agent_data, 'get'):
+            data = agent_data.get('data', {})
+            if hasattr(data, 'get'):
+                return data.get(key)
+        return None
+
     def _validate_prerequisites(self, context: Dict[str, Any]) -> None:
         """Validate prerequisites with flexible dependency checking"""
         # Initialize shared_memory structure if not present
@@ -42,10 +52,10 @@ class Agent11_TheOracle(ValidationAgent):
         
         # Also check for any compilation or build results from previous agents
         compilation_available = any(
-            agent_data.get('data', {}).get('build_system') or 
-            agent_data.get('data', {}).get('compilation_results')
+            self._get_agent_data_safely(agent_data, 'build_system') or 
+            self._get_agent_data_safely(agent_data, 'compilation_results')
             for agent_data in agent_results.values()
-            if hasattr(agent_data, 'data') and agent_data.data
+            if agent_data
         )
         
         if compilation_available:

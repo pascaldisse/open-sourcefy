@@ -576,13 +576,21 @@ def truncate_string(text: str, max_length: int = 100, suffix: str = "...") -> st
 
 
 def create_timestamp(include_microseconds: bool = False) -> str:
-    """Create timestamp string"""
+    """Create timestamp string using config format"""
     now = datetime.now()
     
     if include_microseconds:
-        return now.strftime("%Y%m%d_%H%M%S_%f")
+        return now.strftime("%Y%m%d-%H%M%S_%f")
     else:
-        return now.strftime("%Y%m%d_%H%M%S")
+        # Use config manager for timestamp format
+        try:
+            from .config_manager import get_config_manager
+            config_manager = get_config_manager()
+            timestamp_format = config_manager.get_value('paths.timestamp_format', '%Y%m%d-%H%M%S')
+            return now.strftime(timestamp_format)
+        except:
+            # Fallback if config manager not available
+            return now.strftime("%Y%m%d-%H%M%S")
 
 
 # Global instances

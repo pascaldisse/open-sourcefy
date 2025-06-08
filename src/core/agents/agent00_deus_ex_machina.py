@@ -190,7 +190,7 @@ class DeusExMachinaAgent(MatrixAgent):
             12: [5, 6, 7, 8],        # Link - Depends on Phase B agents
             13: [5, 6, 7, 8],        # Agent Johnson - Depends on Phase B agents
             14: [9, 10, 11],         # Cleaner - Depends on early Phase C agents
-            15: [9, 10, 11],         # Analyst - Depends on early Phase C agents
+            15: [1, 2],              # Analyst - Depends on Sentinel and Architect
             16: [14, 15]             # Agent Brown - Final validation
         }
         

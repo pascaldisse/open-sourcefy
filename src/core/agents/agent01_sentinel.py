@@ -149,11 +149,11 @@ class SentinelAgent(AnalysisAgent):
             try:
                 path = self.config.get_path(path_key)
                 if path is None:
-                    # Use default paths if not configured
+                    # Use config manager for default paths
                     if path_key == 'paths.temp_directory':
-                        path = Path('./temp')
+                        path = Path(self.config.get_path('temp_dir', 'temp'))
                     elif path_key == 'paths.output_directory':
-                        path = Path('./output')
+                        path = Path(self.config.get_path('default_output_dir', 'output'))
                     else:
                         missing_paths.append(f"{path_key}: No path configured")
                         continue

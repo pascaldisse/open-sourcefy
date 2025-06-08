@@ -285,7 +285,7 @@ class AIInterface:
     
     def analyze_binary_security(self, binary_info: Dict[str, Any]) -> AIResponse:
         """Analyze binary for security indicators"""
-        system_prompt = system_prompt or self._get_security_system_prompt()
+        system_prompt = self._get_security_system_prompt()
         prompt = self._format_security_prompt(binary_info)
         return self.generate_response(prompt, system_prompt)
     

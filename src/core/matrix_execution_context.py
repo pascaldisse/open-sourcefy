@@ -55,10 +55,11 @@ class MatrixExecutionContext:
     def __post_init__(self):
         """Initialize context after creation"""
         if not self.output_paths:
-            # Create output structure based on binary name and timestamp
+            # Create output structure using config manager for new path format
+            from .config_manager import get_config_manager
             binary_name = self.binary_path.stem
-            timestamp = time.strftime("%Y%m%d_%H%M%S")
-            base_output = Path("output") / f"{binary_name}_{timestamp}"
+            config_manager = get_config_manager()
+            base_output = config_manager.get_output_path(binary_name)
             self.output_paths = setup_output_structure(base_output)
         
         # Initialize global data

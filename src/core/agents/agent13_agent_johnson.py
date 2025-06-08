@@ -46,11 +46,11 @@ class Agent13_AgentJohnson(ReconstructionAgent):
         
         # Also check for any advanced analysis results from previous agents
         analysis_available = any(
-            agent_data.get('data', {}).get('security_analysis') or 
-            agent_data.get('data', {}).get('vulnerability_assessment') or
-            agent_data.get('data', {}).get('decompiled_code')
+            self._get_agent_data_safely(agent_data, 'security_analysis') or 
+            self._get_agent_data_safely(agent_data, 'vulnerability_assessment') or
+            self._get_agent_data_safely(agent_data, 'decompiled_code')
             for agent_data in agent_results.values()
-            if hasattr(agent_data, 'data') and agent_data.data
+            if agent_data
         )
         
         if analysis_available:
@@ -58,6 +58,16 @@ class Agent13_AgentJohnson(ReconstructionAgent):
         
         if not dependencies_met:
             self.logger.warning("No advanced analysis dependencies found - proceeding with basic security analysis")
+
+    def _get_agent_data_safely(self, agent_data: Any, key: str) -> Any:
+        """Safely get data from agent result, handling both dict and AgentResult objects"""
+        if hasattr(agent_data, 'data') and hasattr(agent_data.data, 'get'):
+            return agent_data.data.get(key)
+        elif hasattr(agent_data, 'get'):
+            data = agent_data.get('data', {})
+            if hasattr(data, 'get'):
+                return data.get(key)
+        return None
 
     def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute security analysis and vulnerability detection"""
@@ -178,15 +188,13 @@ class Agent13_AgentJohnson(ReconstructionAgent):
         source_code = {}
         
         # From Global Reconstructor (Agent 9)
-        if 9 in all_results and hasattr(all_results[9], 'data'):
-            global_data = all_results[9].data
-            if isinstance(global_data, dict):
-                reconstructed_source = global_data.get('reconstructed_source', {})
-                if isinstance(reconstructed_source, dict):
-                    source_files = reconstructed_source.get('source_files', {})
-                    header_files = reconstructed_source.get('header_files', {})
-                    source_code.update(source_files)
-                    source_code.update(header_files)
+        if 9 in all_results:
+            reconstructed_source = self._get_agent_data_safely(all_results[9], 'reconstructed_source')
+            if isinstance(reconstructed_source, dict):
+                source_files = reconstructed_source.get('source_files', {})
+                header_files = reconstructed_source.get('header_files', {})
+                source_code.update(source_files)
+                source_code.update(header_files)
         
         return source_code
 

@@ -232,6 +232,48 @@ class MatrixAgent(abc.ABC):
             metadata={'matrix_character': self.matrix_character.value}
         )
 
+    @staticmethod
+    def get_result_status(result: Any) -> str:
+        """Get status from result object regardless of type"""
+        if hasattr(result, 'status'):
+            status = result.status
+            # Convert enum to string if needed
+            if hasattr(status, 'value'):
+                return status.value
+            return str(status)
+        elif isinstance(result, dict):
+            return result.get('status', 'unknown')
+        else:
+            return 'unknown'
+
+    @staticmethod
+    def get_result_data(result: Any) -> Dict[str, Any]:
+        """Get data from result object regardless of type"""
+        if hasattr(result, 'data'):
+            return result.data if isinstance(result.data, dict) else {}
+        elif isinstance(result, dict):
+            return result.get('data', {})
+        else:
+            return {}
+
+    @staticmethod
+    def get_agent_data_safely(agent_data: Any, key: str) -> Any:
+        """Safely get data from agent result, handling both dict and AgentResult objects"""
+        if hasattr(agent_data, 'data'):
+            if isinstance(agent_data.data, dict):
+                return agent_data.data.get(key)
+        elif isinstance(agent_data, dict):
+            data = agent_data.get('data', {})
+            if isinstance(data, dict):
+                return data.get(key)
+        return None
+
+    @staticmethod
+    def is_agent_successful(result: Any) -> bool:
+        """Check if agent result indicates success"""
+        status = MatrixAgent.get_result_status(result)
+        return status in ['success', 'SUCCESS', AgentStatus.SUCCESS.value]
+
     def __str__(self) -> str:
         return f"{self.agent_name} ({self.matrix_character.value})"
 
