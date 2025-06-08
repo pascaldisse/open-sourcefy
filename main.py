@@ -32,10 +32,12 @@ try:
     from core.config_manager import get_config_manager
     from core.shared_utils import LoggingUtils, FileOperations, ValidationUtils
     MATRIX_AVAILABLE = True
+    CONFIG_MANAGER_AVAILABLE = True
 except ImportError as e:
     print(f"Matrix Phase 4 modules not available: {e}")
     print("Please ensure all Matrix components are properly installed.")
     MATRIX_AVAILABLE = False
+    CONFIG_MANAGER_AVAILABLE = False
 
 # Import agents
 try:
@@ -55,9 +57,9 @@ class MatrixCLIConfig:
     output_dir: Optional[str] = None
     
     # Pipeline configuration
-    pipeline_mode: PipelineMode = PipelineMode.FULL_PIPELINE
-    execution_mode: MatrixExecutionMode = MatrixExecutionMode.MASTER_FIRST_PARALLEL
-    resource_profile: MatrixResourceLimits = MatrixResourceLimits.STANDARD
+    pipeline_mode: str = "full_pipeline" if not MATRIX_AVAILABLE else PipelineMode.FULL_PIPELINE
+    execution_mode: str = "master_first_parallel" if not MATRIX_AVAILABLE else MatrixExecutionMode.MASTER_FIRST_PARALLEL
+    resource_profile: str = "standard" if not MATRIX_AVAILABLE else MatrixResourceLimits.STANDARD
     
     # Agent selection
     custom_agents: Optional[List[int]] = None

@@ -598,3 +598,171 @@ def get_performance_monitor() -> PerformanceMonitor:
 def get_error_handler() -> ErrorHandler:
     """Get global error handler instance"""
     return _error_handler
+
+
+class LoggingUtils:
+    """Utility class for logging operations"""
+    
+    @staticmethod
+    def setup_agent_logging(agent_id: int, agent_name: str, 
+                           log_level: int = logging.INFO) -> logging.Logger:
+        """Set up logging for an agent"""
+        logger_name = f"Agent{agent_id:02d}_{agent_name}"
+        logger = logging.getLogger(logger_name)
+        
+        if not logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter(
+                f'%(asctime)s - {logger_name} - %(levelname)s - %(message)s'
+            )
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+            logger.setLevel(log_level)
+        
+        return logger
+    
+    @staticmethod
+    def setup_file_logging(log_file: str, log_level: int = logging.INFO) -> logging.Logger:
+        """Set up file logging"""
+        logger = logging.getLogger("FileLogger")
+        
+        if not logger.handlers:
+            handler = logging.FileHandler(log_file)
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+            logger.setLevel(log_level)
+        
+        return logger
+
+
+class FileOperations:
+    """Utility class for file operations"""
+    
+    @staticmethod
+    def ensure_directory(directory: Union[str, Path]) -> Path:
+        """Ensure directory exists, create if it doesn't"""
+        dir_path = Path(directory)
+        dir_path.mkdir(parents=True, exist_ok=True)
+        return dir_path
+    
+    @staticmethod
+    def safe_read_file(file_path: Union[str, Path], 
+                      encoding: str = 'utf-8') -> Optional[str]:
+        """Safely read file contents"""
+        try:
+            with open(file_path, 'r', encoding=encoding) as f:
+                return f.read()
+        except Exception as e:
+            logging.error(f"Failed to read file {file_path}: {e}")
+            return None
+    
+    @staticmethod
+    def safe_write_file(file_path: Union[str, Path], content: str, 
+                       encoding: str = 'utf-8') -> bool:
+        """Safely write file contents"""
+        try:
+            file_path = Path(file_path)
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(file_path, 'w', encoding=encoding) as f:
+                f.write(content)
+            return True
+        except Exception as e:
+            logging.error(f"Failed to write file {file_path}: {e}")
+            return False
+    
+    @staticmethod
+    def get_file_size(file_path: Union[str, Path]) -> Optional[int]:
+        """Get file size in bytes"""
+        try:
+            return Path(file_path).stat().st_size
+        except Exception:
+            return None
+    
+    @staticmethod
+    def file_exists(file_path: Union[str, Path]) -> bool:
+        """Check if file exists"""
+        return Path(file_path).exists()
+
+
+class ValidationUtils:
+    """Utility class for validation operations"""
+    
+    @staticmethod
+    def validate_file_path(file_path: Union[str, Path]) -> bool:
+        """Validate if file path exists and is accessible"""
+        try:
+            path = Path(file_path)
+            return path.exists() and path.is_file()
+        except Exception:
+            return False
+    
+    @staticmethod
+    def validate_directory_path(dir_path: Union[str, Path]) -> bool:
+        """Validate if directory path exists and is accessible"""
+        try:
+            path = Path(dir_path)
+            return path.exists() and path.is_dir()
+        except Exception:
+            return False
+    
+    @staticmethod
+    def validate_agent_result(result: Any) -> bool:
+        """Validate agent result structure"""
+        if not hasattr(result, 'success'):
+            return False
+        if not isinstance(result.success, bool):
+            return False
+        return True
+    
+    @staticmethod
+    def validate_binary_format(file_path: Union[str, Path]) -> bool:
+        """Basic validation of binary file format"""
+        try:
+            path = Path(file_path)
+            if not path.exists():
+                return False
+            
+            # Check file size (should be reasonable for a binary)
+            size = path.stat().st_size
+            if size < 100 or size > 100 * 1024 * 1024:  # 100 bytes to 100MB
+                return False
+            
+            # Check if file is executable
+            with open(path, 'rb') as f:
+                header = f.read(4)
+                
+            # Check for common executable headers
+            pe_header = b'MZ'  # PE (Windows)
+            elf_header = b'\x7fELF'  # ELF (Linux)
+            macho_header = b'\xfe\xed\xfa'  # Mach-O (macOS)
+            
+            return (header.startswith(pe_header) or 
+                   header.startswith(elf_header) or 
+                   header.startswith(macho_header))
+        except Exception:
+            return False
+    
+    @staticmethod
+    def validate_config_dict(config: Dict[str, Any], 
+                           required_keys: List[str]) -> bool:
+        """Validate configuration dictionary"""
+        if not isinstance(config, dict):
+            return False
+        
+        for key in required_keys:
+            if key not in config:
+                return False
+        
+        return True
+    
+    @staticmethod
+    def validate_agent_id(agent_id: Any) -> bool:
+        """Validate agent ID"""
+        try:
+            return isinstance(agent_id, int) and 0 <= agent_id <= 50
+        except Exception:
+            return False

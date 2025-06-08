@@ -12,7 +12,7 @@ from enum import Enum
 from pathlib import Path
 
 from .config_manager import get_config_manager
-from .ai_enhancement import get_ai_engine
+from .ai_engine_interface import get_ai_engine
 
 
 class AgentStatus(Enum):

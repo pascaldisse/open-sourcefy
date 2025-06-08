@@ -83,17 +83,19 @@ class ProcessMetrics:
 class PerformanceMonitor:
     """Real-time performance monitoring for Open-Sourcefy operations"""
     
-    def __init__(self, sample_interval: float = 1.0, max_samples: int = 3600):
+    def __init__(self, agent_name: str = "unknown", sample_interval: float = 1.0, max_samples: int = 3600):
         """
         Initialize performance monitor
         
         Args:
+            agent_name: Name of the agent being monitored
             sample_interval: Seconds between samples
             max_samples: Maximum number of samples to keep in memory
         """
+        self.agent_name = agent_name
         self.sample_interval = sample_interval
         self.max_samples = max_samples
-        self.logger = logging.getLogger("PerformanceMonitor")
+        self.logger = logging.getLogger(f"PerformanceMonitor_{agent_name}")
         
         # Data storage
         self.system_metrics: List[PerformanceMetrics] = []
@@ -114,6 +116,10 @@ class PerformanceMonitor:
         
         # Baseline metrics for comparison
         self.baseline_metrics: Optional[PerformanceMetrics] = None
+        
+        # Operation tracking for Matrix agents
+        self.current_operation = None
+        self.operation_start_time = None
         
         if not PSUTIL_AVAILABLE:
             self.logger.warning("psutil not available - performance monitoring will be limited")
@@ -286,6 +292,26 @@ class PerformanceMonitor:
                 for key, value in updates.items():
                     if hasattr(process_metrics, key):
                         setattr(process_metrics, key, value)
+    
+    def start_operation(self, operation_name: str):
+        """Start tracking an operation (Matrix agent compatibility)"""
+        self.current_operation = operation_name
+        self.operation_start_time = time.time()
+        self.logger.info(f"Started operation: {operation_name}")
+    
+    def end_operation(self, operation_name: str):
+        """End tracking an operation (Matrix agent compatibility)"""
+        if self.current_operation == operation_name and self.operation_start_time:
+            duration = time.time() - self.operation_start_time
+            self.logger.info(f"Completed operation: {operation_name} in {duration:.2f}s")
+        self.current_operation = None
+        self.operation_start_time = None
+    
+    def get_execution_time(self) -> float:
+        """Get execution time of current operation (Matrix agent compatibility)"""
+        if self.operation_start_time:
+            return time.time() - self.operation_start_time
+        return 0.0
     
     def get_current_metrics(self) -> Optional[PerformanceMetrics]:
         """Get the most recent system metrics"""

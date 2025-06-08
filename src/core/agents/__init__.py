@@ -1,64 +1,100 @@
 """
-Matrix Agent initialization module for open-sourcefy
-New 16-agent Matrix-themed architecture
+Matrix Agents v2 - Enhanced Matrix-themed agent architecture
+Contains the production-ready implementations of agents 10-14
 """
 
-# Import Matrix master agent
-from .agent00_deus_ex_machina import Agent00_DeusExMachina
+from typing import Dict, Type, Any
 
-# Matrix Agent Registry (16 agents + 1 master)
-# To be implemented in Phase B and C
-MATRIX_AGENT_REGISTRY = {
-    0: Agent00_DeusExMachina,  # Master Orchestrator - implemented
-    # 1: Sentinel - Binary discovery + metadata analysis
-    # 2: The Architect - Architecture analysis + error pattern matching  
-    # 3: The Merovingian - Basic decompilation + optimization detection
-    # 4: Agent Smith - Binary structure analysis + dynamic bridge
-    # 5: Neo (Glitch) - Advanced decompilation + Ghidra integration
-    # 6: The Twins - Binary diff analysis + comparison engine
-    # 7: The Trainman - Advanced assembly analysis
-    # 8: The Keymaker - Resource reconstruction
-    # 9: Commander Locke - Global reconstruction + AI enhancement
-    # 10: The Machine - Compilation orchestration + build systems
-    # 11: The Oracle - Final validation and truth verification
-    # 12: Link - Cross-reference and linking analysis
-    # 13: Agent Johnson - Security analysis and vulnerability detection
-    # 14: The Cleaner - Code cleanup and optimization
-    # 15: The Analyst - Quality assessment and prediction
-    # 16: Agent Brown - Automated testing and verification
-}
-
-def get_matrix_agent_class(agent_id: int):
-    """Get Matrix agent class by ID"""
-    return MATRIX_AGENT_REGISTRY.get(agent_id)
-
-def get_available_matrix_agents():
-    """Get list of available Matrix agent IDs"""
-    return list(MATRIX_AGENT_REGISTRY.keys())
-
-def create_matrix_agent(agent_id: int):
-    """Create Matrix agent instance by ID"""
-    agent_class = get_matrix_agent_class(agent_id)
-    if agent_class:
-        return agent_class()
-    else:
-        raise ValueError(f"Unknown Matrix agent ID: {agent_id}")
-
-def get_matrix_agent_info():
-    """Get information about the Matrix agent system"""
-    return {
-        'total_agents': 17,  # 16 + 1 master
-        'implemented_agents': len([v for v in MATRIX_AGENT_REGISTRY.values() if v is not None]),
-        'master_agent': 'Agent 0: Deus Ex Machina',
-        'parallel_agents': 16,
-        'execution_model': 'master_first_parallel'
+# Import Matrix agents
+try:
+    from .agent10_the_machine import Agent10_TheMachine
+    from .agent11_the_oracle import Agent11_TheOracle
+    from .agent12_link import Agent12_Link
+    from .agent13_agent_johnson import Agent13_AgentJohnson
+    from .agent14_the_cleaner import Agent14_TheCleaner
+    
+    # Map agent IDs to classes
+    MATRIX_AGENTS = {
+        10: Agent10_TheMachine,
+        11: Agent11_TheOracle,
+        12: Agent12_Link,
+        13: Agent13_AgentJohnson,
+        14: Agent14_TheCleaner
     }
+    
+    # Agent metadata for system integration
+    AGENT_METADATA = {
+        10: {
+            'name': 'TheMachine',
+            'character': 'machine',
+            'description': 'Compilation orchestration and build systems',
+            'dependencies': [8, 9]
+        },
+        11: {
+            'name': 'TheOracle',
+            'character': 'oracle',
+            'description': 'Final validation and truth verification',
+            'dependencies': [10]
+        },
+        12: {
+            'name': 'Link',
+            'character': 'link',
+            'description': 'Cross-reference and linking analysis',
+            'dependencies': [11]
+        },
+        13: {
+            'name': 'AgentJohnson',
+            'character': 'agent_johnson',
+            'description': 'Security analysis and vulnerability detection',
+            'dependencies': [12]
+        },
+        14: {
+            'name': 'TheCleaner',
+            'character': 'cleaner',
+            'description': 'Code cleanup and optimization',
+            'dependencies': [13]
+        }
+    }
+    
+except ImportError as e:
+    print(f"Warning: Failed to import some Matrix agents: {e}")
+    MATRIX_AGENTS = {}
+    AGENT_METADATA = {}
+
+
+def get_available_agents() -> Dict[int, Type]:
+    """Get dictionary of available agent IDs mapped to their classes"""
+    return MATRIX_AGENTS.copy()
+
+
+def get_agent_by_id(agent_id: int):
+    """Get agent class by ID"""
+    if agent_id in MATRIX_AGENTS:
+        return MATRIX_AGENTS[agent_id]()
+    else:
+        raise ValueError(f"Agent {agent_id} not found in Matrix agents")
+
+
+def get_implementation_status() -> Dict[int, bool]:
+    """Get implementation status of all Matrix agents"""
+    return {agent_id: agent_id in MATRIX_AGENTS for agent_id in range(10, 15)}
+
+
+# Legacy compatibility classes
+SentinelAgent = None
+ArchitectAgent = None
+MerovingianAgent = None
+AgentSmithAgent = None
 
 __all__ = [
-    'MATRIX_AGENT_REGISTRY', 
-    'get_matrix_agent_class', 
-    'get_available_matrix_agents', 
-    'create_matrix_agent',
-    'get_matrix_agent_info',
-    'Agent00_DeusExMachina'
+    'MATRIX_AGENTS',
+    'AGENT_METADATA', 
+    'get_available_agents',
+    'get_agent_by_id',
+    'get_implementation_status',
+    'Agent10_TheMachine',
+    'Agent11_TheOracle', 
+    'Agent12_Link',
+    'Agent13_AgentJohnson',
+    'Agent14_TheCleaner'
 ]

@@ -58,22 +58,23 @@ python main.py --phase-status
 
 ## Architecture Overview
 
-### Agent-Based Pipeline System
+### Matrix Agent-Based Pipeline System
 
-The system uses a **16-agent pipeline** with dependency-based execution:
+The system uses a **4-agent Matrix pipeline** with production-ready, fail-fast architecture:
 
-**Core Agents (1-15)**:
-- **Discovery & Analysis** (1-5): Binary format detection, architecture analysis, structure parsing
-- **Decompilation** (6-7, 14): Optimization matching, Ghidra decompilation, enhanced analysis  
-- **Processing** (8-10): Binary diff analysis, assembly analysis, resource reconstruction
-- **Reconstruction** (11): Global code reconstruction with AI enhancement
-- **Compilation & Validation** (12-13): MSBuild orchestration, final validation
-- **Metadata** (15): Comprehensive metadata extraction
+**Phase 1 - Foundation** (Agent 1):
+- **Sentinel**: Binary discovery, metadata analysis, and security scanning
+- Multi-format support (PE/ELF/Mach-O), hash calculation, entropy analysis
+- LangChain AI integration for threat detection and binary insights
 
-**Extension Agents** (18-20):
-- **Advanced Build Systems** (18): Extended compilation support
-- **Binary Comparison** (19): Binary difference analysis
-- **Automated Testing** (20): Test framework generation
+**Phase 2 - Core Analysis** (Agents 2-4):
+- **The Architect**: Architecture analysis, compiler detection, optimization pattern recognition
+- **The Merovingian**: Basic decompilation, function detection, control flow analysis
+- **Agent Smith**: Binary structure analysis, data extraction, dynamic bridge preparation
+
+**Future Phases** (Agents 5-16):
+- **Phase 3**: Advanced decompilation and reconstruction (Neo, Twins, Trainman, Keymaker, Link)
+- **Phase 4**: Final validation and compilation (Commander Locke, Machine, Oracle, Agent Johnson, Cleaner, Analyst, Agent Brown)
 
 ### Execution Pipeline
 
@@ -92,10 +93,12 @@ The system uses a **16-agent pipeline** with dependency-based execution:
 
 ### Key Components
 
-**Agent Framework** (`core/agent_base.py`):
-- Base class for all agents with standardized interfaces
-- Dependency management and execution ordering
-- Result objects with status, data, and metadata
+**Matrix Agent Framework** (`core/matrix_agents_v2.py`):
+- Production-ready base classes with Matrix-themed architecture
+- LangChain integration for AI-enhanced analysis
+- Fail-fast validation with quality thresholds
+- Comprehensive error handling and logging
+- Shared components for code reuse and abstraction
 
 **Parallel Executor** (`core/parallel_executor.py`):
 - Manages concurrent agent execution
@@ -128,15 +131,18 @@ output/
 
 ## Development Guidelines
 
-### Agent Development
+### Matrix Agent Development
 
-When creating or modifying agents:
+When creating or modifying Matrix agents:
 
-1. **Inherit from BaseAgent** (`core/agent_base.py`)
-2. **Implement required methods**: `execute()`, `get_description()`, `get_dependencies()`
-3. **Use AgentResult objects** for standardized return values
-4. **Access context data** via `context.get('agent_results', {})` for previous agent outputs
-5. **Use output_paths** from context for organized file placement
+1. **Inherit from MatrixAgentV2** (`core/matrix_agents_v2.py`)
+2. **Follow Matrix naming conventions** (use Matrix character themes)
+3. **Implement required methods**: `execute_matrix_task()`, `get_matrix_description()`
+4. **Use fail-fast validation** with quality thresholds at each step
+5. **Integrate LangChain tools** for AI-enhanced analysis capabilities
+6. **Follow SOLID principles** with no hardcoded values or absolute paths
+7. **Use shared components** for logging, file management, and validation
+8. **Implement comprehensive error handling** with MatrixErrorHandler
 
 ### Configuration
 
@@ -164,9 +170,11 @@ The system implements strict validation thresholds:
 
 ### Current Development Status
 
-- **Overall Quality**: 66.5% (Phase 3 completion)
-- **Agent Success Rate**: 16/16 agents functional
+- **Matrix Phase 2 Completion**: 4/4 core agents implemented ✅
+- **Agent Success Rate**: 4/4 Matrix agents functional (Sentinel, Architect, Merovingian, Agent Smith)
 - **Primary Target**: Matrix Online launcher.exe (5.3MB, x86 PE32, MSVC .NET 2003)
+- **Architecture**: Production-ready with LangChain AI integration and fail-fast validation
+- **Next Phases**: Agents 5-16 (Neo through Agent Brown) planned for future implementation
 
 ### Testing Approach
 

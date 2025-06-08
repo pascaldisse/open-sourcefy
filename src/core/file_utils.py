@@ -569,3 +569,124 @@ def cleanup_empty_directories(root_dir: Union[str, Path]):
             except OSError:
                 # Directory not empty, continue
                 pass
+
+
+class OutputManager:
+    """Output management for agents and pipeline results"""
+    
+    def __init__(self, base_output_dir: Optional[Union[str, Path]] = None):
+        self.logger = logging.getLogger("OutputManager")
+        self.base_output_dir = Path(base_output_dir) if base_output_dir else Path.cwd() / "output"
+        self.file_manager = FileManager()
+        
+    def save_agent_output(self, agent_id: int, agent_name: str, 
+                         result_data: Dict[str, Any], output_paths: Dict[str, Path]):
+        """Save agent output to standardized location"""
+        try:
+            agents_dir = output_paths.get('agents', self.base_output_dir / 'agents')
+            agent_file = agents_dir / f"agent_{agent_id:02d}_{agent_name}.json"
+            
+            # Ensure directory exists
+            agent_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Save result data
+            with open(agent_file, 'w', encoding='utf-8') as f:
+                json.dump(result_data, f, indent=2, ensure_ascii=False, default=str)
+            
+            self.logger.debug(f"Saved agent {agent_id} output to {agent_file}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to save agent {agent_id} output: {e}")
+            raise
+    
+    def save_pipeline_report(self, report_data: Dict[str, Any], 
+                           output_paths: Dict[str, Path], report_name: str = "pipeline_report"):
+        """Save pipeline execution report"""
+        try:
+            reports_dir = output_paths.get('reports', self.base_output_dir / 'reports')
+            report_file = reports_dir / f"{report_name}.json"
+            
+            # Ensure directory exists
+            report_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Save report
+            with open(report_file, 'w', encoding='utf-8') as f:
+                json.dump(report_data, f, indent=2, ensure_ascii=False, default=str)
+            
+            self.logger.info(f"Saved pipeline report to {report_file}")
+            return report_file
+            
+        except Exception as e:
+            self.logger.error(f"Failed to save pipeline report: {e}")
+            raise
+    
+    def create_session_directory(self, session_id: str) -> Dict[str, Path]:
+        """Create session-specific output directory structure"""
+        session_dir = self.base_output_dir / session_id
+        return self.file_manager.ensure_output_structure(session_dir)
+
+
+class JsonManager:
+    """JSON management utilities for Matrix pipeline"""
+    
+    def __init__(self):
+        self.logger = logging.getLogger("JsonManager")
+        self.json_handler = JsonFileHandler()
+    
+    def load_agent_result(self, agent_id: int, output_paths: Dict[str, Path]) -> Optional[Dict[str, Any]]:
+        """Load agent result from output directory"""
+        try:
+            agents_dir = output_paths.get('agents')
+            if not agents_dir:
+                return None
+            
+            # Look for agent result file
+            pattern = f"agent_{agent_id:02d}_*.json"
+            result_files = list(agents_dir.glob(pattern))
+            
+            if result_files:
+                return self.json_handler.read_json(result_files[0])
+            else:
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Failed to load agent {agent_id} result: {e}")
+            return None
+    
+    def save_metadata(self, metadata: Dict[str, Any], output_paths: Dict[str, Path], 
+                     filename: str = "metadata.json"):
+        """Save metadata to output directory"""
+        try:
+            reports_dir = output_paths.get('reports')
+            if reports_dir:
+                metadata_file = reports_dir / filename
+                self.json_handler.write_json(metadata_file, metadata)
+                self.logger.debug(f"Saved metadata to {metadata_file}")
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save metadata: {e}")
+            raise
+    
+    def load_configuration(self, config_path: Union[str, Path]) -> Dict[str, Any]:
+        """Load configuration from JSON file"""
+        try:
+            return self.json_handler.read_json(config_path)
+        except Exception as e:
+            self.logger.error(f"Failed to load configuration from {config_path}: {e}")
+            return {}
+    
+    def save_analysis_results(self, results: Dict[str, Any], output_paths: Dict[str, Path], 
+                            analysis_type: str):
+        """Save analysis results with proper naming"""
+        try:
+            reports_dir = output_paths.get('reports')
+            if reports_dir:
+                filename = f"{analysis_type}_analysis.json"
+                result_file = reports_dir / filename
+                self.json_handler.write_json(result_file, results)
+                self.logger.info(f"Saved {analysis_type} analysis to {result_file}")
+                return result_file
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save {analysis_type} analysis: {e}")
+            raise

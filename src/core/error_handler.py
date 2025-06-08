@@ -626,6 +626,43 @@ class ErrorHandlingContext:
         return False
 
 
+# Matrix-specific error handler for agents
+class MatrixErrorHandler:
+    """Matrix-themed error handler for Matrix agents"""
+    
+    def __init__(self, agent_name: str, max_retries: int = 3):
+        self.agent_name = agent_name
+        self.max_retries = max_retries
+        self.error_handler = get_error_handler()
+        self.logger = logging.getLogger(f"Matrix.{agent_name}")
+        
+    def handle_matrix_operation(self, operation_name: str):
+        """Context manager for Matrix operations"""
+        return ErrorHandlingContext(
+            f"{self.agent_name}_{operation_name}",
+            severity=ErrorSeverity.MEDIUM,
+            category=ErrorCategory.AGENT,
+            reraise=True
+        )
+    
+    def handle_agent_error(self, exception: Exception, context_data: Optional[Dict[str, Any]] = None) -> ErrorRecord:
+        """Handle agent-specific errors"""
+        if context_data is None:
+            context_data = {}
+        
+        context_data.update({
+            'agent_name': self.agent_name,
+            'matrix_operation': True
+        })
+        
+        return self.error_handler.handle_error(
+            exception,
+            severity=ErrorSeverity.HIGH,
+            category=ErrorCategory.AGENT,
+            context_data=context_data
+        )
+
+
 if __name__ == "__main__":
     # Test error handling system
     handler = EnhancedErrorHandler()

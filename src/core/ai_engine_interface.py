@@ -524,3 +524,8 @@ def get_conversation_manager() -> AIConversationManager:
     if _conversation_manager is None:
         _conversation_manager = AIConversationManager()
     return _conversation_manager
+
+
+def get_ai_engine() -> AIEngineManager:
+    """Get global AI engine manager (alias for get_ai_manager)"""
+    return get_ai_manager()

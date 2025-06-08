@@ -71,6 +71,7 @@ class BinaryInfo:
         self.is_64bit: bool = False
         self.is_packed: bool = False
         self.compiler_info: Optional[str] = None
+        self.confidence_score: float = 0.8  # Default confidence for binary analysis
 
 
 class BinaryAnalyzer:

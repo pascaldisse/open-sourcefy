@@ -1090,3 +1090,20 @@ class AIEnhancementCoordinator:
             insights.append(f"Variable naming confidence: {avg_confidence:.1%}")
         
         return insights
+
+
+class AICodeEnhancer:
+    """AI-powered code enhancement for Matrix agents"""
+    
+    def __init__(self, config):
+        self.config = config
+        self.logger = logging.getLogger("AICodeEnhancer")
+        self.coordinator = AIEnhancementCoordinator()
+    
+    def enhance_code(self, code_data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhance code using AI capabilities"""
+        try:
+            return self.coordinator.enhance_analysis(code_data, context)
+        except Exception as e:
+            self.logger.error(f"Code enhancement failed: {e}")
+            return {'error': str(e), 'enhanced': False}

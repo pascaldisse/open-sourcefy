@@ -415,10 +415,10 @@ class BinaryBehaviorTester:
     def run_comparison_test(self, original_binary: str, reconstructed_binary: str) -> Dict[str, Any]:
         """Run complete behavior comparison test suite"""
         if self.verbose:
-            print(f"Starting behavior comparison test...")
-            print(f"Original binary: {original_binary}")
-            print(f"Reconstructed binary: {reconstructed_binary}")
-            print(f"Test cases: {len(self.test_cases)}")
+            self.logger.info(f"Starting behavior comparison test...")
+            self.logger.info(f"Original binary: {original_binary}")
+            self.logger.info(f"Reconstructed binary: {reconstructed_binary}")
+            self.logger.info(f"Test cases: {len(self.test_cases)}")
         
         # Validate binaries exist
         if not Path(original_binary).exists():
@@ -434,7 +434,7 @@ class BinaryBehaviorTester:
         
         for i, test_case in enumerate(self.test_cases):
             if self.verbose:
-                print(f"Running test {i+1}/{len(self.test_cases)}: {test_case.name}")
+                self.logger.debug(f"Running test {i+1}/{len(self.test_cases)}: {test_case.name}")
             
             # Execute original binary
             original_result = self.execute_binary(original_binary, test_case)
@@ -447,8 +447,8 @@ class BinaryBehaviorTester:
             self.results.append(comparison)
             
             if self.verbose:
-                print(f"  Result: {comparison.comparison_result.value} (similarity: {comparison.similarity_score:.2f})")
-                print(f"  Details: {comparison.details}")
+                self.logger.debug(f"  Result: {comparison.comparison_result.value} (similarity: {comparison.similarity_score:.2f})")
+                self.logger.debug(f"  Details: {comparison.details}")
         
         # Generate summary report
         return self._generate_report()
