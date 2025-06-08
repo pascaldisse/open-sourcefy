@@ -29,10 +29,9 @@ import struct
 from collections import defaultdict
 
 # Matrix framework imports
-from ..agent_base import BaseAgent, AgentResult, AgentStatus
+from ..matrix_agents import AnalysisAgent, AgentResult, AgentStatus, MatrixCharacter
 from ..config_manager import ConfigManager
-from ..performance_monitor import PerformanceMonitor
-from ..error_handler import MatrixErrorHandler
+from ..shared_components import MatrixErrorHandler
 
 # AI enhancement imports
 try:
@@ -85,7 +84,7 @@ class TwinsAnalysisResult:
     twins_synchronization: Optional[Dict[str, Any]] = None
 
 
-class Agent6_Twins_BinaryDiff(BaseAgent):
+class Agent6_Twins_BinaryDiff(AnalysisAgent):
     """
     Agent 6: The Twins - Binary Diff Analysis and Comparison Engine
     
@@ -105,12 +104,9 @@ class Agent6_Twins_BinaryDiff(BaseAgent):
     def __init__(self):
         super().__init__(
             agent_id=6,
-            name="Twins_BinaryDiff",
+            matrix_character=MatrixCharacter.TWINS,
             dependencies=[1, 2, 5]  # Depends on Binary Discovery, Arch Analysis, and Neo's decompilation
         )
-        
-        # Initialize configuration
-        self.config = ConfigManager()
         
         # Load Twins-specific configuration
         self.similarity_threshold = self.config.get_value('agents.agent_06.similarity_threshold', 0.7)
@@ -119,7 +115,6 @@ class Agent6_Twins_BinaryDiff(BaseAgent):
         self.enable_deep_analysis = self.config.get_value('agents.agent_06.deep_analysis', True)
         
         # Initialize components
-        self.performance_monitor = PerformanceMonitor("Twins_Agent")
         self.error_handler = MatrixErrorHandler("Twins", max_retries=2)
         
         # Initialize AI components if available
@@ -209,7 +204,7 @@ class Agent6_Twins_BinaryDiff(BaseAgent):
             self.logger.error(f"Failed to setup Twins AI agent: {e}")
             self.ai_enabled = False
 
-    def execute(self, context: Dict[str, Any]) -> AgentResult:
+    def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute The Twins' binary diff analysis with dual-state comparison
         
@@ -220,7 +215,7 @@ class Agent6_Twins_BinaryDiff(BaseAgent):
         4. Use AI to interpret significance of differences
         5. Synchronize findings between twin perspectives
         """
-        self.performance_monitor.start_operation("twins_binary_diff")
+        start_time = time.time()
         
         try:
             # Validate prerequisites - The Twins need the foundation
@@ -286,7 +281,7 @@ class Agent6_Twins_BinaryDiff(BaseAgent):
             if output_paths:
                 self._save_twins_results(twins_result, output_paths)
             
-            self.performance_monitor.end_operation("twins_binary_diff")
+            execution_time = time.time() - start_time
             
             return AgentResult(
                 agent_id=self.agent_id,
@@ -323,13 +318,13 @@ class Agent6_Twins_BinaryDiff(BaseAgent):
                     'comparison_levels': len(self.comparison_algorithms),
                     'differences_found': len(twins_result.binary_differences),
                     'ai_enabled': self.ai_enabled,
-                    'execution_time': self.performance_monitor.get_execution_time(),
+                    'execution_time': execution_time,
                     'similarity_achieved': similarity_metrics.overall_confidence >= self.similarity_threshold
                 }
             )
             
         except Exception as e:
-            self.performance_monitor.end_operation("twins_binary_diff")
+            execution_time = time.time() - start_time
             error_msg = f"The Twins' binary diff analysis failed: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             

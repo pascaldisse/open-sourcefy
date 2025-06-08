@@ -17,7 +17,7 @@ from .ai_engine_interface import (
 )
 
 # Matrix Agent Framework
-from .matrix_agents_v2 import MatrixAgentV2, AgentResult, AgentStatus, MatrixCharacter
+from .matrix_agents import MatrixAgent, AgentResult, AgentStatus, MatrixCharacter
 
 __version__ = "2.0.0-matrix"
 __author__ = "Open-Sourcefy Matrix Team"
@@ -41,5 +41,5 @@ __all__ = [
     "MatrixPromptLibrary", "get_ai_manager", "get_conversation_manager",
     
     # Agent Framework
-    "MatrixAgentV2", "AgentResult", "AgentStatus", "MatrixCharacter"
+    "MatrixAgent", "AgentResult", "AgentStatus", "MatrixCharacter"
 ]

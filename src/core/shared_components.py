@@ -393,6 +393,40 @@ class SharedAnalysisTools:
                     })
         
         return sorted(patterns, key=lambda x: x['occurrences'], reverse=True)
+    
+    @staticmethod
+    def extract_strings(binary_path: Path, min_length: int = 4, max_strings: int = 1000) -> List[str]:
+        """Extract printable strings from binary file"""
+        import string
+        
+        try:
+            with open(binary_path, 'rb') as f:
+                data = f.read()
+            
+            strings = []
+            current_string = ""
+            printable_chars = set(string.printable) - set(string.whitespace) | {' ', '\t'}
+            
+            for byte in data:
+                char = chr(byte) if byte < 128 else None
+                
+                if char and char in printable_chars:
+                    current_string += char
+                else:
+                    if len(current_string) >= min_length:
+                        strings.append(current_string)
+                        if len(strings) >= max_strings:
+                            break
+                    current_string = ""
+            
+            # Don't forget the last string
+            if len(current_string) >= min_length:
+                strings.append(current_string)
+            
+            return strings
+            
+        except Exception as e:
+            return []
 
 
 class SharedValidationTools:

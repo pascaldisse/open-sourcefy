@@ -22,9 +22,9 @@ from dataclasses import dataclass
 import tempfile
 
 # Matrix framework imports
-from ..agent_base import BaseAgent, AgentResult, AgentStatus
+from ..matrix_agents import ValidationAgent, AgentResult, AgentStatus, MatrixCharacter
 from ..config_manager import ConfigManager
-from ..performance_monitor import PerformanceMonitor
+from ..shared_utils import PerformanceMonitor
 from ..error_handler import MatrixErrorHandler
 
 # AI enhancement imports
@@ -78,7 +78,7 @@ class AgentBrownResult:
     agent_brown_insights: Optional[Dict[str, Any]] = None
 
 
-class Agent16_AgentBrown(BaseAgent):
+class Agent16_AgentBrown(ValidationAgent):
     """
     Agent 16: Agent Brown - Final Quality Assurance and Optimization
     
@@ -98,8 +98,8 @@ class Agent16_AgentBrown(BaseAgent):
     def __init__(self):
         super().__init__(
             agent_id=16,
-            name="AgentBrown_QualityAssurance",
-            dependencies=[1, 2, 5, 10, 11, 13, 14, 15]  # Depends on most pipeline outputs
+            matrix_character=MatrixCharacter.AGENT_BROWN,
+            dependencies=[14, 15]  # Final validation
         )
         
         # Initialize configuration
@@ -198,7 +198,7 @@ class Agent16_AgentBrown(BaseAgent):
             self.logger.error(f"Failed to setup Agent Brown AI: {e}")
             self.ai_enabled = False
 
-    def execute(self, context: Dict[str, Any]) -> AgentResult:
+    def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute Agent Brown's final quality assurance and optimization
         

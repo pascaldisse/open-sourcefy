@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Matrix framework imports
 try:
-    from ..matrix_agents_v2 import AnalysisAgent, MatrixCharacter, AgentStatus
+    from ..matrix_agents import ReconstructionAgent, MatrixCharacter, AgentStatus
     from ..shared_components import (
         MatrixLogger, MatrixFileManager, MatrixValidator, MatrixProgressTracker, 
         MatrixErrorHandler, MatrixMetrics, SharedAnalysisTools, SharedValidationTools
@@ -29,7 +29,7 @@ except ImportError:
     HAS_MATRIX_FRAMEWORK = False
 
 # Standard agent framework imports
-from ..matrix_agents_v2 import AgentResult, AgentStatus as StandardAgentStatus
+from ..matrix_agents import AgentResult, AgentStatus as StandardAgentStatus
 
 
 @dataclass
@@ -166,7 +166,9 @@ class CommanderLockeAgent:
             
             return AgentResult(
                 agent_id=self.agent_id,
-                status=StandardAgentStatus.COMPLETED,
+                agent_name=self.name,
+                matrix_character=self.character if isinstance(self.character, str) else self.character.value,
+                status=StandardAgentStatus.SUCCESS,
                 data={
                     'reconstruction_result': final_result,
                     'source_files': final_result.source_files,
@@ -935,6 +937,8 @@ EndGlobal
         """Create failure result"""
         return AgentResult(
             agent_id=self.agent_id,
+            agent_name=self.name,
+            matrix_character=self.character if isinstance(self.character, str) else self.character.value,
             status=StandardAgentStatus.FAILED,
             data={
                 'reconstruction_result': ReconstructionResult()

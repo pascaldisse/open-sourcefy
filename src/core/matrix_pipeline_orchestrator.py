@@ -138,11 +138,11 @@ class MatrixPipelineOrchestrator:
             return self.config.custom_agents
             
         mode_agents = {
-            PipelineMode.FULL_PIPELINE: list(range(1, 21)),  # All agents 1-20
+            PipelineMode.FULL_PIPELINE: list(range(1, 17)),  # All agents 1-16
             PipelineMode.DECOMPILE_ONLY: [1, 2, 5, 7, 14],
             PipelineMode.ANALYZE_ONLY: [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 15],
-            PipelineMode.COMPILE_ONLY: [1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18],
-            PipelineMode.VALIDATE_ONLY: [1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 19],
+            PipelineMode.COMPILE_ONLY: [1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            PipelineMode.VALIDATE_ONLY: [1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
             PipelineMode.CUSTOM_AGENTS: self.config.custom_agents or []
         }
         
@@ -269,7 +269,7 @@ class MatrixPipelineOrchestrator:
                 )
                 agent_results[agent_id] = result
                 
-                from .matrix_agents_v2 import AgentStatus
+                from .matrix_agents import AgentStatus
                 if result.status == AgentStatus.SUCCESS:
                     completed_count += 1
                     self.logger.info(f"✅ Agent {agent_id} completed successfully")
@@ -295,12 +295,26 @@ class MatrixPipelineOrchestrator:
             from .agents import get_agent_by_id
             agent = get_agent_by_id(agent_id)
             
-            # Prepare agent context
+            # Prepare agent context with unified structure
             agent_context = {
                 **self.global_context,
                 'agent_id': agent_id,
                 'agent_results': self.agent_results.copy(),
-                'pipeline_config': self.config
+                'pipeline_config': self.config,
+                # Initialize shared_memory if not present
+                'shared_memory': self.global_context.get('shared_memory', {
+                    'binary_metadata': {},
+                    'analysis_results': {},
+                    'decompilation_data': {},
+                    'reconstruction_info': {},
+                    'validation_status': {}
+                }),
+                # Add global_data alias for agents that expect it
+                'global_data': {
+                    'binary_path': self.global_context.get('binary_path'),
+                    'output_dir': self.global_context.get('output_dir'),
+                    'output_paths': self.global_context.get('output_paths', {})
+                }
             }
             
             return agent.execute(agent_context)
@@ -311,7 +325,7 @@ class MatrixPipelineOrchestrator:
     
     def _create_timeout_result(self, agent_id: int):
         """Create timeout result for agent"""
-        from .matrix_agents_v2 import AgentResult, AgentStatus
+        from .matrix_agents import AgentResult, AgentStatus
         return AgentResult(
             agent_id=agent_id,
             agent_name=f"Agent{agent_id:02d}",
@@ -323,7 +337,7 @@ class MatrixPipelineOrchestrator:
     
     def _create_error_result(self, agent_id: int, error_msg: str):
         """Create error result for agent"""
-        from .matrix_agents_v2 import AgentResult, AgentStatus
+        from .matrix_agents import AgentResult, AgentStatus
         return AgentResult(
             agent_id=agent_id,
             agent_name=f"Agent{agent_id:02d}",

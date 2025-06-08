@@ -28,7 +28,7 @@ import re
 import time
 
 # Matrix framework imports
-from ..matrix_agents_v2 import MatrixAgentV2, AgentResult, AgentStatus, MatrixCharacter
+from ..matrix_agents import DecompilerAgent, AgentResult, AgentStatus, MatrixCharacter
 from ..config_manager import ConfigManager
 from ..ghidra_headless import GhidraHeadless
 from ..shared_utils import LoggingUtils
@@ -75,7 +75,7 @@ class NeoAnalysisResult:
     matrix_annotations: Optional[Dict[str, Any]] = None
 
 
-class Agent5_Neo_AdvancedDecompiler(MatrixAgentV2):
+class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
     """
     Agent 5: Neo (Glitch) - Advanced Decompilation and Ghidra Integration
     

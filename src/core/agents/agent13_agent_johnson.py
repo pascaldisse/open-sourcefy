@@ -9,20 +9,20 @@ import json
 import hashlib
 from typing import Dict, Any, List, Set, Tuple, Optional
 from pathlib import Path
-from ..agent_base import BaseAgent, AgentResult, AgentStatus
+from ..matrix_agents import ReconstructionAgent, AgentResult, AgentStatus, MatrixCharacter
 
 
-class Agent13_AgentJohnson(BaseAgent):
+class Agent13_AgentJohnson(ReconstructionAgent):
     """Agent 13: Agent Johnson - Security analysis and vulnerability detection"""
     
     def __init__(self):
         super().__init__(
             agent_id=13,
-            name="AgentJohnson",
-            dependencies=[12]  # Depends on Link
+            matrix_character=MatrixCharacter.AGENT_JOHNSON,
+            dependencies=[5, 6, 7, 8]  # Depends on Phase B agents
         )
 
-    def execute(self, context: Dict[str, Any]) -> AgentResult:
+    def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute security analysis and vulnerability detection"""
         link_result = context['agent_results'].get(12)
         

@@ -32,10 +32,9 @@ import mimetypes
 from collections import defaultdict
 
 # Matrix framework imports
-from ..agent_base import BaseAgent, AgentResult, AgentStatus
+from ..matrix_agents import ReconstructionAgent, AgentResult, AgentStatus, MatrixCharacter
 from ..config_manager import ConfigManager
-from ..performance_monitor import PerformanceMonitor
-from ..error_handler import MatrixErrorHandler
+from ..shared_components import MatrixErrorHandler
 
 # AI enhancement imports
 try:
@@ -103,7 +102,7 @@ class KeymakerAnalysisResult:
     keymaker_doors: Optional[Dict[str, Any]] = None
 
 
-class Agent8_Keymaker_ResourceReconstruction(BaseAgent):
+class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
     """
     Agent 8: The Keymaker - Resource Reconstruction
     
@@ -125,12 +124,9 @@ class Agent8_Keymaker_ResourceReconstruction(BaseAgent):
     def __init__(self):
         super().__init__(
             agent_id=8,
-            name="Keymaker_ResourceReconstruction",
+            matrix_character=MatrixCharacter.KEYMAKER,
             dependencies=[1, 2, 5, 7]  # Depends on Binary Discovery, Arch Analysis, Neo's decompilation, and Trainman's assembly analysis
         )
-        
-        # Initialize configuration
-        self.config = ConfigManager()
         
         # Load Keymaker-specific configuration
         self.min_string_length = self.config.get_value('agents.agent_08.min_string_length', 4)
@@ -139,7 +135,6 @@ class Agent8_Keymaker_ResourceReconstruction(BaseAgent):
         self.enable_deep_extraction = self.config.get_value('agents.agent_08.deep_extraction', True)
         
         # Initialize components
-        self.performance_monitor = PerformanceMonitor("Keymaker_Agent")
         self.error_handler = MatrixErrorHandler("Keymaker", max_retries=2)
         
         # Initialize AI components if available
@@ -253,7 +248,7 @@ class Agent8_Keymaker_ResourceReconstruction(BaseAgent):
             self.logger.error(f"Failed to setup Keymaker AI agent: {e}")
             self.ai_enabled = False
 
-    def execute(self, context: Dict[str, Any]) -> AgentResult:
+    def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute The Keymaker's resource reconstruction process
         
@@ -266,7 +261,7 @@ class Agent8_Keymaker_ResourceReconstruction(BaseAgent):
         6. Validate resource integrity and completeness
         7. Generate AI-enhanced insights about resource organization
         """
-        self.performance_monitor.start_operation("keymaker_resource_reconstruction")
+        start_time = time.time()
         
         try:
             # Validate prerequisites - The Keymaker needs the foundation
@@ -350,7 +345,7 @@ class Agent8_Keymaker_ResourceReconstruction(BaseAgent):
             if output_paths:
                 self._save_keymaker_results(keymaker_result, output_paths)
             
-            self.performance_monitor.end_operation("keymaker_resource_reconstruction")
+            execution_time = time.time() - start_time
             
             return AgentResult(
                 agent_id=self.agent_id,
@@ -413,13 +408,13 @@ class Agent8_Keymaker_ResourceReconstruction(BaseAgent):
                     'doors_created': len(keymaker_result.keymaker_doors) if keymaker_result.keymaker_doors else 0,
                     'resources_extracted': sum(len(cat.items) for cat in keymaker_result.resource_categories),
                     'ai_enabled': self.ai_enabled,
-                    'execution_time': self.performance_monitor.get_execution_time(),
+                    'execution_time': execution_time,
                     'reconstruction_complete': quality_metrics.overall_quality >= 0.7
                 }
             )
             
         except Exception as e:
-            self.performance_monitor.end_operation("keymaker_resource_reconstruction")
+            execution_time = time.time() - start_time
             error_msg = f"The Keymaker's resource reconstruction failed: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             

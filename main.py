@@ -34,15 +34,22 @@ try:
     MATRIX_AVAILABLE = True
     CONFIG_MANAGER_AVAILABLE = True
 except ImportError as e:
+    # Create dummy classes for missing components
+    class MatrixResourceLimits:
+        pass
+    class PipelineMode:
+        FULL_PIPELINE = "full_pipeline"
+    class MatrixExecutionMode:
+        MASTER_FIRST_PARALLEL = "master_first_parallel"
     print(f"Matrix Phase 4 modules not available: {e}")
-    print("Please ensure all Matrix components are properly installed.")
+    print("Using fallback mode for agent imports.")
     MATRIX_AVAILABLE = False
     CONFIG_MANAGER_AVAILABLE = False
 
 # Import agents
 try:
     from core.agents import create_all_agents, get_available_agents
-    from core.matrix_agents_v2 import MatrixAgentV2
+    from core.matrix_agents import MatrixAgent
     AGENTS_AVAILABLE = True
 except ImportError as e:
     print(f"Agent modules not available: {e}")
@@ -595,7 +602,7 @@ Usage Examples:
         print(f"Output Directory: {output_dir}")
         print(f"Pipeline Mode: {config.pipeline_mode.value}")
         print(f"Execution Mode: {config.execution_mode.value}")
-        print(f"Resource Profile: {config.resource_profile.value}")
+        print(f"Resource Profile: {args.resource_profile}")
         print(f"Max Parallel Agents: {config.max_parallel_agents}")
         print(f"Agent Timeout: {config.timeout_agent}s")
         print(f"Master Timeout: {config.timeout_master}s")

@@ -57,7 +57,7 @@ class AgentResult:
     error_message: Optional[str] = None
 
 
-class MatrixAgentV2(abc.ABC):
+class MatrixAgent(abc.ABC):
     """Enhanced base class for all Matrix agents with reduced boilerplate"""
     
     def __init__(self, agent_id: int, matrix_character: MatrixCharacter, dependencies: List[int] = None):
@@ -230,7 +230,7 @@ class MatrixAgentV2(abc.ABC):
         return f"<MatrixAgent(id={self.agent_id}, character={self.matrix_character.value}, status={self.status.value})>"
 
 
-class AnalysisAgent(MatrixAgentV2):
+class AnalysisAgent(MatrixAgent):
     """Base class for analysis-focused agents (Phase B: Agents 1-8)"""
     
     def __init__(self, agent_id: int, matrix_character: MatrixCharacter, dependencies: List[int] = None):
@@ -244,7 +244,7 @@ class AnalysisAgent(MatrixAgentV2):
         return keys
 
 
-class DecompilerAgent(MatrixAgentV2):
+class DecompilerAgent(MatrixAgent):
     """Base class for decompilation-focused agents"""
     
     def __init__(self, agent_id: int, matrix_character: MatrixCharacter, dependencies: List[int] = None):
@@ -256,7 +256,7 @@ class DecompilerAgent(MatrixAgentV2):
         self.quality_threshold = self.config.get_value('decompilation.quality_threshold', 0.7)
 
 
-class ReconstructionAgent(MatrixAgentV2):
+class ReconstructionAgent(MatrixAgent):
     """Base class for reconstruction-focused agents (Phase C: Agents 9-16)"""
     
     def __init__(self, agent_id: int, matrix_character: MatrixCharacter, dependencies: List[int] = None):
@@ -264,7 +264,7 @@ class ReconstructionAgent(MatrixAgentV2):
         self.reconstruction_type = "advanced"
 
 
-class ValidationAgent(MatrixAgentV2):
+class ValidationAgent(MatrixAgent):
     """Base class for validation and testing agents"""
     
     def __init__(self, agent_id: int, matrix_character: MatrixCharacter, dependencies: List[int] = None):

@@ -9,20 +9,20 @@ import json
 import ast
 from typing import Dict, Any, List, Set, Tuple, Optional
 from pathlib import Path
-from ..agent_base import BaseAgent, AgentResult, AgentStatus
+from ..matrix_agents import ReconstructionAgent, AgentResult, AgentStatus, MatrixCharacter
 
 
-class Agent14_TheCleaner(BaseAgent):
+class Agent14_TheCleaner(ReconstructionAgent):
     """Agent 14: The Cleaner - Code cleanup and optimization"""
     
     def __init__(self):
         super().__init__(
             agent_id=14,
-            name="TheCleaner",
-            dependencies=[13]  # Depends on Agent Johnson
+            matrix_character=MatrixCharacter.CLEANER,
+            dependencies=[9, 10, 11]  # Depends on early Phase C agents
         )
 
-    def execute(self, context: Dict[str, Any]) -> AgentResult:
+    def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute code cleanup and optimization"""
         johnson_result = context['agent_results'].get(13)
         

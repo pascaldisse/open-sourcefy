@@ -14,7 +14,7 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
 # Matrix framework imports
-from ..matrix_agents_v2 import MatrixAgentV2, MatrixCharacter, AgentStatus, AgentResult
+from ..matrix_agents import MatrixAgent, MatrixCharacter, AgentStatus, AgentResult
 from ..shared_components import MatrixLogger, MatrixFileManager, MatrixValidator
 from ..exceptions import MatrixAgentError, ValidationError
 from ..config_manager import get_config_manager
@@ -37,7 +37,7 @@ class MasterAgentResult:
     error: Optional[str]
 
 
-class DeusExMachinaAgent(MatrixAgentV2):
+class DeusExMachinaAgent(MatrixAgent):
     """
     Master orchestrator that guides the entire Matrix pipeline execution.
     Coordinates all 16 agents to transform binary into source code.
@@ -136,7 +136,7 @@ class DeusExMachinaAgent(MatrixAgentV2):
     
     def _organize_agent_batches(self, selected_agents: List[int]) -> List[List[int]]:
         """Organize agents into batches based on dependencies"""
-        # Matrix dependency structure from matrix_agents_v2.py
+        # Matrix dependency structure from matrix_agents.py
         MATRIX_DEPENDENCIES = {
             1: [],                    # Sentinel - Entry point
             2: [1],                   # Architect - Depends on Sentinel

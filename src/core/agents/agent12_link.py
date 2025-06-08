@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Matrix framework imports
 try:
-    from ..matrix_agents_v2 import AnalysisAgent, MatrixCharacter, AgentStatus
+    from ..matrix_agents import ReconstructionAgent, MatrixCharacter, AgentStatus
     from ..shared_components import (
         MatrixLogger, MatrixFileManager, MatrixValidator, MatrixProgressTracker, 
         MatrixErrorHandler, MatrixMetrics, SharedAnalysisTools, SharedValidationTools
@@ -61,7 +61,7 @@ class CommunicationChannel:
     data_format: str = "json"
 
 
-class Agent12_Link:
+class Agent12_Link(ReconstructionAgent):
     """
     Agent 12: Link - Communications Bridge & Integration Controller
     
@@ -74,9 +74,11 @@ class Agent12_Link:
     """
     
     def __init__(self):
-        self.agent_id = 12
-        self.name = "Link"
-        self.character = MatrixCharacter.LINK if HAS_MATRIX_FRAMEWORK else "link"
+        super().__init__(
+            agent_id=12,
+            matrix_character=MatrixCharacter.LINK,
+            dependencies=[5, 6, 7, 8]  # Based on MATRIX_DEPENDENCIES
+        )
         
         # Core components
         self.logger = self._setup_logging()

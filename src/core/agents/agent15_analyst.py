@@ -21,9 +21,9 @@ from dataclasses import dataclass
 from collections import defaultdict
 
 # Matrix framework imports
-from ..agent_base import BaseAgent, AgentResult, AgentStatus
+from ..matrix_agents import ReconstructionAgent, AgentResult, AgentStatus, MatrixCharacter
 from ..config_manager import ConfigManager
-from ..performance_monitor import PerformanceMonitor
+from ..shared_utils import PerformanceMonitor
 from ..error_handler import MatrixErrorHandler
 
 # AI enhancement imports
@@ -65,7 +65,7 @@ class AnalystResult:
     analyst_insights: Optional[Dict[str, Any]] = None
 
 
-class Agent15_Analyst(BaseAgent):
+class Agent15_Analyst(ReconstructionAgent):
     """
     Agent 15: The Analyst - Advanced Metadata Analysis and Intelligence
     
@@ -85,8 +85,8 @@ class Agent15_Analyst(BaseAgent):
     def __init__(self):
         super().__init__(
             agent_id=15,
-            name="Analyst",
-            dependencies=[1, 2, 5, 7, 8, 10, 11, 12, 13, 14]  # Depends on most previous agents
+            matrix_character=MatrixCharacter.ANALYST,
+            dependencies=[9, 10, 11]  # Depends on early Phase C agents
         )
         
         # Initialize configuration
@@ -176,7 +176,7 @@ class Agent15_Analyst(BaseAgent):
             self.logger.error(f"Failed to setup Analyst AI agent: {e}")
             self.ai_enabled = False
 
-    def execute(self, context: Dict[str, Any]) -> AgentResult:
+    def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute The Analyst's comprehensive metadata analysis
         

@@ -29,10 +29,9 @@ import time
 from collections import defaultdict, Counter
 
 # Matrix framework imports
-from ..agent_base import BaseAgent, AgentResult, AgentStatus
+from ..matrix_agents import AnalysisAgent, AgentResult, AgentStatus, MatrixCharacter
 from ..config_manager import ConfigManager
-from ..performance_monitor import PerformanceMonitor
-from ..error_handler import MatrixErrorHandler
+from ..shared_components import MatrixErrorHandler
 
 # AI enhancement imports
 try:
@@ -96,7 +95,7 @@ class TrainmanAnalysisResult:
     trainman_insights: Optional[Dict[str, Any]] = None
 
 
-class Agent7_Trainman_AssemblyAnalysis(BaseAgent):
+class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
     """
     Agent 7: The Trainman - Advanced Assembly Analysis
     
@@ -117,12 +116,9 @@ class Agent7_Trainman_AssemblyAnalysis(BaseAgent):
     def __init__(self):
         super().__init__(
             agent_id=7,
-            name="Trainman_AssemblyAnalysis",
+            matrix_character=MatrixCharacter.TRAINMAN,
             dependencies=[1, 2, 5]  # Depends on Binary Discovery, Arch Analysis, and Neo's decompilation
         )
-        
-        # Initialize configuration
-        self.config = ConfigManager()
         
         # Load Trainman-specific configuration
         self.analysis_depth = self.config.get_value('agents.agent_07.analysis_depth', 'deep')
@@ -131,7 +127,6 @@ class Agent7_Trainman_AssemblyAnalysis(BaseAgent):
         self.max_instructions_analyzed = self.config.get_value('agents.agent_07.max_instructions', 50000)
         
         # Initialize components
-        self.performance_monitor = PerformanceMonitor("Trainman_Agent")
         self.error_handler = MatrixErrorHandler("Trainman", max_retries=2)
         
         # Initialize AI components if available
@@ -247,7 +242,7 @@ class Agent7_Trainman_AssemblyAnalysis(BaseAgent):
             self.logger.error(f"Failed to setup Trainman AI agent: {e}")
             self.ai_enabled = False
 
-    def execute(self, context: Dict[str, Any]) -> AgentResult:
+    def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute The Trainman's advanced assembly analysis
         
@@ -260,7 +255,7 @@ class Agent7_Trainman_AssemblyAnalysis(BaseAgent):
         6. Identify performance and security characteristics
         7. Apply AI insights for pattern interpretation
         """
-        self.performance_monitor.start_operation("trainman_assembly_analysis")
+        start_time = time.time()
         
         try:
             # Validate prerequisites - The Trainman needs the foundation
@@ -349,7 +344,7 @@ class Agent7_Trainman_AssemblyAnalysis(BaseAgent):
             if output_paths:
                 self._save_trainman_results(trainman_result, output_paths)
             
-            self.performance_monitor.end_operation("trainman_assembly_analysis")
+            execution_time = time.time() - start_time
             
             return AgentResult(
                 agent_id=self.agent_id,
@@ -397,13 +392,13 @@ class Agent7_Trainman_AssemblyAnalysis(BaseAgent):
                     'patterns_detected': len(trainman_result.instruction_patterns),
                     'calling_conventions_found': len(trainman_result.calling_conventions),
                     'ai_enabled': self.ai_enabled,
-                    'execution_time': self.performance_monitor.get_execution_time(),
+                    'execution_time': execution_time,
                     'station_status': 'analysis_complete'
                 }
             )
             
         except Exception as e:
-            self.performance_monitor.end_operation("trainman_assembly_analysis")
+            execution_time = time.time() - start_time
             error_msg = f"The Trainman's assembly analysis failed: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             

@@ -10,20 +10,20 @@ import tempfile
 import shutil
 from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
-from ..agent_base import BaseAgent, AgentResult, AgentStatus
+from ..matrix_agents import ReconstructionAgent, AgentResult, AgentStatus, MatrixCharacter
 
 
-class Agent10_TheMachine(BaseAgent):
+class Agent10_TheMachine(ReconstructionAgent):
     """Agent 10: The Machine - Compilation orchestration and build systems"""
     
     def __init__(self):
         super().__init__(
             agent_id=10,
-            name="TheMachine",
-            dependencies=[8, 9]  # Depends on resource reconstruction and assembly analysis
+            matrix_character=MatrixCharacter.MACHINE,
+            dependencies=[9]  # Depends on Commander Locke (agent 9)
         )
 
-    def execute(self, context: Dict[str, Any]) -> AgentResult:
+    def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute compilation orchestration"""
         # Gather dependencies - can work with partial results
         agent8_result = context['agent_results'].get(8)  # Resource reconstruction

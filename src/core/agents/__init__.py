@@ -44,6 +44,27 @@ try:
 except ImportError as e:
     failed_imports.append(f"Agent 5 (Neo): {e}")
 
+# Agent 6: Twins
+try:
+    from .agent06_twins_binary_diff import Agent6_Twins_BinaryDiff
+    MATRIX_AGENTS[6] = Agent6_Twins_BinaryDiff
+except ImportError as e:
+    failed_imports.append(f"Agent 6 (Twins): {e}")
+
+# Agent 7: Trainman
+try:
+    from .agent07_trainman_assembly_analysis import Agent7_Trainman_AssemblyAnalysis
+    MATRIX_AGENTS[7] = Agent7_Trainman_AssemblyAnalysis
+except ImportError as e:
+    failed_imports.append(f"Agent 7 (Trainman): {e}")
+
+# Agent 8: Keymaker
+try:
+    from .agent08_keymaker_resource_reconstruction import Agent8_Keymaker_ResourceReconstruction
+    MATRIX_AGENTS[8] = Agent8_Keymaker_ResourceReconstruction
+except ImportError as e:
+    failed_imports.append(f"Agent 8 (Keymaker): {e}")
+
 # Agent 9: Commander Locke  
 try:
     from .agent09_commander_locke import CommanderLockeAgent
@@ -51,12 +72,54 @@ try:
 except ImportError as e:
     failed_imports.append(f"Agent 9 (Commander Locke): {e}")
 
+# Agent 10: The Machine
+try:
+    from .agent10_the_machine import Agent10_TheMachine
+    MATRIX_AGENTS[10] = Agent10_TheMachine
+except ImportError as e:
+    failed_imports.append(f"Agent 10 (The Machine): {e}")
+
+# Agent 11: The Oracle
+try:
+    from .agent11_the_oracle import Agent11_TheOracle
+    MATRIX_AGENTS[11] = Agent11_TheOracle
+except ImportError as e:
+    failed_imports.append(f"Agent 11 (The Oracle): {e}")
+
 # Agent 12: Link
 try:
     from .agent12_link import Agent12_Link
     MATRIX_AGENTS[12] = Agent12_Link
 except ImportError as e:
     failed_imports.append(f"Agent 12 (Link): {e}")
+
+# Agent 13: Agent Johnson
+try:
+    from .agent13_agent_johnson import Agent13_AgentJohnson
+    MATRIX_AGENTS[13] = Agent13_AgentJohnson
+except ImportError as e:
+    failed_imports.append(f"Agent 13 (Agent Johnson): {e}")
+
+# Agent 14: The Cleaner
+try:
+    from .agent14_the_cleaner import Agent14_TheCleaner
+    MATRIX_AGENTS[14] = Agent14_TheCleaner
+except ImportError as e:
+    failed_imports.append(f"Agent 14 (The Cleaner): {e}")
+
+# Agent 15: Analyst
+try:
+    from .agent15_analyst import Agent15_Analyst
+    MATRIX_AGENTS[15] = Agent15_Analyst
+except ImportError as e:
+    failed_imports.append(f"Agent 15 (Analyst): {e}")
+
+# Agent 16: Agent Brown
+try:
+    from .agent16_agent_brown import Agent16_AgentBrown
+    MATRIX_AGENTS[16] = Agent16_AgentBrown
+except ImportError as e:
+    failed_imports.append(f"Agent 16 (Agent Brown): {e}")
 
 # Report failed imports
 if failed_imports:
@@ -108,6 +171,30 @@ if 5 in MATRIX_AGENTS:
         'dependencies': [2, 3, 4]
     }
 
+if 6 in MATRIX_AGENTS:
+    AGENT_METADATA[6] = {
+        'name': 'Twins',
+        'character': 'twins',
+        'description': 'Binary differential analysis and comparison',
+        'dependencies': [1, 2, 5]
+    }
+
+if 7 in MATRIX_AGENTS:
+    AGENT_METADATA[7] = {
+        'name': 'Trainman',
+        'character': 'trainman',
+        'description': 'Advanced assembly analysis and transportation',
+        'dependencies': [1, 2, 5]
+    }
+
+if 8 in MATRIX_AGENTS:
+    AGENT_METADATA[8] = {
+        'name': 'Keymaker',
+        'character': 'keymaker',
+        'description': 'Resource reconstruction and access management',
+        'dependencies': [1, 2, 5, 6, 7]
+    }
+
 if 9 in MATRIX_AGENTS:
     AGENT_METADATA[9] = {
         'name': 'CommanderLocke',
@@ -116,12 +203,60 @@ if 9 in MATRIX_AGENTS:
         'dependencies': [1, 2, 3, 4, 5]
     }
 
+if 10 in MATRIX_AGENTS:
+    AGENT_METADATA[10] = {
+        'name': 'TheMachine',
+        'character': 'the_machine',
+        'description': 'Compilation orchestration and build systems',
+        'dependencies': [5, 6, 7, 8]
+    }
+
+if 11 in MATRIX_AGENTS:
+    AGENT_METADATA[11] = {
+        'name': 'TheOracle',
+        'character': 'the_oracle',
+        'description': 'Final validation and truth verification',
+        'dependencies': [9, 10]
+    }
+
 if 12 in MATRIX_AGENTS:
     AGENT_METADATA[12] = {
         'name': 'Link',
         'character': 'link',
         'description': 'Cross-reference and linking analysis',
         'dependencies': [1, 2]
+    }
+
+if 13 in MATRIX_AGENTS:
+    AGENT_METADATA[13] = {
+        'name': 'AgentJohnson',
+        'character': 'agent_johnson',
+        'description': 'Security analysis and vulnerability detection',
+        'dependencies': [5, 6, 7, 8]
+    }
+
+if 14 in MATRIX_AGENTS:
+    AGENT_METADATA[14] = {
+        'name': 'TheCleaner',
+        'character': 'the_cleaner',
+        'description': 'Code cleanup and optimization',
+        'dependencies': [9, 10, 11]
+    }
+
+if 15 in MATRIX_AGENTS:
+    AGENT_METADATA[15] = {
+        'name': 'Analyst',
+        'character': 'analyst',
+        'description': 'Advanced metadata analysis and intelligence synthesis',
+        'dependencies': [9, 10, 11]
+    }
+
+if 16 in MATRIX_AGENTS:
+    AGENT_METADATA[16] = {
+        'name': 'AgentBrown',
+        'character': 'agent_brown',
+        'description': 'Final quality assurance and optimization',
+        'dependencies': [14, 15]
     }
 
 
@@ -140,7 +275,7 @@ def get_agent_by_id(agent_id: int):
 
 def get_implementation_status() -> Dict[int, bool]:
     """Get implementation status of all Matrix agents"""
-    return {agent_id: agent_id in MATRIX_AGENTS for agent_id in range(1, 17)}
+    return {agent_id: agent_id in MATRIX_AGENTS for agent_id in range(1, 21)}
 
 
 def create_all_agents():
@@ -183,7 +318,25 @@ if 4 in MATRIX_AGENTS:
     __all__.append('AgentSmithAgent')
 if 5 in MATRIX_AGENTS:
     __all__.append('NeoAgent')
+if 6 in MATRIX_AGENTS:
+    __all__.append('Agent6_Twins_BinaryDiff')
+if 7 in MATRIX_AGENTS:
+    __all__.append('Agent7_Trainman_AssemblyAnalysis')
+if 8 in MATRIX_AGENTS:
+    __all__.append('Agent8_Keymaker_ResourceReconstruction')
 if 9 in MATRIX_AGENTS:
     __all__.append('CommanderLockeAgent')
+if 10 in MATRIX_AGENTS:
+    __all__.append('Agent10_TheMachine')
+if 11 in MATRIX_AGENTS:
+    __all__.append('Agent11_TheOracle')
 if 12 in MATRIX_AGENTS:
     __all__.append('Agent12_Link')
+if 13 in MATRIX_AGENTS:
+    __all__.append('Agent13_AgentJohnson')
+if 14 in MATRIX_AGENTS:
+    __all__.append('Agent14_TheCleaner')
+if 15 in MATRIX_AGENTS:
+    __all__.append('Agent15_Analyst')
+if 16 in MATRIX_AGENTS:
+    __all__.append('Agent16_AgentBrown')

@@ -10,20 +10,20 @@ import subprocess
 import tempfile
 from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
-from ..agent_base import BaseAgent, AgentResult, AgentStatus
+from ..matrix_agents import ValidationAgent, AgentResult, AgentStatus, MatrixCharacter
 
 
-class Agent11_TheOracle(BaseAgent):
+class Agent11_TheOracle(ValidationAgent):
     """Agent 11: The Oracle - Final validation and truth verification"""
     
     def __init__(self):
         super().__init__(
             agent_id=11,
-            name="TheOracle",
+            matrix_character=MatrixCharacter.ORACLE,
             dependencies=[10]  # Depends on The Machine (compilation)
         )
 
-    def execute(self, context: Dict[str, Any]) -> AgentResult:
+    def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute final validation and truth verification"""
         machine_result = context['agent_results'].get(10)
         

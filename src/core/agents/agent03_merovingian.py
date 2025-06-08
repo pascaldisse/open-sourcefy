@@ -13,7 +13,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 
 # Matrix framework imports
-from ..matrix_agents_v2 import DecompilerAgent, MatrixCharacter, AgentStatus
+from ..matrix_agents import DecompilerAgent, MatrixCharacter, AgentStatus
 from ..shared_components import (
     MatrixLogger, MatrixFileManager, MatrixValidator, MatrixProgressTracker, 
     MatrixErrorHandler, MatrixMetrics, SharedAnalysisTools, SharedValidationTools
