@@ -163,6 +163,39 @@ class BuildSystemManager:
     def get_msbuild_path(self) -> str:
         """Get MSBuild path - ALWAYS VS2022 Preview"""
         return self.build_config.msbuild_path
+
+    def _find_rc_compiler(self) -> Optional[str]:
+        """Find Windows Resource Compiler (rc.exe) in VS2022 installation"""
+        try:
+            # rc.exe is typically in the same directory as cl.exe
+            vc_tools_base = "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.44.35207"
+            
+            # Try x64 host tools first
+            rc_x64 = f"{vc_tools_base}/bin/Hostx64/x64/rc.exe"
+            if Path(rc_x64).exists():
+                return rc_x64
+            
+            # Try x86 host tools
+            rc_x86 = f"{vc_tools_base}/bin/Hostx86/x86/rc.exe"
+            if Path(rc_x86).exists():
+                return rc_x86
+            
+            # Try Windows SDK location (alternative)
+            sdk_paths = [
+                "/mnt/c/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/rc.exe",
+                "/mnt/c/Program Files (x86)/Windows Kits/10/bin/10.0.19041.0/x64/rc.exe"
+            ]
+            
+            for sdk_rc in sdk_paths:
+                if Path(sdk_rc).exists():
+                    return sdk_rc
+            
+            self.logger.warning("Resource compiler (rc.exe) not found in VS2022 installation")
+            return None
+            
+        except Exception as e:
+            self.logger.error(f"Error finding resource compiler: {e}")
+            return None
     
     def get_include_dirs(self) -> List[str]:
         """Get all include directories"""
@@ -309,7 +342,26 @@ class BuildSystemManager:
             
             # Convert paths to Windows format for MSBuild
             win_msbuild_path = self._convert_wsl_path_to_windows(msbuild_path)
+            
+            # CRITICAL FIX: Ensure project_file is absolute before conversion
+            if not os.path.isabs(str(project_file)):
+                abs_project_file = os.path.abspath(str(project_file))
+                self.logger.info(f"🔧 Converting relative to absolute: {project_file} → {abs_project_file}")
+                project_file = Path(abs_project_file)
+            
             win_project_path = self._convert_wsl_path_to_windows(str(project_file))
+            
+            # DEBUG: Check if project file actually exists
+            project_exists = os.path.exists(project_file)
+            self.logger.info(f"🔍 DEBUG: Project file exists: {project_exists} at {project_file}")
+            self.logger.info(f"🔍 DEBUG: WSL project path: {project_file}")
+            self.logger.info(f"🔍 DEBUG: Windows project path: {win_project_path}")
+            
+            # Additional validation
+            if not project_exists:
+                error_msg = f"Project file does not exist at WSL path: {project_file}"
+                self.logger.error(error_msg)
+                return False, error_msg
             
             # Execute MSBuild directly from WSL using the WSL path
             cmd = [

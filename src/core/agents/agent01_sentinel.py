@@ -24,7 +24,7 @@ from ..shared_components import (
 from ..exceptions import MatrixAgentError, ValidationError, ConfigurationError, BinaryAnalysisError
 
 # AI imports using centralized AI system
-from ..ai_system import ai_available, ai_request
+from ..ai_system import ai_available
 
 # LangChain imports (conditional)
 try:
@@ -666,9 +666,10 @@ Provide:
 4. Recommendations for further analysis
 """
             
-            # Use working AI pattern with timeout - ai_request_safe has 10s timeout
-            from ..ai_system import ai_request_safe
-            ai_content = ai_request_safe(prompt, system_prompt)
+            # Use AI system with proper timeout handling
+            from ..ai_system import ai_analyze
+            ai_response = ai_analyze(prompt, system_prompt)
+            ai_content = ai_response.content if ai_response.success else None
             
             if ai_content:
                 return {
@@ -678,10 +679,11 @@ Provide:
                     'ai_provider': 'claude_code'
                 }
             else:
-                self.logger.warning("AI analysis timeout or failed - no response received")
+                error_msg = ai_response.error if ai_response.error else "AI request failed or timeout"
+                self.logger.warning(f"AI analysis failed: {error_msg}")
                 return {
                     'ai_enabled': False, 
-                    'ai_error': "AI request timeout or no response",
+                    'ai_error': error_msg,
                     'ai_provider': 'claude_code'
                 }
         except Exception as e:

@@ -902,13 +902,13 @@ class Agent11_TheOracle(ValidationAgent):
         completed_agents = sum(1 for agent_id in expected_agents 
                              if agent_id in all_results and 
                              hasattr(all_results[agent_id], 'status') and
-                             all_results[agent_id].status == AgentStatus.COMPLETED)
+                             all_results[agent_id].status == AgentStatus.SUCCESS)
         
         validation['pipeline_completeness'] = completed_agents / len(expected_agents)
         validation['missing_components'] = [agent_id for agent_id in expected_agents 
                                           if agent_id not in all_results or
                                           not hasattr(all_results[agent_id], 'status') or
-                                          all_results[agent_id].status != AgentStatus.COMPLETED]
+                                          all_results[agent_id].status != AgentStatus.SUCCESS]
         
         # Analyze data completeness
         validation['data_completeness'] = self._analyze_data_completeness(all_results)
@@ -1461,7 +1461,7 @@ class Agent11_TheOracle(ValidationAgent):
         for agent_id in expected_components:
             if agent_id in all_results:
                 result = all_results[agent_id]
-                if hasattr(result, 'status') and result.status == AgentStatus.COMPLETED:
+                if hasattr(result, 'status') and result.status == AgentStatus.SUCCESS:
                     score = self._calculate_component_score(agent_id, result)
                     component_scores[agent_id] = score
                 else:

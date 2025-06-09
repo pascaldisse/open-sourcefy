@@ -221,6 +221,68 @@ class SemanticDecompiler:
         
         return result
     
+    def analyze_binary(self, ghidra_results: Dict[str, Any], 
+                      binary_info: Dict[str, Any], 
+                      arch_info: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Bridge method for Neo agent integration - performs semantic decompilation
+        
+        Args:
+            ghidra_results: Raw Ghidra analysis output
+            binary_info: Binary metadata from Sentinel agent
+            arch_info: Architecture information from Architect agent
+            
+        Returns:
+            Semantic analysis results compatible with Neo agent expectations
+        """
+        self.logger.info("Neo requesting semantic binary analysis...")
+        
+        # Prepare binary metadata for semantic analysis
+        binary_metadata = {
+            'format': binary_info.get('format', 'unknown'),
+            'architecture': arch_info.get('architecture', 'unknown'),
+            'bitness': arch_info.get('bitness', 32),
+            'entry_point': binary_info.get('entry_point', 0),
+            'compiler': arch_info.get('compiler', 'unknown')
+        }
+        
+        # Perform semantic decompilation
+        semantic_results = self.decompile_semantically(ghidra_results, binary_metadata)
+        
+        # Convert results to format expected by Neo agent
+        neo_compatible_results = {
+            'functions': semantic_results.get('semantic_functions', []),
+            'structures': semantic_results.get('semantic_structures', []),
+            'reconstructed_code': semantic_results.get('reconstructed_code', ''),
+            'quality_score': semantic_results.get('decompilation_quality', 0.0),
+            'is_true_reconstruction': semantic_results.get('is_true_decompilation', False),
+            'advanced_signatures': ghidra_results.get('advanced_signatures', {}),
+            'confidence': self._calculate_overall_confidence(semantic_results),
+            'semantic_analysis_available': True,
+            'semantic_analysis_status': 'enabled',
+            'validation_results': semantic_results.get('validation_results', {}),
+            'advanced_type_analysis': semantic_results.get('advanced_type_analysis', {}),
+            'advanced_structure_analysis': semantic_results.get('advanced_structure_analysis', {})
+        }
+        
+        self.logger.info(f"Semantic analysis complete - quality: {neo_compatible_results['quality_score']:.2f}, confidence: {neo_compatible_results['confidence']:.2f}")
+        
+        return neo_compatible_results
+    
+    def _calculate_overall_confidence(self, semantic_results: Dict[str, Any]) -> float:
+        """Calculate overall confidence from semantic analysis results"""
+        validation = semantic_results.get('validation_results', {})
+        quality = semantic_results.get('decompilation_quality', 0.0)
+        
+        # Base confidence on validation and quality
+        confidence = (quality + validation.get('quality_score', 0.0)) / 2.0
+        
+        # Boost confidence if truly semantic
+        if validation.get('is_semantic', False):
+            confidence = min(confidence * 1.2, 1.0)
+            
+        return confidence
+    
     def _analyze_functions_semantically(self, ghidra_results: Dict[str, Any]) -> List[SemanticFunction]:
         """Analyze functions for semantic meaning with advanced signature recovery"""
         functions = ghidra_results.get('functions', [])

@@ -154,7 +154,7 @@ class Agent16_AgentBrown(ValidationAgent):
         6. Generate final recommendations
         7. Determine production readiness
         """
-        self.performance_monitor.start_operation("agent_brown_qa")
+        operation_metrics = self.performance_monitor.start_operation("agent_brown_qa")
         
         try:
             # Validate prerequisites
@@ -220,7 +220,7 @@ class Agent16_AgentBrown(ValidationAgent):
             if output_paths:
                 self._save_agent_brown_results(agent_brown_result, output_paths)
             
-            self.performance_monitor.end_operation("agent_brown_qa")
+            self.performance_monitor.end_operation(operation_metrics)
             
             # Return dict from execute_matrix_task - base class will wrap in AgentResult
             return {
@@ -252,7 +252,7 @@ class Agent16_AgentBrown(ValidationAgent):
             }
             
         except Exception as e:
-            self.performance_monitor.end_operation("agent_brown_qa")
+            self.performance_monitor.end_operation(operation_metrics)
             error_msg = f"Agent Brown's quality assurance failed: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             
@@ -261,10 +261,10 @@ class Agent16_AgentBrown(ValidationAgent):
 
     def _validate_agent_brown_prerequisites(self, context: Dict[str, Any]) -> None:
         """Validate that Agent Brown has necessary data for final validation"""
-        required_agents = [1, 2, 5]  # Minimum required agents
+        required_agents = [14, 15]  # Final validation agents (Cleaner, Analyst)
         for agent_id in required_agents:
             agent_result = context['agent_results'].get(agent_id)
-            if not agent_result or agent_result.status != AgentStatus.COMPLETED:
+            if not agent_result or agent_result.status != AgentStatus.SUCCESS:
                 raise ValueError(f"Agent {agent_id} dependency not satisfied for Agent Brown")
 
     def _collect_pipeline_data(self, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -281,7 +281,7 @@ class Agent16_AgentBrown(ValidationAgent):
         
         # Collect outputs from all completed agents
         for agent_id, result in agent_results.items():
-            if result.status == AgentStatus.COMPLETED:
+            if result.status == AgentStatus.SUCCESS:
                 pipeline_data['agent_outputs'][agent_id] = result.data
                 
                 # Extract specific data types

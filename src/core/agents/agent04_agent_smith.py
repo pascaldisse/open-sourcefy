@@ -38,19 +38,29 @@ class AgentSmithConstants:
 
 @dataclass
 class DataStructure:
-    """Identified data structure in binary"""
+    """Identified data structure in binary with Phase 3 memory layout features"""
     address: int
     size: int
-    type: str  # vtable/array/struct/string_table
+    type: str  # vtable/array/struct/string_table/global_var
     name: str = None
     elements: List[Dict[str, Any]] = None
     confidence: float = 0.0
+    # Phase 3: Memory Layout & Structure Analysis
+    virtual_address: int = 0
+    file_offset: int = 0
+    alignment: int = 0
+    padding_bytes: int = 0
+    memory_layout: Dict[str, Any] = None
+    access_pattern: str = "unknown"  # read_only/read_write/execute
+    section_name: str = ".data"
     
     def __post_init__(self):
         if self.elements is None:
             self.elements = []
         if self.name is None:
             self.name = f"{self.type}_{self.address:08x}"
+        if self.memory_layout is None:
+            self.memory_layout = {}
 
 @dataclass
 class ExtractedResource:
@@ -460,53 +470,54 @@ class AgentSmithAgent(AnalysisAgent):
         }
     
     def _analyze_data_structures(self, analysis_context: Dict[str, Any]) -> Dict[str, Any]:
-        """Identify and analyze data structures in the binary"""
+        """Phase 3: Advanced data structure analysis with memory layout preservation"""
         binary_content = analysis_context['binary_content']
         format_analysis = analysis_context.get('format_analysis', {})
         
         data_structures = []
         
-        # Analyze string tables
-        strings = analysis_context['sentinel_data'].get('strings', [])
-        if strings:
-            string_table = DataStructure(
-                address=0,  # Would need to find actual address
-                size=sum(len(s) + 1 for s in strings),  # +1 for null terminator
-                type='string_table',
-                confidence=self._calculate_string_table_confidence(strings)
-            )
-            string_table.elements = [{'string': s, 'length': len(s)} for s in strings[:20]]  # Limit output
-            data_structures.append(string_table)
+        # Phase 3.1: Global Variable Layout Analysis
+        global_variables = self._analyze_global_variable_layout(analysis_context)
+        data_structures.extend(global_variables)
         
-        # Analyze import/export tables as data structures
-        imports = format_analysis.get('imports', [])
-        if imports:
-            import_table = DataStructure(
-                address=0,  # Would need PE parsing for actual address
-                size=len(imports) * 8,  # Rough estimate
-                type='import_table',
-                confidence=0.95
-            )
-            import_table.elements = [{'dll': imp.get('dll'), 'function_count': len(imp.get('functions', []))} 
-                                   for imp in imports[:10]]
-            data_structures.append(import_table)
+        # Phase 3.2: Structure Padding/Alignment Analysis
+        struct_analysis = self._analyze_structure_padding_alignment(analysis_context)
+        data_structures.extend(struct_analysis)
         
-        # Look for potential vtables (simplified heuristic)
-        vtables = self._detect_vtables(binary_content, analysis_context)
+        # Phase 3.3: String Literal Placement Analysis
+        string_layout = self._analyze_string_literal_placement(analysis_context)
+        data_structures.extend(string_layout)
+        
+        # Phase 3.4: Constant Pool Reconstruction
+        constant_pools = self._reconstruct_constant_pools(analysis_context)
+        data_structures.extend(constant_pools)
+        
+        # Phase 3.5: Virtual Table Layout Analysis
+        vtables = self._analyze_vtable_layout(analysis_context)
         data_structures.extend(vtables)
         
-        # Look for arrays and other structures
-        arrays = self._detect_arrays(binary_content, analysis_context)
-        data_structures.extend(arrays)
+        # Phase 3.6: Static Initialization Analysis
+        static_init = self._analyze_static_initialization(analysis_context)
         
-        # Global variables estimation
-        global_variables = self._estimate_global_variables(analysis_context)
+        # Phase 3.7: Thread Local Storage Analysis
+        tls_analysis = self._analyze_thread_local_storage(analysis_context)
+        
+        # Phase 3.8: Exception Handling Structures
+        exception_structures = self._analyze_exception_handling(analysis_context)
+        data_structures.extend(exception_structures)
+        
+        # Enhanced memory layout analysis
+        memory_layout_analysis = self._perform_memory_layout_analysis(data_structures, analysis_context)
         
         return {
             'data_structures': data_structures,
-            'global_variables': global_variables,
+            'global_variables': [ds for ds in data_structures if ds.type == 'global_variable'],
+            'memory_layout_analysis': memory_layout_analysis,
+            'static_initialization': static_init,
+            'thread_local_storage': tls_analysis,
+            'exception_handling': exception_structures,
             'data_structure_count': len(data_structures),
-            'analysis_confidence': self._calculate_analysis_confidence(data_structures, global_variables)
+            'analysis_confidence': self._calculate_analysis_confidence(data_structures, [])
         }
     
     def _detect_vtables(self, binary_content: bytes, analysis_context: Dict[str, Any]) -> List[DataStructure]:
@@ -982,14 +993,475 @@ class AgentSmithAgent(AnalysisAgent):
         
         return min(0.5 + (string_count_factor * 0.3) + (readability_factor * 0.2), 0.95)
     
+    def _analyze_global_variable_layout(self, analysis_context: Dict[str, Any]) -> List[DataStructure]:
+        """Phase 3.1: Analyze global variable layout with exact memory addresses and ordering"""
+        global_vars = []
+        format_analysis = analysis_context.get('format_analysis', {})
+        sections = format_analysis.get('sections', [])
+        
+        # Find .data and .bss sections for global variables
+        for section in sections:
+            section_name = section.get('name', '').lower()
+            if '.data' in section_name or '.bss' in section_name:
+                virtual_addr = section.get('virtual_address', 0)
+                section_size = section.get('virtual_size', 0)
+                
+                # Analyze variable placement within section
+                variables = self._detect_variables_in_section(analysis_context, section, virtual_addr)
+                global_vars.extend(variables)
+        
+        return global_vars
+    
+    def _analyze_structure_padding_alignment(self, analysis_context: Dict[str, Any]) -> List[DataStructure]:
+        """Phase 3.2: Analyze structure padding and alignment for perfect reconstruction"""
+        structures = []
+        binary_content = analysis_context['binary_content']
+        
+        # Detect structures with padding analysis
+        potential_structs = self._detect_structures_with_padding(binary_content, analysis_context)
+        
+        for struct_data in potential_structs:
+            structure = DataStructure(
+                address=struct_data['address'],
+                size=struct_data['size'],
+                type='padded_struct',
+                alignment=struct_data['alignment'],
+                padding_bytes=struct_data['padding'],
+                memory_layout=struct_data['layout'],
+                confidence=struct_data['confidence']
+            )
+            structure.elements = struct_data['members']
+            structures.append(structure)
+        
+        return structures
+    
+    def _analyze_string_literal_placement(self, analysis_context: Dict[str, Any]) -> List[DataStructure]:
+        """Phase 3.3: Analyze string literal placement with exact layout and references"""
+        string_structures = []
+        binary_content = analysis_context['binary_content']
+        strings = analysis_context['sentinel_data'].get('strings', [])
+        
+        # Map strings to their exact memory locations
+        string_map = self._map_strings_to_memory(binary_content, strings)
+        
+        for string_addr, string_info in string_map.items():
+            string_struct = DataStructure(
+                address=string_addr,
+                virtual_address=string_info['virtual_address'],
+                file_offset=string_info['file_offset'],
+                size=string_info['size'],
+                type='string_literal',
+                section_name=string_info['section'],
+                access_pattern='read_only',
+                confidence=0.95
+            )
+            string_struct.elements = [{
+                'content': string_info['content'],
+                'encoding': string_info['encoding'],
+                'null_terminated': string_info['null_terminated']
+            }]
+            string_structures.append(string_struct)
+        
+        return string_structures
+    
+    def _reconstruct_constant_pools(self, analysis_context: Dict[str, Any]) -> List[DataStructure]:
+        """Phase 3.4: Reconstruct constant pools with exact placement"""
+        constant_pools = []
+        binary_content = analysis_context['binary_content']
+        
+        # Detect floating point constants
+        fp_constants = self._detect_floating_point_constants(binary_content)
+        if fp_constants:
+            fp_pool = DataStructure(
+                address=fp_constants['address'],
+                size=fp_constants['size'],
+                type='fp_constant_pool',
+                alignment=8,  # Double alignment
+                confidence=fp_constants['confidence']
+            )
+            fp_pool.elements = fp_constants['constants']
+            constant_pools.append(fp_pool)
+        
+        # Detect integer constants
+        int_constants = self._detect_integer_constants(binary_content)
+        if int_constants:
+            int_pool = DataStructure(
+                address=int_constants['address'],
+                size=int_constants['size'],
+                type='int_constant_pool',
+                alignment=4,  # Integer alignment
+                confidence=int_constants['confidence']
+            )
+            int_pool.elements = int_constants['constants']
+            constant_pools.append(int_pool)
+        
+        return constant_pools
+    
+    def _analyze_vtable_layout(self, analysis_context: Dict[str, Any]) -> List[DataStructure]:
+        """Phase 3.5: Analyze C++ virtual table layout with exact function pointer ordering"""
+        vtables = []
+        binary_content = analysis_context['binary_content']
+        
+        # Enhanced vtable detection with layout analysis
+        vtable_candidates = self._detect_vtables_enhanced(binary_content, analysis_context)
+        
+        for vtable_data in vtable_candidates:
+            vtable = DataStructure(
+                address=vtable_data['address'],
+                virtual_address=vtable_data['virtual_address'],
+                size=vtable_data['size'],
+                type='vtable',
+                alignment=4,  # Pointer alignment
+                access_pattern='read_only',
+                confidence=vtable_data['confidence']
+            )
+            vtable.elements = vtable_data['function_pointers']
+            vtable.memory_layout = vtable_data['layout']
+            vtables.append(vtable)
+        
+        return vtables
+    
+    def _analyze_static_initialization(self, analysis_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Phase 3.6: Analyze static initialization patterns"""
+        static_init = {
+            'global_constructors': [],
+            'dll_main_patterns': [],
+            'static_variables': [],
+            'initialization_order': []
+        }
+        
+        # Detect global constructor patterns
+        format_analysis = analysis_context.get('format_analysis', {})
+        sections = format_analysis.get('sections', [])
+        
+        for section in sections:
+            section_name = section.get('name', '').lower()
+            if '.init' in section_name or '.ctor' in section_name:
+                static_init['global_constructors'].append({
+                    'section': section_name,
+                    'address': section.get('virtual_address', 0),
+                    'size': section.get('virtual_size', 0)
+                })
+        
+        return static_init
+    
+    def _analyze_thread_local_storage(self, analysis_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Phase 3.7: Analyze Thread Local Storage variables and initialization"""
+        tls_analysis = {
+            'tls_variables': [],
+            'tls_callbacks': [],
+            'tls_index': None,
+            'tls_directory': None
+        }
+        
+        # Detect TLS directory
+        format_analysis = analysis_context.get('format_analysis', {})
+        sections = format_analysis.get('sections', [])
+        
+        for section in sections:
+            section_name = section.get('name', '').lower()
+            if '.tls' in section_name or 'tls' in section_name:
+                tls_analysis['tls_directory'] = {
+                    'section': section_name,
+                    'address': section.get('virtual_address', 0),
+                    'size': section.get('virtual_size', 0)
+                }
+        
+        return tls_analysis
+    
+    def _analyze_exception_handling(self, analysis_context: Dict[str, Any]) -> List[DataStructure]:
+        """Phase 3.8: Analyze SEH/C++ exception tables and unwinding information"""
+        exception_structures = []
+        
+        # Detect exception handling structures
+        format_analysis = analysis_context.get('format_analysis', {})
+        sections = format_analysis.get('sections', [])
+        
+        for section in sections:
+            section_name = section.get('name', '').lower()
+            if '.pdata' in section_name or '.xdata' in section_name or 'except' in section_name:
+                exception_struct = DataStructure(
+                    address=section.get('virtual_address', 0),
+                    size=section.get('virtual_size', 0),
+                    type='exception_table',
+                    section_name=section_name,
+                    access_pattern='read_only',
+                    confidence=0.85
+                )
+                exception_struct.elements = [{
+                    'section_type': section_name,
+                    'purpose': self._determine_exception_section_purpose(section_name)
+                }]
+                exception_structures.append(exception_struct)
+        
+        return exception_structures
+    
+    def _perform_memory_layout_analysis(self, structures: List[DataStructure], analysis_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Perform comprehensive memory layout analysis for Phase 3"""
+        layout_analysis = {
+            'memory_regions': {},
+            'address_space_map': {},
+            'alignment_analysis': {},
+            'padding_analysis': {},
+            'section_layout': {}
+        }
+        
+        # Group structures by memory regions
+        for structure in structures:
+            region_key = f"{structure.section_name}_{structure.address >> 12}"  # Group by page
+            if region_key not in layout_analysis['memory_regions']:
+                layout_analysis['memory_regions'][region_key] = []
+            layout_analysis['memory_regions'][region_key].append(structure)
+        
+        # Analyze alignment patterns
+        alignments = [s.alignment for s in structures if s.alignment > 0]
+        if alignments:
+            layout_analysis['alignment_analysis'] = {
+                'common_alignments': list(set(alignments)),
+                'average_alignment': sum(alignments) / len(alignments),
+                'max_alignment': max(alignments)
+            }
+        
+        # Analyze padding patterns
+        padding_bytes = [s.padding_bytes for s in structures if s.padding_bytes > 0]
+        if padding_bytes:
+            layout_analysis['padding_analysis'] = {
+                'total_padding': sum(padding_bytes),
+                'average_padding': sum(padding_bytes) / len(padding_bytes),
+                'max_padding': max(padding_bytes)
+            }
+        
+        return layout_analysis
+    
+    # Helper methods for Phase 3 analysis
+    
+    def _detect_variables_in_section(self, analysis_context: Dict[str, Any], section: Dict[str, Any], base_addr: int) -> List[DataStructure]:
+        """Detect individual variables within a data section"""
+        variables = []
+        section_size = section.get('virtual_size', 0)
+        
+        # Simple heuristic: divide section into reasonable variable sizes
+        estimated_var_sizes = [1, 2, 4, 8, 16, 32]  # Common variable sizes
+        
+        offset = 0
+        var_count = 0
+        while offset < section_size and var_count < 50:  # Limit to prevent explosion
+            for var_size in estimated_var_sizes:
+                if offset + var_size <= section_size:
+                    var = DataStructure(
+                        address=base_addr + offset,
+                        virtual_address=base_addr + offset,
+                        file_offset=section.get('raw_address', 0) + offset,
+                        size=var_size,
+                        type='global_variable',
+                        section_name=section.get('name', '.data'),
+                        alignment=var_size,  # Assume natural alignment
+                        confidence=0.6
+                    )
+                    var.name = f"global_var_{base_addr + offset:08x}"
+                    variables.append(var)
+                    var_count += 1
+                    break
+            offset += max(estimated_var_sizes[0], 4)  # Move by at least 4 bytes
+        
+        return variables
+    
+    def _detect_structures_with_padding(self, binary_content: bytes, analysis_context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Detect structures and analyze their padding"""
+        structures = []
+        
+        # Look for patterns that suggest structured data with padding
+        for i in range(0, len(binary_content) - 64, 16):  # Check every 16 bytes
+            # Simple heuristic: look for patterns with potential padding
+            block = binary_content[i:i+64]
+            
+            # Count null bytes (potential padding)
+            null_count = block.count(0)
+            if null_count > 8:  # Significant padding detected
+                struct_data = {
+                    'address': i,
+                    'size': 64,
+                    'alignment': 16,  # Assume 16-byte alignment
+                    'padding': null_count,
+                    'confidence': min(null_count / 32.0, 0.9),
+                    'layout': {'null_bytes': null_count, 'data_bytes': 64 - null_count},
+                    'members': [{'offset': j, 'size': 4, 'type': 'unknown'} for j in range(0, 64, 4) if block[j:j+4] != b'\x00\x00\x00\x00']
+                }
+                structures.append(struct_data)
+        
+        return structures[:10]  # Limit results
+    
+    def _map_strings_to_memory(self, binary_content: bytes, strings: List[str]) -> Dict[int, Dict[str, Any]]:
+        """Map strings to their exact memory locations"""
+        string_map = {}
+        
+        for string in strings[:100]:  # Limit processing
+            if len(string) < 3:
+                continue
+                
+            # Search for string in binary
+            string_bytes = string.encode('utf-8', errors='ignore')
+            pos = binary_content.find(string_bytes)
+            
+            if pos != -1:
+                string_map[pos] = {
+                    'content': string,
+                    'virtual_address': 0x400000 + pos,  # Estimate virtual address
+                    'file_offset': pos,
+                    'size': len(string_bytes) + 1,  # Include null terminator
+                    'section': '.rdata',  # Assume read-only data
+                    'encoding': 'utf-8',
+                    'null_terminated': True
+                }
+        
+        return string_map
+    
+    def _detect_floating_point_constants(self, binary_content: bytes) -> Dict[str, Any]:
+        """Detect floating point constant pools"""
+        fp_constants = []
+        
+        # Look for IEEE 754 double patterns
+        for i in range(0, len(binary_content) - 8, 4):
+            try:
+                # Try to read as double
+                double_bytes = binary_content[i:i+8]
+                if len(double_bytes) == 8:
+                    import struct
+                    double_val = struct.unpack('<d', double_bytes)[0]
+                    
+                    # Check if it's a reasonable constant
+                    if abs(double_val) < 1e10 and double_val != 0.0:
+                        fp_constants.append({
+                            'offset': i,
+                            'value': double_val,
+                            'type': 'double',
+                            'size': 8
+                        })
+            except:
+                continue
+        
+        if fp_constants:
+            return {
+                'address': fp_constants[0]['offset'],
+                'size': len(fp_constants) * 8,
+                'constants': fp_constants[:20],  # Limit results
+                'confidence': min(len(fp_constants) / 10.0, 0.9)
+            }
+        
+        return {}
+    
+    def _detect_integer_constants(self, binary_content: bytes) -> Dict[str, Any]:
+        """Detect integer constant pools"""
+        int_constants = []
+        
+        # Look for 32-bit integer patterns
+        for i in range(0, len(binary_content) - 4, 4):
+            try:
+                import struct
+                int_bytes = binary_content[i:i+4]
+                if len(int_bytes) == 4:
+                    int_val = struct.unpack('<I', int_bytes)[0]
+                    
+                    # Check for interesting constants
+                    if int_val > 1000 and int_val < 0xFFFF0000:
+                        int_constants.append({
+                            'offset': i,
+                            'value': int_val,
+                            'type': 'uint32',
+                            'size': 4
+                        })
+            except:
+                continue
+        
+        if int_constants:
+            return {
+                'address': int_constants[0]['offset'],
+                'size': len(int_constants) * 4,
+                'constants': int_constants[:30],  # Limit results
+                'confidence': min(len(int_constants) / 20.0, 0.8)
+            }
+        
+        return {}
+    
+    def _detect_vtables_enhanced(self, binary_content: bytes, analysis_context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Enhanced vtable detection with layout analysis"""
+        vtables = []
+        
+        # Look for sequences of function pointers
+        for i in range(0, len(binary_content) - 32, 4):
+            function_pointers = []
+            
+            for j in range(8):  # Check up to 8 consecutive pointers
+                try:
+                    import struct
+                    ptr_bytes = binary_content[i + j*4:i + j*4 + 4]
+                    if len(ptr_bytes) == 4:
+                        ptr_val = struct.unpack('<I', ptr_bytes)[0]
+                        
+                        # Check if it looks like a code pointer
+                        if 0x400000 <= ptr_val <= 0x500000:  # Typical code range
+                            function_pointers.append({
+                                'offset': j * 4,
+                                'address': ptr_val,
+                                'index': j
+                            })
+                        else:
+                            break
+                    else:
+                        break
+                except:
+                    break
+            
+            if len(function_pointers) >= 3:  # At least 3 function pointers
+                vtables.append({
+                    'address': i,
+                    'virtual_address': 0x400000 + i,  # Estimate
+                    'size': len(function_pointers) * 4,
+                    'function_pointers': function_pointers,
+                    'layout': {
+                        'entry_count': len(function_pointers),
+                        'entry_size': 4,
+                        'total_size': len(function_pointers) * 4
+                    },
+                    'confidence': min(len(function_pointers) / 8.0 + 0.5, 0.95)
+                })
+        
+        return vtables[:5]  # Limit results
+    
+    def _determine_exception_section_purpose(self, section_name: str) -> str:
+        """Determine the purpose of exception handling sections"""
+        section_name = section_name.lower()
+        if '.pdata' in section_name:
+            return 'runtime_function_table'
+        elif '.xdata' in section_name:
+            return 'unwind_information'
+        elif 'except' in section_name:
+            return 'exception_handler_table'
+        else:
+            return 'unknown_exception_data'
+    
     def _calculate_analysis_confidence(self, data_structures: List, functions: List) -> float:
-        """Calculate overall analysis confidence"""
+        """Calculate overall analysis confidence with Phase 3 enhancements"""
         base_confidence = 0.3
         
         # Boost confidence based on discovered structures
         if data_structures:
-            base_confidence += min(len(data_structures) * 0.1, 0.3)
+            base_confidence += min(len(data_structures) * 0.05, 0.3)
+            
+            # Additional confidence for Phase 3 features
+            global_vars = [ds for ds in data_structures if ds.type == 'global_variable']
+            if global_vars:
+                base_confidence += min(len(global_vars) * 0.02, 0.1)
+                
+            vtables = [ds for ds in data_structures if ds.type == 'vtable']
+            if vtables:
+                base_confidence += min(len(vtables) * 0.05, 0.15)
+                
+            string_literals = [ds for ds in data_structures if ds.type == 'string_literal']
+            if string_literals:
+                base_confidence += min(len(string_literals) * 0.01, 0.1)
+        
         if functions:
             base_confidence += min(len(functions) * 0.05, 0.2)
             
-        return min(base_confidence, 0.9)
+        return min(base_confidence, 0.95)

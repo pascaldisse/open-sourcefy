@@ -10,18 +10,9 @@ from typing import Dict, Any, Optional, Union, List
 from dataclasses import dataclass, field
 from enum import Enum
 
-# Optional imports with fallbacks
-try:
-    import yaml
-    HAS_YAML = True
-except ImportError:
-    HAS_YAML = False
-
-try:
-    import json
-    HAS_JSON = True
-except ImportError:
-    HAS_JSON = False
+# Required imports - strict mode only
+import yaml
+import json
 
 
 class ConfigSource(Enum):
@@ -117,50 +108,17 @@ class ConfigManager:
         if not self.config_file or not Path(self.config_file).exists():
             return
             
-        try:
-            with open(self.config_file, 'r') as f:
-                if self.config_file.endswith(('.yaml', '.yml')) and HAS_YAML:
-                    data = yaml.safe_load(f)
-                elif self.config_file.endswith('.json') and HAS_JSON:
-                    data = json.load(f)
-                else:
-                    # Fallback: try to parse as simple key=value
-                    data = self._parse_simple_config(f.read())
-            
-            self._flatten_config_dict(data, ConfigSource.CONFIG_FILE)
-            self.logger.info(f"Loaded configuration from {self.config_file}")
-            
-        except Exception as e:
-            self.logger.error(f"Failed to load config file {self.config_file}: {e}")
+        with open(self.config_file, 'r') as f:
+            if self.config_file.endswith(('.yaml', '.yml')):
+                data = yaml.safe_load(f)
+            elif self.config_file.endswith('.json'):
+                data = json.load(f)
+            else:
+                raise ValueError(f"Unsupported config file format: {self.config_file}")
+        
+        self._flatten_config_dict(data, ConfigSource.CONFIG_FILE)
+        self.logger.info(f"Loaded configuration from {self.config_file}")
     
-    def _parse_simple_config(self, content: str) -> Dict[str, Any]:
-        """Parse simple key=value configuration format with validation."""
-        config = {}
-        for line_num, line in enumerate(content.split('\n'), 1):
-            line = line.strip()
-            if line and not line.startswith('#') and '=' in line:
-                try:
-                    key, value = line.split('=', 1)
-                    key = key.strip()
-                    value = value.strip()
-                    
-                    # Validate key format
-                    if not key.replace('.', '').replace('_', '').isalnum():
-                        self.logger.warning(f"Invalid config key format at line {line_num}: {key}")
-                        continue
-                        
-                    # Basic value sanitization
-                    if len(value) > 1000:  # Prevent extremely long values
-                        self.logger.warning(f"Config value too long at line {line_num}, truncating")
-                        value = value[:1000]
-                    
-                    config[key] = value
-                    
-                except ValueError:
-                    self.logger.warning(f"Invalid config line format at line {line_num}: {line}")
-                    continue
-                    
-        return config
     
     def _load_environment_variables(self):
         """Load configuration from environment variables"""

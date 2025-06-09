@@ -44,19 +44,14 @@ class AISetup:
         self.ai_config = self._load_ai_config()
         self.ai_interface = None
         
-        # Initialize AI interface based on configuration
-        if self.ai_config.enabled:
-            self._initialize_ai_interface()
+        # Initialize AI interface - strict mode only
+        self._initialize_ai_interface()
     
     def _load_ai_config(self) -> AIConfig:
         """Load AI configuration from config manager"""
-        # Get provider
-        provider_str = self.config.get_value('ai.provider', 'anthropic')
-        try:
-            provider = AIProvider(provider_str)
-        except ValueError:
-            self.logger.warning(f"Unknown AI provider '{provider_str}', using 'disabled'")
-            provider = AIProvider.DISABLED
+        # Get provider - strict mode only
+        provider_str = self.config.get_value('ai.provider', 'claude_code')
+        provider = AIProvider(provider_str)
         
         # Load all configuration from config manager
         return AIConfig(
@@ -94,26 +89,17 @@ class AISetup:
         return defaults.get(provider, "NONE")
     
     def _initialize_ai_interface(self):
-        """Initialize AI interface based on provider"""
-        if not self.ai_config.enabled:
-            self.logger.info("AI integration disabled in configuration")
-            return
-        
-        try:
-            if self.ai_config.provider == AIProvider.CLAUDE_CODE:
-                self.ai_interface = self._setup_claude_code()
-            elif self.ai_config.provider == AIProvider.ANTHROPIC:
-                self.ai_interface = self._setup_anthropic()
-            elif self.ai_config.provider == AIProvider.OPENAI:
-                self.ai_interface = self._setup_openai()
-            elif self.ai_config.provider == AIProvider.LOCAL_LLM:
-                self.ai_interface = self._setup_local_llm()
-            else:
-                self.logger.warning(f"Unsupported AI provider: {self.ai_config.provider}")
-                
-        except Exception as e:
-            self.logger.error(f"Failed to initialize AI interface: {e}")
-            self.ai_interface = None
+        """Initialize AI interface - strict mode only"""
+        if self.ai_config.provider == AIProvider.CLAUDE_CODE:
+            self.ai_interface = self._setup_claude_code()
+        elif self.ai_config.provider == AIProvider.ANTHROPIC:
+            self.ai_interface = self._setup_anthropic()
+        elif self.ai_config.provider == AIProvider.OPENAI:
+            self.ai_interface = self._setup_openai()
+        elif self.ai_config.provider == AIProvider.LOCAL_LLM:
+            self.ai_interface = self._setup_local_llm()
+        else:
+            raise ValueError(f"Unsupported AI provider: {self.ai_config.provider}")
     
     def _setup_claude_code(self):
         """Setup Claude Code CLI interface - WSL/Linux compatible"""
@@ -124,72 +110,30 @@ class AISetup:
         # Determine the correct command for the environment
         claude_cmd = self._get_claude_command()
         
-        # Test claude command accessibility with shorter timeout
-        try:
-            result = subprocess.run([claude_cmd, '--version'], 
-                                  capture_output=True, text=True, timeout=5)
-            if result.returncode != 0:
-                self.logger.warning(f"Claude CLI ({claude_cmd}) returned non-zero exit code")
-                # Try to continue anyway - some versions might still work
-        except subprocess.TimeoutExpired:
-            self.logger.warning(f"Claude CLI ({claude_cmd}) version check timed out - continuing anyway")
-            # Don't raise error - the CLI might still work for actual requests
-        except FileNotFoundError:
-            raise ImportError(f"Claude CLI not found. Available commands tried: {claude_cmd}")
+        # Test claude command accessibility - strict validation
+        result = subprocess.run([claude_cmd, '--version'], 
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode != 0:
+            raise RuntimeError(f"Claude CLI ({claude_cmd}) returned non-zero exit code: {result.returncode}")
         
         self.logger.info(f"Claude CLI initialized using command: {claude_cmd}")
         return ClaudeCodeInterface(self.ai_config, claude_cmd)
     
     def _get_claude_command(self):
-        """Get the appropriate Claude command for the current environment"""
+        """Get Claude CLI command - strict mode only"""
         import shutil
-        import platform
-        import os
         
-        # Priority order of commands to try
-        commands_to_try = []
-        
-        # Check if we're in WSL
-        if self._is_wsl():
-            self.logger.info("WSL environment detected, using claude-skip")
-            commands_to_try = ['claude-skip', 'claude-code', 'claude']
-        else:
-            # Regular Linux/Windows/macOS
-            commands_to_try = ['claude-code', 'claude', 'claude-skip']
-        
-        # Try each command
-        for cmd in commands_to_try:
-            if shutil.which(cmd):
-                self.logger.info(f"Found Claude CLI command: {cmd}")
-                return cmd
-        
-        # If no command found, provide helpful error message
-        system = platform.system()
-        if self._is_wsl():
+        # Only claude-code is supported - no alternatives
+        cmd = 'claude-code'
+        if not shutil.which(cmd):
             raise ImportError(
-                "Claude CLI not found. For WSL, install with:\n"
-                "npm install -g @anthropic-ai/claude-code-skip\n"
-                "OR: npm install -g @anthropic-ai/claude-code"
-            )
-        elif system == "Windows":
-            raise ImportError(
-                "Claude CLI not found. Install with:\n"
+                f"Required Claude CLI '{cmd}' not found. Install with:\n"
                 "npm install -g @anthropic-ai/claude-code"
             )
-        else:
-            raise ImportError(
-                "Claude CLI not found. Install with:\n"
-                "npm install -g @anthropic-ai/claude-code\n"
-                "OR for WSL: npm install -g @anthropic-ai/claude-code-skip"
-            )
+        
+        self.logger.info(f"Using required Claude CLI command: {cmd}")
+        return cmd
     
-    def _is_wsl(self):
-        """Check if running in WSL"""
-        try:
-            with open('/proc/version', 'r') as f:
-                return 'microsoft' in f.read().lower()
-        except:
-            return False
     
     def _setup_anthropic(self):
         """Setup Anthropic Claude interface"""

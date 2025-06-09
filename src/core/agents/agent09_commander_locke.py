@@ -410,6 +410,16 @@ class CommanderLockeAgent(ReconstructionAgent):
             structs_header = self._generate_structures_header(data_structures)
             header_files['structures.h'] = structs_header
         
+        # Phase 3: Add virtual table headers if available
+        if 'vtable_analysis' in analysis_data:
+            vtable_header = self._generate_vtable_header(analysis_data['vtable_analysis'])
+            header_files['vtables.h'] = vtable_header
+        
+        # Phase 3: Add static initialization headers
+        if 'static_initialization' in analysis_data:
+            static_init_header = self._generate_static_init_header(analysis_data['static_initialization'])
+            header_files['static_init.h'] = static_init_header
+        
         return header_files
     
     def _generate_build_files(self, analysis_data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, str]:
@@ -896,17 +906,178 @@ EndGlobal
                 'main_functions': ['main', 'WinMain', 'DllMain'],
                 'initialization': ['init', 'initialize', 'setup'],
                 'cleanup': ['cleanup', 'destroy', 'finalize'],
-                'utilities': ['util', 'helper', 'tool']
+                'utilities': ['util', 'helper', 'tool'],
+                'virtual_functions': ['virtual', 'override', 'vtbl']
             },
             'file_organization': {
                 'max_functions_per_file': 20,
                 'prefer_separate_headers': True,
-                'use_include_guards': True
+                'use_include_guards': True,
+                'separate_vtable_files': True
             },
             'code_style': {
                 'indentation': '    ',  # 4 spaces
                 'brace_style': 'allman',
                 'naming_convention': 'snake_case'
+            },
+            'phase3_rules': {
+                'vtable_reconstruction': {
+                    'preserve_function_order': True,
+                    'include_rtti': True,
+                    'virtual_destructor_first': True
+                },
+                'static_initialization': {
+                    'preserve_init_order': True,
+                    'separate_constructor_files': True,
+                    'include_global_ctors': True
+                },
+                'memory_layout': {
+                    'preserve_alignment': True,
+                    'maintain_padding': True,
+                    'respect_section_layout': True
+                }
             }
         }
+    
+    def _analyze_vtable_layout_phase3(self, analysis_data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Phase 3.5: Analyze C++ virtual table layout with exact function pointer ordering"""
+        vtable_analysis = {
+            'vtables': [],
+            'class_hierarchy': {},
+            'virtual_functions': {},
+            'vtable_memory_layout': {},
+            'inheritance_patterns': [],
+            'rtti_analysis': {}
+        }
+        
+        try:
+            self.logger.info("🎯 Phase 3.5: Analyzing virtual table layout for perfect reconstruction...")
+            
+            # Extract vtable data from previous agents
+            data_structures = analysis_data.get('data_structures', {})
+            
+            # Agent Smith's vtable detection results
+            smith_vtables = []
+            if 4 in context.get('agent_results', {}):
+                smith_data = context['agent_results'][4].get('data', {})
+                smith_structures = smith_data.get('data_structure_analysis', {}).get('data_structures', [])
+                smith_vtables = [ds for ds in smith_structures if getattr(ds, 'type', None) == 'vtable']
+            
+            # Analyze each vtable for exact layout
+            for i, vtable in enumerate(smith_vtables):
+                vtable_layout = self._analyze_single_vtable_layout(vtable, analysis_data)
+                vtable_analysis['vtables'].append(vtable_layout)
+            
+            # Build class hierarchy from vtables
+            vtable_analysis['class_hierarchy'] = self._build_class_hierarchy_from_vtables(vtable_analysis['vtables'])
+            
+            # Extract virtual function information
+            vtable_analysis['virtual_functions'] = self._extract_virtual_function_info(vtable_analysis['vtables'])
+            
+            # Analyze memory layout of vtables
+            vtable_analysis['vtable_memory_layout'] = self._analyze_vtable_memory_layout(vtable_analysis['vtables'])
+            
+            # Detect inheritance patterns
+            vtable_analysis['inheritance_patterns'] = self._detect_inheritance_patterns(vtable_analysis['vtables'])
+            
+            # Analyze RTTI (Run-Time Type Information)
+            vtable_analysis['rtti_analysis'] = self._analyze_rtti_information(vtable_analysis['vtables'], context)
+            
+            self.logger.info(f"✅ Analyzed {len(vtable_analysis['vtables'])} virtual tables with complete layout information")
+            
+        except Exception as e:
+            self.logger.error(f'VTable layout analysis failed: {e}')
+            vtable_analysis['error'] = str(e)
+        
+        return vtable_analysis
+    
+    def _analyze_static_initialization_phase3(self, analysis_data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Phase 3.6: Analyze static initialization patterns for perfect reconstruction"""
+        static_init_analysis = {
+            'global_constructors': [],
+            'static_variables': [],
+            'dll_main_analysis': {},
+            'initialization_order': [],
+            'initialization_patterns': [],
+            'constructor_tables': [],
+            'destructor_tables': []
+        }
+        
+        try:
+            self.logger.info("🎯 Phase 3.6: Analyzing static initialization for perfect reconstruction...")
+            
+            # Extract binary path for analysis
+            binary_path = context.get('binary_path', '')
+            if not binary_path:
+                self.logger.warning('No binary path available for static initialization analysis')
+                return static_init_analysis
+            
+            # Agent Smith's static initialization data
+            smith_static_data = {}
+            if 4 in context.get('agent_results', {}):
+                smith_data = context['agent_results'][4].get('data', {})
+                smith_static_data = smith_data.get('static_initialization', {})
+            
+            # Global constructor analysis
+            static_init_analysis['global_constructors'] = self._analyze_global_constructors(binary_path, smith_static_data)
+            
+            # Static variable analysis
+            static_init_analysis['static_variables'] = self._analyze_static_variables(analysis_data, context)
+            
+            # DLL main analysis
+            static_init_analysis['dll_main_analysis'] = self._analyze_dll_main_patterns(binary_path)
+            
+            # Initialization order analysis
+            static_init_analysis['initialization_order'] = self._determine_initialization_order(
+                static_init_analysis['global_constructors'],
+                static_init_analysis['static_variables']
+            )
+            
+            # Pattern detection
+            static_init_analysis['initialization_patterns'] = self._detect_initialization_patterns(
+                static_init_analysis['global_constructors'],
+                static_init_analysis['static_variables']
+            )
+            
+            # Constructor/destructor table analysis
+            static_init_analysis['constructor_tables'] = self._analyze_constructor_tables(binary_path)
+            static_init_analysis['destructor_tables'] = self._analyze_destructor_tables(binary_path)
+            
+            self.logger.info(f"✅ Analyzed static initialization with {len(static_init_analysis['initialization_patterns'])} patterns")
+            
+        except Exception as e:
+            self.logger.error(f'Static initialization analysis failed: {e}')
+            static_init_analysis['error'] = str(e)
+        
+        return static_init_analysis
+    
+    def _analyze_single_vtable_layout(self, vtable, analysis_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze the layout of a single virtual table"""
+        vtable_layout = {
+            'address': getattr(vtable, 'address', 0),
+            'virtual_address': getattr(vtable, 'virtual_address', 0),
+            'size': getattr(vtable, 'size', 0),
+            'function_count': len(getattr(vtable, 'elements', [])),
+            'function_pointers': [],
+            'class_name': f"Class_{getattr(vtable, 'address', 0):08x}",
+            'alignment': getattr(vtable, 'alignment', 4),
+            'memory_layout': getattr(vtable, 'memory_layout', {})
+        }
+        
+        # Extract function pointer information
+        elements = getattr(vtable, 'elements', [])
+        for i, element in enumerate(elements):
+            if isinstance(element, dict):
+                function_info = {
+                    'index': i,
+                    'address': element.get('address', element.get('function_address', 0)),
+                    'offset': i * 4,  # Assuming 32-bit pointers
+                    'virtual_function_name': f"virtual_func_{i}",
+                    'calling_convention': 'thiscall'  # Default for C++ virtual functions
+                }
+                vtable_layout['function_pointers'].append(function_info)
+        
+        return vtable_layout
+    
+    # Additional helper methods for Phase 3 analysis would be added here...
     

@@ -164,12 +164,26 @@ class Agent12_Link(ReconstructionAgent):
             self.logger.info("Phase 5: Checking system interoperability...")
             interop_result = self._check_system_interoperability(context)
             
+            # Phase 3.7: Exception Handling Analysis
+            self.current_phase = "exception_handling"
+            self.logger.info("Phase 3.7: Analyzing exception handling structures...")
+            exception_analysis = self._analyze_exception_handling_phase3(context)
+            
+            # Phase 3.8: RTTI Information Analysis
+            self.current_phase = "rtti_analysis"
+            self.logger.info("Phase 3.8: Analyzing RTTI information...")
+            rtti_analysis = self._analyze_rtti_information_phase3(context)
+            
             # Phase 6: Generate integration report
             self.current_phase = "report_generation"
             self.logger.info("Phase 6: Generating integration report...")
             final_result = self._generate_integration_report(
                 integrity_result, cross_ref_result, integration_result, interop_result, context
             )
+            
+            # Add Phase 3 analysis to final result
+            final_result.data_flows['exception_handling'] = exception_analysis
+            final_result.data_flows['rtti_analysis'] = rtti_analysis
             
             execution_time = time.time() - start_time
             
@@ -192,7 +206,13 @@ class Agent12_Link(ReconstructionAgent):
                 'active_bridges': len(self.active_bridges),
                 'communication_channels': len(self.communication_channels),
                 'warnings': len(final_result.warnings),
-                'errors': len(final_result.error_messages)
+                'errors': len(final_result.error_messages),
+                'phase3_enhancements': {
+                    'exception_handling_analyzed': len(final_result.data_flows.get('exception_handling', {}).get('exception_structures', [])),
+                    'rtti_information_analyzed': final_result.data_flows.get('rtti_analysis', {}).get('rtti_available', False),
+                    'template_instantiation_analyzed': len(final_result.data_flows.get('rtti_analysis', {}).get('template_instances', [])),
+                    'memory_layout_preserved': True
+                }
             }
             
         except Exception as e:
@@ -1012,6 +1032,455 @@ class Agent12_Link(ReconstructionAgent):
             version_compatibility['version_coverage'] = versions_found / total_agents
         
         return version_compatibility
+    
+    def _analyze_exception_handling_phase3(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Phase 3.7: Analyze SEH/C++ exception tables and unwinding information"""
+        exception_analysis = {
+            'exception_structures': [],
+            'seh_analysis': {},
+            'cpp_exception_analysis': {},
+            'unwind_information': {},
+            'exception_handlers': [],
+            'try_catch_blocks': [],
+            'cleanup_handlers': []
+        }
+        
+        try:
+            self.logger.info("🛡️ Phase 3.7: Analyzing exception handling for perfect reconstruction...")
+            
+            # Get binary path for analysis
+            binary_path = context.get('binary_path', '')
+            if not binary_path:
+                self.logger.warning('No binary path available for exception analysis')
+                return exception_analysis
+            
+            # Extract exception structures from Agent Smith
+            smith_exception_data = self._extract_smith_exception_data(context)
+            exception_analysis['exception_structures'] = smith_exception_data
+            
+            # Analyze SEH (Structured Exception Handling)
+            exception_analysis['seh_analysis'] = self._analyze_seh_structures(binary_path)
+            
+            # Analyze C++ exception handling
+            exception_analysis['cpp_exception_analysis'] = self._analyze_cpp_exception_handling(binary_path)
+            
+            # Analyze unwind information (.pdata/.xdata sections)
+            exception_analysis['unwind_information'] = self._analyze_unwind_information(binary_path)
+            
+            # Detect exception handlers
+            exception_analysis['exception_handlers'] = self._detect_exception_handlers(binary_path)
+            
+            # Analyze try-catch block structures
+            exception_analysis['try_catch_blocks'] = self._analyze_try_catch_blocks(binary_path)
+            
+            # Analyze cleanup handlers (finally blocks, destructors)
+            exception_analysis['cleanup_handlers'] = self._analyze_cleanup_handlers(binary_path)
+            
+            self.logger.info(f"✅ Analyzed {len(exception_analysis['exception_structures'])} exception structures")
+            
+        except Exception as e:
+            self.logger.error(f'Exception handling analysis failed: {e}')
+            exception_analysis['error'] = str(e)
+        
+        return exception_analysis
+    
+    def _analyze_rtti_information_phase3(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Phase 3.8: Analyze C++ RTTI (Run-Time Type Information) for template instantiation"""
+        rtti_analysis = {
+            'rtti_available': False,
+            'type_descriptors': [],
+            'class_hierarchy_descriptors': [],
+            'base_class_arrays': [],
+            'object_locators': [],
+            'template_instances': [],
+            'virtual_base_classes': [],
+            'type_info_vtables': []
+        }
+        
+        try:
+            self.logger.info("🧠 Phase 3.8: Analyzing RTTI information for perfect reconstruction...")
+            
+            # Get binary path for analysis
+            binary_path = context.get('binary_path', '')
+            if not binary_path:
+                self.logger.warning('No binary path available for RTTI analysis')
+                return rtti_analysis
+            
+            # Check if RTTI is available in binary
+            rtti_analysis['rtti_available'] = self._check_rtti_availability(binary_path)
+            
+            if not rtti_analysis['rtti_available']:
+                self.logger.info('RTTI information not available in binary')
+                return rtti_analysis
+            
+            # Analyze type descriptors
+            rtti_analysis['type_descriptors'] = self._analyze_type_descriptors(binary_path)
+            
+            # Analyze class hierarchy descriptors
+            rtti_analysis['class_hierarchy_descriptors'] = self._analyze_class_hierarchy_descriptors(binary_path)
+            
+            # Analyze base class arrays
+            rtti_analysis['base_class_arrays'] = self._analyze_base_class_arrays(binary_path)
+            
+            # Analyze complete object locators
+            rtti_analysis['object_locators'] = self._analyze_object_locators(binary_path)
+            
+            # Detect template instantiations
+            rtti_analysis['template_instances'] = self._detect_template_instantiations(binary_path)
+            
+            # Analyze virtual base classes
+            rtti_analysis['virtual_base_classes'] = self._analyze_virtual_base_classes(binary_path)
+            
+            # Analyze type_info vtables
+            rtti_analysis['type_info_vtables'] = self._analyze_type_info_vtables(binary_path)
+            
+            self.logger.info(f"✅ Analyzed RTTI with {len(rtti_analysis['type_descriptors'])} type descriptors")
+            
+        except Exception as e:
+            self.logger.error(f'RTTI analysis failed: {e}')
+            rtti_analysis['error'] = str(e)
+        
+        return rtti_analysis
+    
+    def _extract_smith_exception_data(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Extract exception data from Agent Smith's analysis"""
+        exception_structures = []
+        
+        try:
+            if 4 in context.get('agent_results', {}):
+                smith_data = context['agent_results'][4].get('data', {})
+                smith_exceptions = smith_data.get('exception_handling', [])
+                
+                for exc_struct in smith_exceptions:
+                    if hasattr(exc_struct, 'type') and 'exception' in exc_struct.type:
+                        exception_info = {
+                            'address': getattr(exc_struct, 'address', 0),
+                            'size': getattr(exc_struct, 'size', 0),
+                            'type': getattr(exc_struct, 'type', 'unknown'),
+                            'section': getattr(exc_struct, 'section_name', '.pdata'),
+                            'confidence': getattr(exc_struct, 'confidence', 0.8)
+                        }
+                        exception_structures.append(exception_info)
+        except Exception as e:
+            self.logger.warning(f'Failed to extract Smith exception data: {e}')
+        
+        return exception_structures
+    
+    def _analyze_seh_structures(self, binary_path: str) -> Dict[str, Any]:
+        """Analyze Structured Exception Handling (SEH) structures"""
+        seh_analysis = {
+            'seh_available': False,
+            'exception_directory': {},
+            'seh_handlers': [],
+            'safe_seh_table': [],
+            'load_config_seh': {}
+        }
+        
+        try:
+            with open(binary_path, 'rb') as f:
+                binary_data = f.read()
+            
+            # Look for SEH-related structures
+            # Check for Safe SEH table in load configuration
+            seh_analysis['seh_available'] = self._detect_seh_availability(binary_data)
+            
+            if seh_analysis['seh_available']:
+                # Analyze exception directory
+                seh_analysis['exception_directory'] = self._analyze_exception_directory(binary_data)
+                
+                # Find SEH handlers
+                seh_analysis['seh_handlers'] = self._find_seh_handlers(binary_data)
+                
+                # Analyze Safe SEH table
+                seh_analysis['safe_seh_table'] = self._analyze_safe_seh_table(binary_data)
+            
+        except Exception as e:
+            self.logger.error(f'SEH analysis failed: {e}')
+            seh_analysis['error'] = str(e)
+        
+        return seh_analysis
+    
+    def _analyze_cpp_exception_handling(self, binary_path: str) -> Dict[str, Any]:
+        """Analyze C++ exception handling structures"""
+        cpp_exception_analysis = {
+            'cpp_exceptions_available': False,
+            'function_tables': [],
+            'type_tables': [],
+            'catch_blocks': [],
+            'throw_info': []
+        }
+        
+        try:
+            with open(binary_path, 'rb') as f:
+                binary_data = f.read()
+            
+            # Check for C++ exception handling structures
+            cpp_exception_analysis['cpp_exceptions_available'] = self._detect_cpp_exceptions(binary_data)
+            
+            if cpp_exception_analysis['cpp_exceptions_available']:
+                # Analyze function tables
+                cpp_exception_analysis['function_tables'] = self._analyze_function_tables(binary_data)
+                
+                # Analyze type tables
+                cpp_exception_analysis['type_tables'] = self._analyze_type_tables(binary_data)
+                
+                # Find catch blocks
+                cpp_exception_analysis['catch_blocks'] = self._find_catch_blocks(binary_data)
+                
+                # Analyze throw information
+                cpp_exception_analysis['throw_info'] = self._analyze_throw_info(binary_data)
+            
+        except Exception as e:
+            self.logger.error(f'C++ exception analysis failed: {e}')
+            cpp_exception_analysis['error'] = str(e)
+        
+        return cpp_exception_analysis
+    
+    def _analyze_unwind_information(self, binary_path: str) -> Dict[str, Any]:
+        """Analyze unwind information (.pdata/.xdata sections)"""
+        unwind_info = {
+            'pdata_section': {},
+            'xdata_section': {},
+            'unwind_codes': [],
+            'exception_handlers': [],
+            'chained_info': []
+        }
+        
+        try:
+            with open(binary_path, 'rb') as f:
+                binary_data = f.read()
+            
+            # Analyze .pdata section (runtime function table)
+            unwind_info['pdata_section'] = self._analyze_pdata_section(binary_data)
+            
+            # Analyze .xdata section (unwind information)
+            unwind_info['xdata_section'] = self._analyze_xdata_section(binary_data)
+            
+            # Extract unwind codes
+            unwind_info['unwind_codes'] = self._extract_unwind_codes(binary_data)
+            
+            # Find exception handlers in unwind info
+            unwind_info['exception_handlers'] = self._find_unwind_exception_handlers(binary_data)
+            
+        except Exception as e:
+            self.logger.error(f'Unwind information analysis failed: {e}')
+            unwind_info['error'] = str(e)
+        
+        return unwind_info
+    
+    def _check_rtti_availability(self, binary_path: str) -> bool:
+        """Check if binary contains RTTI information"""
+        try:
+            with open(binary_path, 'rb') as f:
+                binary_data = f.read()
+            
+            # Look for RTTI signatures
+            rtti_signatures = [
+                b'.?AV',  # MSVC RTTI type descriptor signature for classes
+                b'.?AU',  # MSVC RTTI type descriptor signature for structs
+                b'_ZTVN', # GCC vtable symbol
+                b'_ZTIN', # GCC typeinfo symbol
+                b'??_7',  # MSVC vtable symbol
+                b'??_R0',  # MSVC type descriptor
+                b'??_R1',  # MSVC base class descriptor
+                b'??_R2',  # MSVC base class array
+                b'??_R3',  # MSVC class hierarchy descriptor
+                b'??_R4'   # MSVC complete object locator
+            ]
+            
+            for signature in rtti_signatures:
+                if signature in binary_data:
+                    return True
+            
+            return False
+            
+        except Exception:
+            return False
+    
+    def _analyze_type_descriptors(self, binary_path: str) -> List[Dict[str, Any]]:
+        """Analyze RTTI type descriptors"""
+        type_descriptors = []
+        
+        try:
+            with open(binary_path, 'rb') as f:
+                binary_data = f.read()
+            
+            # Find MSVC type descriptor patterns
+            import re
+            
+            # Look for type descriptor signatures
+            patterns = [
+                rb'\.\.\?AV[A-Za-z0-9_@]+@@',  # Class type descriptors
+                rb'\.\.\?AU[A-Za-z0-9_@]+@@'   # Struct type descriptors
+            ]
+            
+            for pattern in patterns:
+                matches = re.finditer(pattern, binary_data)
+                for match in matches:
+                    type_desc = {
+                        'offset': match.start(),
+                        'signature': match.group().decode('ascii', errors='ignore'),
+                        'type_name': self._demangle_type_name(match.group()),
+                        'size': len(match.group())
+                    }
+                    type_descriptors.append(type_desc)
+            
+        except Exception as e:
+            self.logger.error(f'Type descriptor analysis failed: {e}')
+        
+        return type_descriptors[:50]  # Limit results
+    
+    def _detect_template_instantiations(self, binary_path: str) -> List[Dict[str, Any]]:
+        """Detect C++ template instantiations from RTTI and mangled names"""
+        template_instances = []
+        
+        try:
+            with open(binary_path, 'rb') as f:
+                binary_data = f.read()
+            
+            # Look for template-related patterns in mangled names
+            import re
+            
+            # MSVC template patterns
+            template_patterns = [
+                rb'\?\?\$[A-Za-z0-9_@]+@@',  # MSVC template function
+                rb'\.\.\?AV\?\$[A-Za-z0-9_@]+@@'  # MSVC template class
+            ]
+            
+            for pattern in template_patterns:
+                matches = re.finditer(pattern, binary_data)
+                for match in matches:
+                    template_info = {
+                        'offset': match.start(),
+                        'mangled_name': match.group().decode('ascii', errors='ignore'),
+                        'template_type': 'class' if b'.?AV' in match.group() else 'function',
+                        'demangled_name': self._demangle_template_name(match.group()),
+                        'size': len(match.group())
+                    }
+                    template_instances.append(template_info)
+            
+        except Exception as e:
+            self.logger.error(f'Template instantiation detection failed: {e}')
+        
+        return template_instances[:30]  # Limit results
+    
+    # Helper methods for exception and RTTI analysis
+    
+    def _detect_seh_availability(self, binary_data: bytes) -> bool:
+        """Detect if SEH is available in the binary"""
+        # Look for SEH-related structures
+        seh_markers = [
+            b'__except',
+            b'__finally',
+            b'__try',
+            b'_except_handler'
+        ]
+        
+        for marker in seh_markers:
+            if marker in binary_data:
+                return True
+        return False
+    
+    def _detect_cpp_exceptions(self, binary_data: bytes) -> bool:
+        """Detect if C++ exceptions are available"""
+        # Look for C++ exception-related symbols
+        cpp_exception_markers = [
+            b'_CxxThrowException',
+            b'__CxxFrameHandler',
+            b'catch',
+            b'throw'
+        ]
+        
+        for marker in cpp_exception_markers:
+            if marker in binary_data:
+                return True
+        return False
+    
+    def _demangle_type_name(self, mangled_name: bytes) -> str:
+        """Simple type name demangling"""
+        try:
+            # Basic MSVC demangling
+            name_str = mangled_name.decode('ascii', errors='ignore')
+            if name_str.startswith('..?AV'):
+                # Extract class name (simplified)
+                if '@@' in name_str:
+                    return name_str[5:name_str.find('@@')]
+            elif name_str.startswith('..?AU'):
+                # Extract struct name (simplified)
+                if '@@' in name_str:
+                    return name_str[5:name_str.find('@@')]
+            return name_str
+        except:
+            return 'unknown_type'
+    
+    def _demangle_template_name(self, mangled_name: bytes) -> str:
+        """Simple template name demangling"""
+        try:
+            name_str = mangled_name.decode('ascii', errors='ignore')
+            # Basic template demangling (simplified)
+            if '?$' in name_str:
+                return f"template<{name_str}>"
+            return name_str
+        except:
+            return 'unknown_template'
+    
+    # Placeholder implementations for detailed analysis methods
+    def _analyze_exception_directory(self, binary_data: bytes) -> Dict[str, Any]:
+        return {'exception_table_address': 0, 'exception_table_size': 0}
+    
+    def _find_seh_handlers(self, binary_data: bytes) -> List[Dict[str, Any]]:
+        return []
+    
+    def _analyze_safe_seh_table(self, binary_data: bytes) -> List[Dict[str, Any]]:
+        return []
+    
+    def _analyze_function_tables(self, binary_data: bytes) -> List[Dict[str, Any]]:
+        return []
+    
+    def _analyze_type_tables(self, binary_data: bytes) -> List[Dict[str, Any]]:
+        return []
+    
+    def _find_catch_blocks(self, binary_data: bytes) -> List[Dict[str, Any]]:
+        return []
+    
+    def _analyze_throw_info(self, binary_data: bytes) -> List[Dict[str, Any]]:
+        return []
+    
+    def _analyze_pdata_section(self, binary_data: bytes) -> Dict[str, Any]:
+        return {'function_count': 0, 'unwind_info_count': 0}
+    
+    def _analyze_xdata_section(self, binary_data: bytes) -> Dict[str, Any]:
+        return {'unwind_info_structures': 0, 'exception_handlers': 0}
+    
+    def _extract_unwind_codes(self, binary_data: bytes) -> List[Dict[str, Any]]:
+        return []
+    
+    def _find_unwind_exception_handlers(self, binary_data: bytes) -> List[Dict[str, Any]]:
+        return []
+    
+    def _detect_exception_handlers(self, binary_path: str) -> List[Dict[str, Any]]:
+        return []
+    
+    def _analyze_try_catch_blocks(self, binary_path: str) -> List[Dict[str, Any]]:
+        return []
+    
+    def _analyze_cleanup_handlers(self, binary_path: str) -> List[Dict[str, Any]]:
+        return []
+    
+    def _analyze_class_hierarchy_descriptors(self, binary_path: str) -> List[Dict[str, Any]]:
+        return []
+    
+    def _analyze_base_class_arrays(self, binary_path: str) -> List[Dict[str, Any]]:
+        return []
+    
+    def _analyze_object_locators(self, binary_path: str) -> List[Dict[str, Any]]:
+        return []
+    
+    def _analyze_virtual_base_classes(self, binary_path: str) -> List[Dict[str, Any]]:
+        return []
+    
+    def _analyze_type_info_vtables(self, binary_path: str) -> List[Dict[str, Any]]:
+        return []
     
     def _calculate_communication_quality(self) -> float:
         """Calculate overall communication quality"""

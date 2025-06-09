@@ -97,6 +97,10 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
         self.timeout_seconds = self.config.get_value('agents.agent_06.timeout', 300)
         self.enable_deep_analysis = self.config.get_value('agents.agent_06.deep_analysis', True)
         
+        # CRITICAL: Binary size comparison thresholds for pipeline failure
+        self.size_similarity_threshold = self.config.get_value('agents.agent_06.size_similarity_threshold', 0.2)  # 20% minimum
+        self.fail_pipeline_on_size_mismatch = self.config.get_value('agents.agent_06.fail_on_size_mismatch', True)
+        
         # Initialize components
         self.error_handler = MatrixErrorHandler("Twins", max_retries=2)
         
@@ -146,11 +150,28 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
             
             self.logger.info("The Twins beginning dual-state binary analysis...")
             
+            # Phase 0: CRITICAL Size Comparison (Pipeline Failure Check)
+            self.logger.info("Phase 0: Critical binary size comparison")
+            size_comparison = self._perform_critical_size_comparison(
+                binary_path, context
+            )
+            
+            # FAIL FAST: If size mismatch exceeds threshold, fail the entire pipeline
+            if size_comparison['should_fail_pipeline']:
+                error_msg = (f"PIPELINE FAILURE: Binary size mismatch exceeds threshold. "
+                           f"Original: {size_comparison['original_size']:,} bytes, "
+                           f"Generated: {size_comparison['generated_size']:,} bytes, "
+                           f"Similarity: {size_comparison['size_similarity']:.2%} "
+                           f"(threshold: {self.size_similarity_threshold:.1%})")
+                self.logger.error(error_msg)
+                raise Exception(error_msg)
+            
             # Phase 1: Multi-Level Binary Comparison
             self.logger.info("Phase 1: Multi-level binary comparison")
             comparison_results = self._perform_multilevel_comparison(
                 binary_path, agent1_data, agent2_data, agent3_data
             )
+            comparison_results['size_comparison'] = size_comparison
             
             # Phase 2: Optimization Pattern Detection
             self.logger.info("Phase 2: Compiler optimization pattern detection")
@@ -1497,3 +1518,92 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
     def _calculate_functional_similarity(self, functional_changes: Dict[str, Any]) -> float:
         """Calculate functional similarity"""
         return 0.9
+
+    def _perform_critical_size_comparison(self, binary_path: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        CRITICAL: Perform binary size comparison that can fail the entire pipeline
+        
+        This is the fail-fast check that determines if decompilation and recompilation
+        produced a result that's significantly different in size, indicating failure.
+        """
+        import os
+        from pathlib import Path
+        
+        # Get original binary size
+        original_size = os.path.getsize(binary_path)
+        
+        # Find generated binary in compilation output
+        generated_binary_path = None
+        generated_size = 0
+        
+        # Search for generated executable in output paths
+        output_paths = context.get('output_paths', {})
+        if output_paths:
+            compilation_dir = output_paths.get('compilation')
+            if compilation_dir:
+                # Look for exe files in bin/Release directories
+                search_patterns = [
+                    compilation_dir / "bin" / "Release" / "Win32" / "*.exe",
+                    compilation_dir / "bin" / "Release" / "x64" / "*.exe", 
+                    compilation_dir / "bin" / "Release" / "*.exe",
+                    compilation_dir / "Release" / "*.exe",
+                    compilation_dir / "*.exe"
+                ]
+                
+                for pattern in search_patterns:
+                    from glob import glob
+                    matches = glob(str(pattern))
+                    if matches:
+                        generated_binary_path = matches[0]
+                        generated_size = os.path.getsize(generated_binary_path)
+                        break
+        
+        # If no generated binary found, check if Agent 10 has results
+        agent_results = context.get('agent_results', {})
+        if not generated_binary_path and 10 in agent_results:
+            agent10_data = agent_results[10].data
+            if isinstance(agent10_data, dict):
+                compilation_results = agent10_data.get('compilation_results', {})
+                binary_outputs = compilation_results.get('binary_outputs', {})
+                if binary_outputs:
+                    # Get first available binary path
+                    generated_binary_path = next(iter(binary_outputs.values()))
+                    if generated_binary_path and os.path.exists(generated_binary_path):
+                        generated_size = os.path.getsize(generated_binary_path)
+        
+        # Calculate size similarity
+        if generated_size > 0 and original_size > 0:
+            # Use the smaller size as denominator to avoid inflated percentages
+            size_similarity = min(generated_size, original_size) / max(generated_size, original_size)
+        else:
+            size_similarity = 0.0
+        
+        # Determine if pipeline should fail
+        should_fail_pipeline = (
+            self.fail_pipeline_on_size_mismatch and 
+            size_similarity < self.size_similarity_threshold
+        )
+        
+        size_comparison = {
+            'original_size': original_size,
+            'generated_size': generated_size,
+            'generated_binary_path': generated_binary_path,
+            'size_similarity': size_similarity,
+            'size_difference': abs(original_size - generated_size),
+            'size_ratio': generated_size / original_size if original_size > 0 else 0.0,
+            'should_fail_pipeline': should_fail_pipeline,
+            'threshold_used': self.size_similarity_threshold,
+            'failure_reason': None
+        }
+        
+        if should_fail_pipeline:
+            if generated_size == 0:
+                size_comparison['failure_reason'] = "No generated binary found - compilation failed"
+            elif size_similarity < 0.01:  # Less than 1%
+                size_comparison['failure_reason'] = f"Generated binary extremely small ({generated_size:,} bytes vs {original_size:,} bytes) - indicates compilation failure"
+            else:
+                size_comparison['failure_reason'] = f"Size similarity {size_similarity:.2%} below threshold {self.size_similarity_threshold:.1%}"
+        
+        self.logger.info(f"Size comparison: Original={original_size:,} bytes, Generated={generated_size:,} bytes, Similarity={size_similarity:.2%}")
+        
+        return size_comparison

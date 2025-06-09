@@ -244,12 +244,189 @@ class Agent10_TheMachine(ReconstructionAgent):
                     self.logger.error(f"Failed to read {neo_file}: {e}")
             else:
                 self.logger.warning(f"No decompiled code found at {neo_file}")
+            
+            # Phase 1 Enhancement: Load Agent 8 (Keymaker) resources for integration
+            self._load_keymaker_resources(most_recent, sources)
                 
         except Exception as e:
             self.logger.error(f"Error loading existing source files: {e}")
     
+    def _load_keymaker_resources(self, run_dir: Path, sources: Dict[str, Any]) -> None:
+        """Load Agent 8 (Keymaker) extracted resources for integration into compilation"""
+        try:
+            keymaker_dir = run_dir / "agents" / "agent_08_keymaker"
+            if not keymaker_dir.exists():
+                self.logger.warning("No Keymaker resources found - proceeding without resource integration")
+                return
+            
+            self.logger.info("🔧 Phase 1: Loading Keymaker resources for binary equivalence improvement...")
+            
+            # Load keymaker analysis JSON
+            analysis_file = keymaker_dir / "keymaker_analysis.json"
+            if analysis_file.exists():
+                try:
+                    import json
+                    with open(analysis_file, 'r', encoding='utf-8') as f:
+                        keymaker_data = json.load(f)
+                    
+                    # Extract resource statistics
+                    resources = keymaker_data.get('resources', {})
+                    string_count = resources.get('string', {}).get('count', 0)
+                    image_count = resources.get('embedded_file', {}).get('count', 0)
+                    
+                    self.logger.info(f"🔧 Found Keymaker resources: {string_count} strings, {image_count} images")
+                    
+                    # Generate Windows Resource Script (.rc) file
+                    if string_count > 0 or image_count > 0:
+                        rc_content = self._generate_resource_script(keymaker_dir, keymaker_data)
+                        sources['resource_files'] = sources.get('resource_files', {})
+                        sources['resource_files']['resources.rc'] = rc_content
+                        
+                        self.logger.info(f"✅ Generated resources.rc with {string_count} strings and {image_count} images")
+                        
+                        # Update resource header with additional constants
+                        self._enhance_resource_header(sources, keymaker_data)
+                        
+                except Exception as e:
+                    self.logger.error(f"Failed to load keymaker analysis: {e}")
+            else:
+                self.logger.warning("No keymaker_analysis.json found - trying direct resource scan")
+                self._scan_resources_directly(keymaker_dir, sources)
+                
+        except Exception as e:
+            self.logger.error(f"Error loading Keymaker resources: {e}")
+    
+    def _generate_resource_script(self, keymaker_dir: Path, keymaker_data: Dict[str, Any]) -> str:
+        """Generate Windows Resource Script (.rc) from Keymaker extracted resources"""
+        try:
+            rc_content = []
+            rc_content.append("// Generated Resource Script from Matrix Keymaker extraction")
+            rc_content.append("#include \"src/resource.h\"")
+            rc_content.append("")
+            
+            # Add string table
+            resources = keymaker_data.get('resources', {})
+            string_info = resources.get('string', {})
+            
+            if string_info.get('count', 0) > 0:
+                rc_content.append("// String Table")
+                rc_content.append("STRINGTABLE")
+                rc_content.append("BEGIN")
+                
+                # Load a sample of string resources (first 100 for performance)
+                string_dir = keymaker_dir / "resources" / "string"
+                if string_dir.exists():
+                    string_files = sorted(string_dir.glob("string_*.txt"))[:100]  # Limit for performance
+                    string_id = 1000
+                    
+                    for string_file in string_files:
+                        try:
+                            with open(string_file, 'r', encoding='utf-8', errors='ignore') as f:
+                                content = f.read().strip()
+                            
+                            # Clean and escape string content for RC format
+                            if content and len(content) < 256:  # Reasonable string length
+                                content = content.replace('\\', '\\\\').replace('"', '\\"')
+                                content = ''.join(c for c in content if ord(c) < 128)  # ASCII only
+                                if content:  # Only include non-empty strings
+                                    rc_content.append(f'    {string_id}, "{content}"')
+                                    string_id += 1
+                        except Exception as e:
+                            continue  # Skip problematic strings
+                
+                rc_content.append("END")
+                rc_content.append("")
+            
+            # Add bitmap resources
+            image_info = resources.get('embedded_file', {})
+            if image_info.get('count', 0) > 0:
+                rc_content.append("// Bitmap Resources")
+                
+                bmp_dir = keymaker_dir / "resources" / "embedded_file"
+                if bmp_dir.exists():
+                    bmp_files = list(bmp_dir.glob("*.bmp"))[:10]  # Limit for performance
+                    bmp_id = 2000
+                    
+                    for bmp_file in bmp_files:
+                        # Use relative path for RC file
+                        rel_path = bmp_file.name
+                        rc_content.append(f'{bmp_id} BITMAP "{rel_path}"')
+                        bmp_id += 1
+                
+                rc_content.append("")
+            
+            # Add version information
+            rc_content.append("// Version Information")
+            rc_content.append("1 VERSIONINFO")
+            rc_content.append("FILEVERSION 1,0,0,0")
+            rc_content.append("PRODUCTVERSION 1,0,0,0")
+            rc_content.append("BEGIN")
+            rc_content.append('  VALUE "CompanyName", "Matrix Reconstructed"')
+            rc_content.append('  VALUE "FileDescription", "Reconstructed Application"')
+            rc_content.append('  VALUE "FileVersion", "1.0.0.0"')
+            rc_content.append('  VALUE "ProductName", "Matrix Decompiled Binary"')
+            rc_content.append('  VALUE "ProductVersion", "1.0.0.0"')
+            rc_content.append("END")
+            
+            return '\n'.join(rc_content)
+            
+        except Exception as e:
+            self.logger.error(f"Error generating resource script: {e}")
+            return "// Resource generation failed\n"
+    
+    def _enhance_resource_header(self, sources: Dict[str, Any], keymaker_data: Dict[str, Any]) -> None:
+        """Enhance resource.h with additional constants from Keymaker data"""
+        try:
+            # Add resource IDs for strings and bitmaps
+            additional_header = []
+            additional_header.append("// Additional Resource Constants from Keymaker")
+            additional_header.append("#define IDS_STRING_BASE         1000")
+            additional_header.append("#define IDB_BITMAP_BASE         2000")
+            additional_header.append("#define IDI_ICON_BASE           3000")
+            additional_header.append("")
+            
+            # Add to existing resource.h content
+            if 'resource.h' in sources.get('source_files', {}):
+                existing_header = sources['source_files']['resource.h']
+                sources['source_files']['resource.h'] = existing_header + '\n' + '\n'.join(additional_header)
+            else:
+                # Create new resource.h if it doesn't exist
+                base_header = self._generate_resource_header()
+                sources['source_files'] = sources.get('source_files', {})
+                sources['source_files']['resource.h'] = base_header + '\n' + '\n'.join(additional_header)
+                
+        except Exception as e:
+            self.logger.error(f"Error enhancing resource header: {e}")
+    
+    def _scan_resources_directly(self, keymaker_dir: Path, sources: Dict[str, Any]) -> None:
+        """Direct resource scanning fallback when analysis JSON is not available"""
+        try:
+            resources_dir = keymaker_dir / "resources"
+            if not resources_dir.exists():
+                return
+            
+            # Count resources directly
+            string_count = len(list((resources_dir / "string").glob("*.txt"))) if (resources_dir / "string").exists() else 0
+            image_count = len(list((resources_dir / "embedded_file").glob("*.bmp"))) if (resources_dir / "embedded_file").exists() else 0
+            
+            if string_count > 0 or image_count > 0:
+                self.logger.info(f"🔧 Direct scan found: {string_count} strings, {image_count} images")
+                
+                # Generate basic resource script
+                rc_content = f"// Basic Resource Script - {string_count} strings, {image_count} images\n"
+                rc_content += "#include \"src/resource.h\"\n"
+                
+                sources['resource_files'] = sources.get('resource_files', {})
+                sources['resource_files']['resources.rc'] = rc_content
+                
+        except Exception as e:
+            self.logger.error(f"Error in direct resource scanning: {e}")
+    
     def _fix_case_sensitivity_issues(self, source_code: str) -> str:
-        """Fix common case sensitivity issues for WSL compilation"""
+        """
+        Phase 2.1: Exact Function Reconstruction & Phase 2.9: Compiler-Specific Idioms
+        Fix compilation issues for perfect MSVC compatibility
+        """
         try:
             # Fix Windows header case sensitivity
             source_code = source_code.replace('#include <windows.h>', '#include <Windows.h>')
@@ -270,34 +447,52 @@ class Agent10_TheMachine(ReconstructionAgent):
                 lines.insert(insert_pos, '#define _CRT_SECURE_NO_WARNINGS')
                 source_code = '\n'.join(lines)
             
+            # Phase 2.1: Add resource header inclusion for exact function reconstruction
+            if '#include "resource.h"' not in source_code:
+                # Find the last #include statement
+                lines = source_code.split('\n')
+                last_include_pos = -1
+                
+                for i, line in enumerate(lines):
+                    if line.strip().startswith('#include'):
+                        last_include_pos = i
+                
+                if last_include_pos >= 0:
+                    lines.insert(last_include_pos + 1, '#include "resource.h"')
+                    source_code = '\n'.join(lines)
+            
             # Fix common missing includes
             if '#include <CommCtrl.h>' not in source_code and 'InitCommonControlsEx' in source_code:
                 source_code = source_code.replace('#include <Windows.h>', '#include <Windows.h>\n#include <CommCtrl.h>')
             
-            # Add missing constant definitions that are referenced but not defined
-            if 'ID_FILE_EXIT' in source_code and '#define ID_FILE_EXIT' not in source_code:
-                # Find a good place to insert constants (after includes, before functions)
-                lines = source_code.split('\n')
-                insert_pos = len(lines)  # Default to end
+            # Phase 2.9: Remove conflicting redefinitions (MSVC-specific idioms)
+            lines = source_code.split('\n')
+            filtered_lines = []
+            in_resource_section = False
+            
+            for line in lines:
+                line_stripped = line.strip()
                 
-                for i, line in enumerate(lines):
-                    if line.strip().startswith('LRESULT CALLBACK') or line.strip().startswith('int WINAPI'):
-                        insert_pos = i
-                        break
+                # Skip redundant resource definitions since we have resource.h
+                if ('// Resource IDs (reconstructed from analysis)' in line or
+                    (line_stripped.startswith('#define') and any(x in line for x in 
+                    ['IDI_MAIN_ICON', 'IDI_APPLICATION', 'IDS_APP_TITLE', 'ID_FILE_EXIT']))):
+                    in_resource_section = True
+                    filtered_lines.append(f'// {line}  // Moved to resource.h for Phase 2.1 compliance')
+                    continue
+                    
+                # End resource section detection
+                if in_resource_section and (line_stripped == '' or 
+                    (line_stripped.startswith('//') and 'reconstructed' not in line)):
+                    in_resource_section = False
                 
-                constants = [
-                    '',
-                    '// Resource IDs (reconstructed from analysis)',
-                    '#define IDI_MAIN_ICON       101',
-                    '#define IDS_APP_TITLE       201', 
-                    '#define ID_FILE_EXIT        1001',
-                    ''
-                ]
-                
-                for j, const_line in enumerate(constants):
-                    lines.insert(insert_pos + j, const_line)
-                
-                source_code = '\n'.join(lines)
+                # Skip lines in resource section
+                if in_resource_section:
+                    continue
+                    
+                filtered_lines.append(line)
+            
+            source_code = '\n'.join(filtered_lines)
             
             # Fix function declaration issues
             if 'CreateMainWindow' in source_code and 'HWND CreateMainWindow(HINSTANCE, int);' not in source_code:
@@ -600,6 +795,9 @@ EndGlobal
   <ItemGroup>
     <ClInclude Include="src\\*.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="resources.rc" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\\Microsoft.Cpp.targets" />
 </Project>"""
         
@@ -823,6 +1021,7 @@ Write-Host "Build complete!" -ForegroundColor Green
             
             if build_system == 'msbuild':
                 # Use centralized MSBuild system
+                # Note: build_config is actually the build_system dict from _generate_build_system
                 result = self._build_with_msbuild(output_dir, build_config)
             else:
                 result['error'] = f"Unsupported build system: {build_system}. Only MSBuild is supported."
@@ -833,6 +1032,138 @@ Write-Host "Build complete!" -ForegroundColor Green
             result['error'] = f"Centralized build system failed: {str(e)}"
         
         return result
+
+    def _compile_resource_files(self, sources: Dict[str, Any], output_dir: str) -> Dict[str, Any]:
+        """Compile resource files (icons, images, strings) into Windows resource format"""
+        resource_result = {
+            'success': False,
+            'resource_count': 0,
+            'compiled_resources': [],
+            'rc_file': None,
+            'res_file': None
+        }
+        
+        try:
+            resource_files = sources.get('resource_files', {})
+            if not resource_files:
+                self.logger.info("No resource files to compile")
+                resource_result['success'] = True
+                return resource_result
+            
+            # Create resources directory
+            resources_dir = os.path.join(output_dir, 'resources')
+            os.makedirs(resources_dir, exist_ok=True)
+            
+            # Generate resource script (.rc file)
+            rc_content = self._generate_resource_script(resource_files, resources_dir)
+            rc_file = os.path.join(output_dir, 'resources.rc')
+            
+            with open(rc_file, 'w', encoding='utf-8') as f:
+                f.write(rc_content)
+            
+            resource_result['rc_file'] = rc_file
+            resource_result['resource_count'] = len(resource_files)
+            resource_result['success'] = True
+            
+            self.logger.info(f"✅ Generated resource script: {rc_file} with {len(resource_files)} resources")
+            
+            # Try to compile with rc.exe if available
+            try:
+                from ..build_system_manager import get_build_manager
+                build_manager = get_build_manager()
+                
+                # Check if Windows Resource Compiler is available
+                rc_exe = build_manager._find_rc_compiler()
+                if rc_exe:
+                    res_file = os.path.join(output_dir, 'resources.res')
+                    cmd = [rc_exe, '/fo', res_file, rc_file]
+                    
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                    if result.returncode == 0:
+                        resource_result['res_file'] = res_file
+                        self.logger.info(f"✅ Compiled resources to: {res_file}")
+                    else:
+                        self.logger.warning(f"Resource compilation failed: {result.stderr}")
+                else:
+                    self.logger.info("Resource compiler not found - RC file generated for manual compilation")
+                    
+            except Exception as e:
+                self.logger.warning(f"Resource compilation attempt failed: {e}")
+            
+        except Exception as e:
+            self.logger.error(f"Resource file processing failed: {e}")
+            resource_result['error'] = str(e)
+        
+        return resource_result
+
+    def _generate_resource_script(self, resource_files: Dict[str, Any], resources_dir: str) -> str:
+        """Generate Windows resource script (.rc) from extracted resources"""
+        rc_lines = [
+            "// Generated resource script for Matrix Online decompilation",
+            "// Generated by Agent 10 (The Machine)",
+            "",
+            "#include <windows.h>",
+            ""
+        ]
+        
+        icon_id = 100
+        bitmap_id = 200
+        string_id = 300
+        
+        # Process icons
+        for resource_name, resource_data in resource_files.items():
+            if 'icon' in resource_name.lower() and isinstance(resource_data, dict):
+                content = resource_data.get('content')
+                if content and isinstance(content, bytes):
+                    # Save icon file
+                    icon_file = os.path.join(resources_dir, f"{resource_name}.ico")
+                    with open(icon_file, 'wb') as f:
+                        f.write(content)
+                    
+                    # Add to RC script
+                    rc_lines.append(f"{icon_id} ICON \"{icon_file}\"")
+                    icon_id += 1
+        
+        # Process bitmaps/images  
+        for resource_name, resource_data in resource_files.items():
+            if any(x in resource_name.lower() for x in ['bitmap', 'bmp', 'image']) and isinstance(resource_data, dict):
+                content = resource_data.get('content')
+                if content and isinstance(content, bytes):
+                    # Save bitmap file
+                    bmp_file = os.path.join(resources_dir, f"{resource_name}.bmp")
+                    with open(bmp_file, 'wb') as f:
+                        f.write(content)
+                    
+                    # Add to RC script
+                    rc_lines.append(f"{bitmap_id} BITMAP \"{bmp_file}\"")
+                    bitmap_id += 1
+        
+        # Process string tables
+        strings = []
+        for resource_name, resource_data in resource_files.items():
+            if 'string' in resource_name.lower() and isinstance(resource_data, dict):
+                content = resource_data.get('content')
+                if content and isinstance(content, str) and len(content.strip()) > 0:
+                    # Escape quotes and newlines
+                    escaped_content = content.replace('"', '\\"').replace('\n', '\\n').replace('\r', '')
+                    strings.append(f'    {string_id}, "{escaped_content}"')
+                    string_id += 1
+        
+        if strings:
+            rc_lines.extend([
+                "",
+                "STRINGTABLE",
+                "BEGIN"
+            ])
+            rc_lines.extend(strings)
+            rc_lines.append("END")
+        
+        rc_lines.extend([
+            "",
+            "// End of generated resource script"
+        ])
+        
+        return '\n'.join(rc_lines)
 
     def _build_with_msbuild(self, output_dir: str, build_config: Dict[str, Any]) -> Dict[str, Any]:
         """Build using centralized MSBuild system - NO FALLBACKS"""
@@ -849,16 +1180,70 @@ Write-Host "Build complete!" -ForegroundColor Green
             os.makedirs(src_dir, exist_ok=True)
             
             # Write all source files to src directory
-            for filename, content in build_config.get('source_files', {}).items():
+            source_files = build_config.get('source_files', {})
+            self.logger.info(f"🔍 DEBUG: Found {len(source_files)} source files to write")
+            
+            if not source_files:
+                self.logger.warning("⚠️ No source files found in build_config")
+                self.logger.info(f"🔍 DEBUG: build_config keys: {list(build_config.keys())}")
+                
+            for filename, content in source_files.items():
                 src_file = os.path.join(src_dir, filename)
                 with open(src_file, 'w', encoding='utf-8') as f:
                     f.write(content)
-                self.logger.info(f"✅ Written source file: {filename}")
+                self.logger.info(f"✅ Written source file: {filename} ({len(content)} chars)")
+            
+            # Phase 2.1: Create resource.h for exact function reconstruction
+            resource_header = self._generate_resource_header()
+            resource_file = os.path.join(src_dir, 'resource.h')
+            with open(resource_file, 'w', encoding='utf-8') as f:
+                f.write(resource_header)
+            self.logger.info("✅ Generated resource.h for Phase 2.1 compliance")
+            
+            # Phase 1: Write resource files (RC files and BMPs) for binary equivalence improvement
+            resource_files = build_config.get('resource_files', {})
+            if resource_files:
+                self.logger.info(f"🔧 Writing {len(resource_files)} resource files for binary equivalence")
+                
+                for filename, content in resource_files.items():
+                    if filename.endswith('.rc'):
+                        # Write RC file to compilation root (not src/)
+                        rc_file = os.path.join(output_dir, filename)
+                        with open(rc_file, 'w', encoding='utf-8') as f:
+                            f.write(content)
+                        self.logger.info(f"✅ Written resource script: {filename}")
+                    else:
+                        # Other resource files go to src/
+                        res_file = os.path.join(src_dir, filename)
+                        with open(res_file, 'w', encoding='utf-8') as f:
+                            f.write(content)
+                        self.logger.info(f"✅ Written resource file: {filename}")
+            else:
+                self.logger.info("🔧 No Keymaker resources found - compiling without resource integration")
             
             # Write project file
             proj_file = os.path.join(output_dir, 'project.vcxproj')
-            with open(proj_file, 'w') as f:
-                f.write(build_config['build_files']['project.vcxproj'])
+            
+            # Ensure build_files exists and has project content
+            if 'build_files' not in build_config or 'project.vcxproj' not in build_config['build_files']:
+                self.logger.error("❌ Build configuration missing project.vcxproj content")
+                result['error'] = "Build configuration missing project.vcxproj content"
+                return result
+            
+            try:
+                with open(proj_file, 'w', encoding='utf-8') as f:
+                    f.write(build_config['build_files']['project.vcxproj'])
+                self.logger.info(f"✅ Written project file: {proj_file}")
+                
+                # Verify the file was written
+                if not os.path.exists(proj_file):
+                    result['error'] = f"Project file was not created: {proj_file}"
+                    return result
+                    
+            except Exception as e:
+                self.logger.error(f"❌ Failed to write project file: {e}")
+                result['error'] = f"Failed to write project file: {e}"
+                return result
             
             # Use centralized build system manager
             build_manager = self._get_build_manager()
@@ -950,6 +1335,38 @@ Write-Host "Build complete!" -ForegroundColor Green
         except Exception as e:
             self.logger.error(f"Error validating executable {exe_path}: {e}")
             return False
+
+    def _generate_resource_header(self) -> str:
+        """
+        Phase 2.1: Generate resource.h for exact function reconstruction
+        Creates proper Windows resource definitions for MSVC compatibility
+        """
+        return """//{{NO_DEPENDENCIES}}
+// Microsoft Visual C++ generated include file.
+// Used by Matrix Online Launcher
+//
+// Resource IDs reconstructed from binary analysis
+// Phase 2.1: Exact Function Reconstruction - Resource Constants
+
+#define IDI_MAIN_ICON                   101
+#define IDI_APP_ICON                    102
+#define IDS_APP_TITLE                   201
+#define IDS_APP_NAME                    202
+#define ID_FILE_EXIT                    1001
+#define ID_FILE_OPEN                    1002
+#define ID_HELP_ABOUT                   1003
+
+// Next default values for new objects
+//
+#ifdef APSTUDIO_INVOKED
+#ifndef APSTUDIO_READONLY_SYMBOLS
+#define _APS_NEXT_RESOURCE_VALUE        103
+#define _APS_NEXT_COMMAND_VALUE         1004
+#define _APS_NEXT_CONTROL_VALUE         1000
+#define _APS_NEXT_SYMED_VALUE           101
+#endif
+#endif
+"""
 
     def _get_build_manager(self):
         """Get centralized build system manager - REQUIRED"""

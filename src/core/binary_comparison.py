@@ -1235,8 +1235,29 @@ class BinaryComparisonEngine:
 
 # Legacy compatibility
 class BinaryComparator(BinaryComparisonEngine):
-    """Legacy compatibility class"""
-    pass
+    """Legacy compatibility class with Phase 4 validation methods"""
+    
+    def validate_final_binary(self) -> Any:
+        """Phase 4 final binary validation for linking and assembly"""
+        from types import SimpleNamespace
+        
+        logger.info("🔍 Running Phase 4: Final Binary Validation")
+        
+        # Mock validation result for now - would integrate with actual validation
+        result = SimpleNamespace()
+        result.status = "VALIDATION_AVAILABLE"
+        result.checksum_match = False  # Would check PE checksum
+        result.relocation_match = False  # Would validate relocation tables
+        result.entry_point_match = False  # Would verify entry points
+        
+        # In full implementation, would validate:
+        # - PE checksum calculation
+        # - Relocation table reconstruction
+        # - Entry point verification
+        # - Load configuration matching
+        # - Symbol table preservation
+        
+        return result
 
 
 def create_binary_comparator() -> BinaryComparator:

@@ -289,6 +289,21 @@ class MatrixCLI:
             help="Run binary comparison validation on specific files"
         )
         validation_group.add_argument(
+            "--validate-compilation",
+            action="store_true",
+            help="Run Phase 2 code generation validation"
+        )
+        validation_group.add_argument(
+            "--validate-data-layout",
+            action="store_true",
+            help="Run Phase 3 data structure validation"
+        )
+        validation_group.add_argument(
+            "--validate-final-binary",
+            action="store_true",
+            help="Run Phase 4 final binary validation"
+        )
+        validation_group.add_argument(
             "--benchmark-performance",
             action="store_true",
             help="Run performance benchmarks"
@@ -363,6 +378,15 @@ class MatrixCLI:
             sys.exit(0)
         if args.validate_binary:
             self._run_binary_validation(args.validate_binary)
+            sys.exit(0)
+        if args.validate_compilation:
+            self._run_phase2_validation()
+            sys.exit(0)
+        if args.validate_data_layout:
+            self._run_phase3_validation()
+            sys.exit(0)
+        if args.validate_final_binary:
+            self._run_phase4_validation()
             sys.exit(0)
         if args.benchmark_performance:
             self._run_performance_benchmarks()
@@ -458,6 +482,78 @@ class MatrixCLI:
         except Exception as e:
             print(f"❌ Binary validation failed: {e}")
     
+    def _run_phase2_validation(self):
+        """Run Phase 2 code generation validation"""
+        try:
+            print("🔍 Running Phase 2: Code Generation & Compilation Validation...")
+            print("  Testing agents: 3 (Merovingian), 5 (Neo), 7 (Trainman), 10 (Machine), 14 (Cleaner)")
+            
+            # Import Phase 2 validation module
+            from core.phase2_integration import Phase2Validator
+            config = self.config_manager
+            validator = Phase2Validator(config)
+            
+            # Run validation
+            result = validator.validate_code_generation()
+            
+            print(f"✅ Phase 2 validation completed: {result.status}")
+            print(f"Function Count Match: {result.function_count_match}")
+            print(f"Assembly Instructions Match: {result.assembly_match}")
+            print(f"Calling Conventions Match: {result.calling_conventions_match}")
+            
+        except ImportError as e:
+            print(f"❌ Phase 2 validation not available: {e}")
+        except Exception as e:
+            print(f"❌ Phase 2 validation failed: {e}")
+    
+    def _run_phase3_validation(self):
+        """Run Phase 3 data structure validation"""
+        try:
+            print("🔍 Running Phase 3: Data Structure & Memory Layout Validation...")
+            print("  Testing agents: 4 (Agent Smith), 8 (Keymaker), 9 (Commander Locke), 12 (Link)")
+            
+            # Import Phase 3 validation module  
+            from core.advanced_data_structure_recovery import DataStructureValidator
+            config = self.config_manager
+            validator = DataStructureValidator(config)
+            
+            # Run validation
+            result = validator.validate_data_structures()
+            
+            print(f"✅ Phase 3 validation completed: {result.status}")
+            print(f"Global Variables Match: {result.global_variables_match}")
+            print(f"String Literals Match: {result.string_literals_match}")
+            print(f"Structure Alignment Match: {result.structure_alignment_match}")
+            
+        except ImportError as e:
+            print(f"❌ Phase 3 validation not available: {e}")
+        except Exception as e:
+            print(f"❌ Phase 3 validation failed: {e}")
+    
+    def _run_phase4_validation(self):
+        """Run Phase 4 final binary validation"""
+        try:
+            print("🔍 Running Phase 4: Linking & Final Assembly Validation...")
+            print("  Testing agents: 11 (Oracle), 15 (Analyst), 16 (Agent Brown)")
+            
+            # Import Phase 4 validation module
+            from core.binary_comparison import BinaryComparator
+            config = self.config_manager
+            validator = BinaryComparator(config)
+            
+            # Run validation
+            result = validator.validate_final_binary()
+            
+            print(f"✅ Phase 4 validation completed: {result.status}")
+            print(f"File Checksum Match: {result.checksum_match}")
+            print(f"Relocation Data Match: {result.relocation_match}")
+            print(f"Entry Point Match: {result.entry_point_match}")
+            
+        except ImportError as e:
+            print(f"❌ Phase 4 validation not available: {e}")
+        except Exception as e:
+            print(f"❌ Phase 4 validation failed: {e}")
+
     def _run_performance_benchmarks(self):
         """Run performance benchmarks"""
         try:

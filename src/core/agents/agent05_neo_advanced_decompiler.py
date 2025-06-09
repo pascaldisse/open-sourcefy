@@ -93,7 +93,7 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
         self.quality_threshold = self.config.get_value('agents.agent_05.quality_threshold', 0.25)
         self.max_analysis_passes = self.config.get_value('agents.agent_05.max_passes', 1)
         self.timeout_seconds = self.config.get_value('agents.agent_05.timeout', 120)  # Increased to 2 minutes
-        self.ghidra_timeout = self.config.get_value('agents.agent_05.ghidra_timeout', 600)  # Increased to 10 minutes
+        self.ghidra_timeout = self.config.get_value('agents.agent_05.ghidra_timeout', 60)  # Reduced to 1 minute for performance
         self.ghidra_memory_limit = self.config.get_value('agents.agent_05.ghidra_memory', '4G')  # Increased memory
         
         # Initialize components
@@ -934,17 +934,23 @@ public class NeoAdvancedAnalysis extends GhidraScript {{
             self.logger.info(f"Building enhanced code from {len(semantic_functions)} semantic functions")
             return self._build_code_from_semantic_functions(semantic_functions, results, insights)
         
-        # Priority 3: Traditional enhanced reconstruction
-        self.logger.info("Using traditional enhanced reconstruction")
+        # Priority 3: Traditional enhanced reconstruction (semantic analysis not available)
+        self.logger.info("Using traditional enhanced reconstruction - semantic analysis unavailable")
         
         # Get available analysis data
         functions = results.get('enhanced_functions', results.get('functions', []))
         ghidra_metadata = results.get('ghidra_metadata', {})
         
+        # Determine analysis type for header comment
+        if results.get('semantic_analysis_available', False):
+            analysis_status = "// Enhanced traditional reconstruction (semantic analysis available but not used in this path)"
+        else:
+            analysis_status = "// Traditional analysis reconstruction (semantic analysis unavailable)"
+        
         # Build comprehensive code structure
         code_parts = [
             "// Neo's Enhanced Decompilation Output",
-            "// Traditional analysis reconstruction (semantic analysis unavailable)",
+            analysis_status,
             "",
             "#include <windows.h>",
             "#include <stdio.h>",
@@ -986,7 +992,7 @@ public class NeoAdvancedAnalysis extends GhidraScript {{
         
         code_parts = [
             "// Neo's Semantic Decompilation Output",
-            "// True source code reconstruction from semantic analysis",
+            "// True source code reconstruction (semantic analysis enabled)",
             "",
             "#include <stdio.h>",
             "#include <stdlib.h>",
