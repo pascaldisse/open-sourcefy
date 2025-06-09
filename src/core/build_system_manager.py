@@ -191,10 +191,36 @@ class BuildSystemManager:
         Returns:
             Tuple of (success: bool, output: str)
         """
+        import shutil
+        import tempfile
+        
         try:
-            compiler_path = self.get_compiler_path(architecture)
+            # If source is in /tmp/, copy to Windows-accessible location
+            if str(source_file).startswith('/tmp/'):
+                # Create a temporary directory in Windows space
+                win_temp_dir = Path('/mnt/c/temp')
+                win_temp_dir.mkdir(exist_ok=True)
+                
+                # Copy source file to Windows temp directory
+                temp_source = win_temp_dir / source_file.name
+                shutil.copy2(source_file, temp_source)
+                
+                # Update output path to Windows temp directory
+                temp_output = win_temp_dir / output_file.name
+                
+                self.logger.info(f"Copied source to Windows-accessible location: {temp_source}")
+                
+                # Use the Windows-accessible paths
+                actual_source = temp_source
+                actual_output = temp_output
+            else:
+                actual_source = source_file
+                actual_output = output_file
             
-            # Build compiler command
+            compiler_path = self.get_compiler_path(architecture)
+            # Use WSL path for executable, Windows paths for arguments
+            
+            # Build compiler command with WSL path for executable
             cmd = [compiler_path]
             cmd.extend(self.build_config.default_flags)
             
@@ -210,8 +236,8 @@ class BuildSystemManager:
                 cmd.append(f"/I\"{win_include_path}\"")
             
             # Convert WSL paths to Windows paths for the compiler
-            source_win_path = self._convert_wsl_path_to_windows(source_file)
-            output_win_path = self._convert_wsl_path_to_windows(output_file)
+            source_win_path = self._convert_wsl_path_to_windows(actual_source)
+            output_win_path = self._convert_wsl_path_to_windows(actual_output)
             
             # Add source file and output
             cmd.append(source_win_path)
@@ -223,20 +249,37 @@ class BuildSystemManager:
                 win_lib_path = self._convert_wsl_path_to_windows(Path(lib_dir))
                 cmd.append(f"/LIBPATH:\"{win_lib_path}\"")
             
-            self.logger.info(f"Compiling with VS2022: {source_file} -> {output_file}")
+            self.logger.info(f"Compiling with VS2022: {actual_source} -> {actual_output}")
             self.logger.info(f"Compiler command: {' '.join(cmd)}")
             
-            # Execute compilation
+            # Execute compilation with Windows environment variables
+            self.logger.info(f"Executing command: {' '.join(cmd)}")
+            
+            # Set up Windows environment for the compiler
+            env = os.environ.copy()
+            env.update({
+                'INCLUDE': ';'.join([self._convert_wsl_path_to_windows(Path(inc)) for inc in self.build_config.include_dirs]),
+                'LIB': ';'.join([self._convert_wsl_path_to_windows(Path(lib)) for lib in self.get_library_dirs(architecture)]),
+                'PATH': env.get('PATH', '') + ';' + self._convert_wsl_path_to_windows(Path(compiler_path).parent)
+            })
+            
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=300,  # 5 minutes
-                cwd=output_file.parent
+                cwd=actual_output.parent,
+                env=env
             )
             
             if result.returncode == 0:
-                self.logger.info(f"✅ Compilation successful: {output_file}")
+                self.logger.info(f"✅ Compilation successful: {actual_output}")
+                
+                # If we used temporary files, copy the result back
+                if str(source_file).startswith('/tmp/') and actual_output.exists():
+                    shutil.copy2(actual_output, output_file)
+                    self.logger.info(f"Copied result back to: {output_file}")
+                
                 return True, result.stdout
             else:
                 error_output = result.stderr or result.stdout or f"Exit code: {result.returncode}"
@@ -421,6 +464,11 @@ class BuildSystemManager:
             # Handle other drive letters
             drive_letter = path_str[5]
             win_path = drive_letter.upper() + ':' + path_str[6:].replace('/', '\\')
+            return win_path
+        elif path_str.startswith('/tmp/'):
+            # Convert /tmp/ paths to Windows temp directory using WSL interop
+            # WSL makes /tmp accessible via the UNC path
+            win_path = '\\\\wsl$\\Ubuntu' + path_str.replace('/', '\\')
             return win_path
         else:
             # Already a Windows path or relative path

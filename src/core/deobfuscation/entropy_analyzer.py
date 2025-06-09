@@ -147,6 +147,41 @@ class EntropyAnalyzer:
         else:
             return ("unknown", 0.50, False, False)
     
+    def analyze_entropy(self, binary_path: Path) -> Dict[str, Any]:
+        """
+        Analyze entropy of a binary file (wrapper for compatibility).
+        
+        Args:
+            binary_path: Path to binary file
+            
+        Returns:
+            Dictionary with entropy analysis results
+        """
+        try:
+            with open(binary_path, 'rb') as f:
+                data = f.read()
+            
+            result = self.analyze_binary_data(data)
+            
+            return {
+                'entropy': result.entropy,
+                'classification': result.classification,
+                'confidence': result.confidence,
+                'packed_probability': result.packed_probability,
+                'encrypted_probability': result.encrypted_probability,
+                'metadata': result.metadata
+            }
+        except Exception as e:
+            self.logger.error(f"Entropy analysis failed for {binary_path}: {e}")
+            return {
+                'entropy': 0.0,
+                'classification': 'error',
+                'confidence': 0.0,
+                'packed_probability': 0.0,
+                'encrypted_probability': 0.0,
+                'metadata': {'error': str(e)}
+            }
+
     def analyze_binary_data(self, data: bytes) -> EntropyResult:
         """
         Perform comprehensive entropy analysis on binary data.

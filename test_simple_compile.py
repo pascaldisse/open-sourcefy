@@ -1,117 +1,75 @@
 #!/usr/bin/env python3
 """
-Simple compilation test to verify build system basics
+Simple compilation test to debug the build system issue
 """
 
 import sys
-import subprocess
+import tempfile
 from pathlib import Path
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
-def test_build_system_compilation():
-    """Test compilation using build system manager"""
-    print("🔧 Testing compilation with build system manager...")
+from src.core.build_system_manager import BuildSystemManager
+
+
+def test_debug_compilation():
+    """Debug compilation with detailed logging"""
+    print("🔍 Debugging compilation issue...")
     
-    try:
-        from core.build_system_manager import get_build_manager
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
         
-        build_manager = get_build_manager()
+        # Create simple hello world program
+        source_file = temp_path / "hello.c"
+        output_file = temp_path / "hello.exe"
         
-        # Create simple test file
-        test_dir = Path("output/build_system_test")
-        test_dir.mkdir(parents=True, exist_ok=True)
-        
-        source_file = test_dir / "simple.c"
-        output_file = test_dir / "simple.exe"
-        
-        with open(source_file, 'w') as f:
-            f.write('''#include <stdio.h>
+        source_content = """#include <stdio.h>
+
 int main() {
-    printf("Build system compilation test\\n");
+    printf("Hello World!\\n");
     return 0;
 }
-''')
+"""
         
-        print(f"Source: {source_file}")
-        print(f"Output: {output_file}")
+        with open(source_file, 'w') as f:
+            f.write(source_content)
         
-        # Use build system manager
-        success, output = build_manager.compile_source(
-            source_file, output_file, architecture="x64", configuration="Release"
-        )
+        # Initialize build manager with debug logging
+        import logging
+        logging.basicConfig(level=logging.DEBUG)
         
-        print(f"Success: {success}")
-        print(f"Output: {output}")
+        manager = BuildSystemManager()
         
-        if success and output_file.exists():
-            print(f"✅ Build system compilation successful! ({output_file.stat().st_size} bytes)")
-            return True
-        else:
-            print("❌ Build system compilation failed")
-            return False
+        print("\n📋 Build Configuration:")
+        print(f"Compiler: {manager.get_compiler_path('x64')}")
+        print(f"Include dirs: {manager.get_include_dirs()}")
+        print(f"Library dirs: {manager.get_library_dirs('x64')}")
+        
+        print(f"\n🔨 Compiling: {source_file} -> {output_file}")
+        
+        success, output = manager.compile_source(source_file, output_file)
+        
+        print(f"\n📊 Result: {'Success' if success else 'Failed'}")
+        print(f"Output:\n{output}")
+        
+        if not success:
+            # Check if files exist
+            print(f"\n🔍 Diagnostic Information:")
+            print(f"Source exists: {source_file.exists()}")
+            print(f"Source content: {source_file.read_text()[:100]}...")
             
-    except Exception as e:
-        print(f"❌ Build system compilation test error: {e}")
-        return False
+            # Check if compiler exists
+            compiler_path = Path(manager.get_compiler_path('x64'))
+            print(f"Compiler exists: {compiler_path.exists()}")
+            
+            # Check first include directory
+            first_include = Path(manager.get_include_dirs()[0])
+            print(f"First include dir exists: {first_include.exists()}")
+            if first_include.exists():
+                stdio_path = first_include / "stdio.h"
+                print(f"stdio.h exists: {stdio_path.exists()}")
 
-def test_environment_setup():
-    """Test if we can access VS environment"""
-    print("\n🌍 Testing Visual Studio environment...")
-    
-    try:
-        from core.build_system_manager import get_build_manager
-        
-        build_manager = get_build_manager()
-        
-        # Test paths exist
-        compiler = Path(build_manager.get_compiler_path("x64"))
-        if not compiler.exists():
-            print(f"❌ Compiler not found: {compiler}")
-            return False
-        
-        print(f"✅ Compiler found: {compiler}")
-        
-        # Test include directories
-        includes = build_manager.get_include_dirs()
-        valid_includes = 0
-        for inc in includes:
-            if Path(inc).exists():
-                valid_includes += 1
-                print(f"✅ Include dir: {inc}")
-            else:
-                print(f"❌ Missing include dir: {inc}")
-        
-        if valid_includes == len(includes):
-            print("✅ All include directories found")
-            return True
-        else:
-            print(f"❌ Only {valid_includes}/{len(includes)} include directories found")
-            return False
-            
-    except Exception as e:
-        print(f"❌ Environment test error: {e}")
-        return False
 
 if __name__ == "__main__":
-    print("=" * 50)
-    print("SIMPLE BUILD SYSTEM TEST")
-    print("=" * 50)
-    
-    tests = [
-        test_environment_setup,
-        test_build_system_compilation
-    ]
-    
-    passed = 0
-    for test in tests:
-        if test():
-            passed += 1
-    
-    print(f"\nResult: {passed}/{len(tests)} tests passed")
-    
-    if passed == len(tests):
-        print("✅ Basic build system functionality verified")
-    else:
-        print("❌ Build system needs fixes")
+    test_debug_compilation()

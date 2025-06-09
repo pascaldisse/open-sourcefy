@@ -24,12 +24,14 @@ import math
 
 try:
     import capstone
+    CAPSTONE_AVAILABLE = True
     import pefile
     import numpy as np
     from sklearn.cluster import DBSCAN
     from sklearn.preprocessing import StandardScaler
     ADVANCED_LIBS_AVAILABLE = True
 except ImportError:
+    CAPSTONE_AVAILABLE = False
     ADVANCED_LIBS_AVAILABLE = False
     logging.warning("Advanced libraries not available, using fallback algorithms")
 

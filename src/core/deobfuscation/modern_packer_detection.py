@@ -16,6 +16,7 @@ import struct
 import re
 import hashlib
 import json
+import math
 from typing import Dict, List, Tuple, Optional, Any, Set, Union
 from dataclasses import dataclass, field
 from enum import Enum
@@ -641,7 +642,7 @@ class ModernPackerDetector:
         for count in byte_counts:
             if count > 0:
                 probability = count / data_len
-                entropy -= probability * (probability.bit_length() - 1)
+                entropy -= probability * math.log2(probability)
         
         return entropy
 

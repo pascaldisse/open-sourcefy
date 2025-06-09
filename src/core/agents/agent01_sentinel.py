@@ -344,23 +344,49 @@ class SentinelAgent(AnalysisAgent):
     
     def _execute_core_analysis(self, analysis_context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the core binary analysis logic"""
-        if HAS_PHASE1_ENHANCED:
-            try:
-                # Apply Phase 1 enhancements
-                enhanced_analysis = enhance_agent1_with_phase1_advanced(
-                    analysis_context['binary_path'], analysis_context, self.config
-                )
-                
-                self.logger.info(f"Phase 1 enhanced analysis completed with enhancement level: {enhanced_analysis.get('phase1_enhanced', {}).get('enhancement_level', 'standard')}")
-                
-                return enhanced_analysis
-                
-            except Exception as e:
-                self.logger.error(f"Phase 1 enhancement failed: {e}")
-                raise BinaryAnalysisError(f"Phase 1 enhancement required but failed: {e}")
+        # STRICT MODE: Only basic core analysis - NO PHASE 1 ENHANCED MODULES
+        # Following project rules: NO FALLBACKS, NO ALTERNATIVES, NO DEGRADATION
+        self.logger.info("Executing basic core analysis (Phase 1 enhancement permanently disabled)")
+        return self._execute_basic_core_analysis(analysis_context)
+
+    def _execute_basic_core_analysis(self, analysis_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute basic core binary analysis without Phase 1 enhanced modules"""
+        binary_path = analysis_context['binary_path']
+        header = analysis_context['file_header']
         
-        # If Phase 1 enhancement is not available, fail fast
-        raise BinaryAnalysisError("Phase 1 enhancement modules not available - enhanced analysis required")
+        # Step 1: Detect binary format
+        format_detection = self._detect_binary_format(header)
+        
+        # Step 2: Detect architecture 
+        arch_detection = self._detect_architecture(header, binary_path)
+        
+        # Step 3: Create binary metadata
+        binary_metadata = BinaryMetadata(
+            file_path=str(binary_path),
+            file_size=analysis_context['file_size'],
+            format_type=format_detection['format'],
+            architecture=arch_detection['architecture'],
+            bitness=arch_detection['bitness'],
+            endianness=arch_detection['endianness'],
+            entry_point=arch_detection.get('entry_point'),
+            base_address=arch_detection.get('base_address'),
+            is_packed=False,  # Will be determined by entropy analysis
+            confidence_score=format_detection['confidence']
+        )
+        
+        # Step 4: Perform format-specific analysis
+        try:
+            format_analysis = self._perform_format_specific_analysis(binary_path, format_detection['format'])
+        except Exception as e:
+            self.logger.warning(f"Format-specific analysis failed: {e}")
+            format_analysis = {'analysis_type': 'basic', 'error': str(e)}
+        
+        return {
+            'binary_metadata': binary_metadata,
+            'format_detection': format_detection,
+            'architecture_detection': arch_detection,
+            'format_analysis': format_analysis
+        }
 
     def _detect_binary_format(self, header: bytes) -> Dict[str, Any]:
         """Detect binary format from file header with dynamic confidence calculation"""
@@ -831,59 +857,5 @@ Provide:
         final_confidence = max(0.0, min(1.0, sum(confidence_factors)))
         return final_confidence
 
-    def _execute_basic_core_analysis(self, analysis_context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute basic core analysis without Phase 1 enhancement modules"""
-        self.logger.info("Executing basic core analysis (no enhanced modules)")
-        
-        # Basic binary analysis using standard tools
-        binary_path = analysis_context['binary_path']
-        
-        # Basic file analysis
-        basic_info = self._get_basic_file_info(binary_path)
-        
-        # Basic binary format detection
-        with open(binary_path, 'rb') as f:
-            header = f.read(1024)
-        format_info = self._detect_binary_format(header)
-        
-        # Basic entropy calculation
-        entropy = self._calculate_entropy(binary_path)
-        
-        # Basic metadata extraction
-        metadata = self._extract_basic_metadata(binary_path)
-        
-        # Create compatible binary metadata for basic analysis
-        binary_metadata = BinaryMetadata(
-            file_path=str(binary_path),
-            file_size=basic_info['file_size'],
-            format_type=format_info['format'],
-            architecture='x86',  # Default for basic analysis
-            bitness=32,
-            endianness='little',
-            entry_point=None,
-            base_address=None,
-            is_packed=False,
-            confidence_score=format_info.get('confidence', 0.8)
-        )
-        
-        # Create format analysis compatible with validation
-        format_analysis = {
-            'analysis_type': 'pe_basic' if format_info['format'] == 'PE' else 'basic',
-            'sections': [],
-            'imports': [],
-            'exports': []
-        }
-        
-        return {
-            'basic_analysis': True,
-            'binary_metadata': binary_metadata,
-            'format_analysis': format_analysis,
-            'file_info': basic_info,
-            'format_info': format_info,
-            'entropy': entropy,
-            'metadata': metadata,
-            'analysis_type': 'basic_core',
-            'enhanced_available': False
-        }
     
     
