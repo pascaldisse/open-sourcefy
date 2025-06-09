@@ -193,9 +193,10 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
     def _setup_keymaker_ai_agent(self) -> None:
         """Setup The Keymaker's AI-enhanced resource analysis capabilities"""
         try:
-            model_path = self.config.get_path('ai.model.path')
-            if not model_path.exists():
-                self.ai_enabled = False
+            # Use centralized AI system instead of local model
+            from ..ai_system import ai_available
+            self.ai_enabled = ai_available()
+            if not self.ai_enabled:
                 return
             
             # Setup LLM for resource analysis

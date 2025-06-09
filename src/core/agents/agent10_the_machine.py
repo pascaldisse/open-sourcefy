@@ -241,24 +241,28 @@ class Agent10_TheMachine(ReconstructionAgent):
         return analysis
 
     def _generate_build_system(self, analysis: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate comprehensive build system configuration"""
+        """Generate VS2022 MSBuild system configuration - CENTRALIZED ONLY"""
         build_system = {
-            'detected_systems': [],
-            'primary_system': 'msbuild',
+            'detected_systems': ['msbuild'],  # Only MSBuild supported
+            'primary_system': 'msbuild_vs2022',
             'build_files': {},
             'build_configurations': {},
             'compilation_commands': {},
             'linking_commands': {},
             'build_scripts': {},
-            'automated_build': {}
+            'automated_build': {},
+            'centralized_config': True,
+            'vs_version': '2022_preview'
         }
         
-        # Generate Visual Studio project files (Windows only)
+        self.logger.info("🔧 Generating VS2022 MSBuild configuration (centralized system)")
+        
+        # Generate VS2022 project files using centralized build system
         vcxproj_content = self._generate_vcxproj_file(analysis)
         build_system['build_files']['project.vcxproj'] = vcxproj_content
-        build_system['detected_systems'].append('msbuild')
+        build_system['detected_systems'] = ['msbuild']  # Only system available
         
-        # Generate solution file for Visual Studio
+        # Generate VS2022 solution file
         sln_content = self._generate_solution_file(analysis)
         build_system['build_files']['project.sln'] = sln_content
         
@@ -335,21 +339,27 @@ EndGlobal
 
 
     def _generate_vcxproj_file(self, analysis: Dict[str, Any]) -> str:
-        """Generate Visual Studio project file"""
-        project_guid = "{" + "12345678-1234-5678-9ABC-123456789012" + "}"
+        """Generate VS2022 Visual Studio project file using centralized build system"""
+        import uuid
+        project_guid = "{" + str(uuid.uuid4()).upper() + "}"
         
         if analysis['architecture'] == 'x64':
             platform = 'x64'
-            platform_toolset = 'v143'
+            platform_toolset = 'v143'  # VS2022 toolset
         else:
             platform = 'Win32'
-            platform_toolset = 'v143'
+            platform_toolset = 'v143'  # VS2022 toolset
         
         config_type = 'Application'
         if analysis['project_type'] == 'dynamic_library':
             config_type = 'DynamicLibrary'
         elif analysis['project_type'] == 'static_library':
             config_type = 'StaticLibrary'
+        
+        # Get include and library directories from centralized build system
+        build_manager = self._get_build_manager()
+        include_dirs = ";".join(build_manager.get_include_dirs())
+        library_dirs = ";".join(build_manager.get_library_dirs(analysis['architecture']))
         
         vcxproj = f"""<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -364,10 +374,11 @@ EndGlobal
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <VCProjectVersion>16.0</VCProjectVersion>
+    <VCProjectVersion>17.0</VCProjectVersion>
     <ProjectGuid>{project_guid}</ProjectGuid>
     <RootNamespace>ReconstructedProject</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <PlatformToolset>{platform_toolset}</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|{platform}'" Label="Configuration">
@@ -387,10 +398,14 @@ EndGlobal
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|{platform}'">
     <OutDir>$(SolutionDir)bin\\$(Configuration)\\$(Platform)\\</OutDir>
     <IntDir>$(SolutionDir)obj\\$(Configuration)\\$(Platform)\\</IntDir>
+    <IncludePath>{include_dirs};$(IncludePath)</IncludePath>
+    <LibraryPath>{library_dirs};$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|{platform}'">
     <OutDir>$(SolutionDir)bin\\$(Configuration)\\$(Platform)\\</OutDir>
     <IntDir>$(SolutionDir)obj\\$(Configuration)\\$(Platform)\\</IntDir>
+    <IncludePath>{include_dirs};$(IncludePath)</IncludePath>
+    <LibraryPath>{library_dirs};$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|{platform}'">
     <ClCompile>
@@ -399,6 +414,7 @@ EndGlobal
       <PreprocessorDefinitions>DEBUG;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -415,12 +431,13 @@ EndGlobal
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <Optimization>MaxSpeed</Optimization>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
       <AdditionalDependencies>{';'.join(analysis['dependencies'])};%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -436,44 +453,64 @@ EndGlobal
         return vcxproj
 
     def _generate_msvc_commands(self, analysis: Dict[str, Any]) -> Dict[str, List[str]]:
-        """Generate MSVC compilation commands"""
+        """Generate MSVC compilation commands using centralized build system"""
         commands = {}
         
-        # MSVC commands only
-        msvc_base = ['cl', '/std:c11', '/W3']
+        # Get compiler path from centralized build manager
+        build_manager = self._get_build_manager()
+        compiler_path = build_manager.get_compiler_path(analysis['architecture'])
+        
+        # Use centralized configuration
+        msvc_base = [compiler_path, '/std:c11', '/W3']
         if analysis['architecture'] == 'x64':
             msvc_base.append('/MACHINE:X64')
         else:
             msvc_base.append('/MACHINE:X86')
         
+        # Add include directories from centralized config
+        include_flags = [f'/I"{include_dir}"' for include_dir in build_manager.get_include_dirs()]
+        
         commands['msvc'] = {
-            'debug': msvc_base + ['/Od', '/Zi', '/DDEBUG'],
-            'release': msvc_base + ['/O2', '/DNDEBUG'],
-            'includes': ['/Isrc'],
+            'debug': msvc_base + ['/Od', '/Zi', '/DDEBUG'] + include_flags,
+            'release': msvc_base + ['/O2', '/DNDEBUG'] + include_flags,
+            'includes': include_flags,
             'output': ['/Fe:reconstructed_project.exe']
         }
         
         return commands
 
     def _generate_msvc_linking_commands(self, analysis: Dict[str, Any]) -> Dict[str, List[str]]:
-        """Generate MSVC linking commands"""
+        """Generate MSVC linking commands using centralized build system"""
         commands = {}
+        
+        # Get linker and library paths from centralized build manager
+        build_manager = self._get_build_manager()
         
         # Base libraries
         libs = analysis['dependencies']
         
-        # MSVC linking only
-        commands['msvc'] = [f"/DEFAULTLIB:{lib}" for lib in libs if lib.endswith('.lib')]
+        # Library path flags from centralized config
+        lib_paths = [f'/LIBPATH:"{lib_dir}"' for lib_dir in build_manager.get_library_dirs(analysis['architecture'])]
+        
+        # MSVC linking with centralized library paths
+        commands['msvc'] = (
+            [f"/DEFAULTLIB:{lib}" for lib in libs if lib.endswith('.lib')] +
+            lib_paths
+        )
         
         return commands
 
     def _generate_windows_build_scripts(self, analysis: Dict[str, Any]) -> Dict[str, str]:
-        """Generate Windows build scripts for MSBuild"""
+        """Generate Windows build scripts using centralized MSBuild paths"""
         scripts = {}
         
-        # Windows batch script using MSBuild
+        # Get MSBuild path from centralized build manager
+        build_manager = self._get_build_manager()
+        msbuild_path = build_manager.get_msbuild_path().replace('/mnt/c/', 'C:\\')
+        
+        # Windows batch script using centralized MSBuild path
         batch_script = f"""@echo off
-echo Building reconstructed project with MSBuild...
+echo Building reconstructed project with VS2022 MSBuild...
 
 REM Create directories
 if not exist "bin" mkdir bin
@@ -481,17 +518,17 @@ if not exist "obj" mkdir obj
 if not exist "Debug" mkdir Debug
 if not exist "Release" mkdir Release
 
-REM Set up Visual Studio environment
-call "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat"
+REM Set up Visual Studio 2022 Preview environment
+call "C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Auxiliary\\Build\\vcvars64.bat"
 
-REM Build with different configurations
+REM Build with different configurations using centralized MSBuild
 echo.
 echo === Debug Build ===
-msbuild project.sln /p:Configuration=Debug /p:Platform={analysis['architecture']}
+"{msbuild_path}" project.sln /p:Configuration=Debug /p:Platform={analysis['architecture']}
 
 echo.
 echo === Release Build ===
-msbuild project.sln /p:Configuration=Release /p:Platform={analysis['architecture']}
+"{msbuild_path}" project.sln /p:Configuration=Release /p:Platform={analysis['architecture']}
 
 echo.
 echo === Testing builds ===
@@ -513,25 +550,25 @@ pause
 """
         scripts['build.bat'] = batch_script
         
-        # PowerShell script for more advanced building
-        powershell_script = f"""# PowerShell build script
-Write-Host "Building reconstructed project with MSBuild..." -ForegroundColor Green
+        # PowerShell script using centralized MSBuild path
+        powershell_script = f"""# PowerShell build script - VS2022 Preview
+Write-Host "Building reconstructed project with VS2022 MSBuild..." -ForegroundColor Green
 
 # Create directories
 New-Item -ItemType Directory -Force -Path "bin", "obj", "Debug", "Release"
 
-# Import Visual Studio build tools
-Import-Module "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\Tools\\Microsoft.VisualStudio.DevShell.dll"
+# Import Visual Studio 2022 Preview build tools
+Import-Module "C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\Common7\\Tools\\Microsoft.VisualStudio.DevShell.dll"
 Enter-VsDevShell
 
 try {{
-    # Debug build
+    # Debug build using centralized MSBuild path
     Write-Host "Building Debug configuration..." -ForegroundColor Yellow
-    & msbuild project.sln /p:Configuration=Debug /p:Platform={analysis['architecture']} /verbosity:minimal
+    & "{msbuild_path}" project.sln /p:Configuration=Debug /p:Platform={analysis['architecture']} /verbosity:minimal
     
-    # Release build
+    # Release build using centralized MSBuild path
     Write-Host "Building Release configuration..." -ForegroundColor Yellow
-    & msbuild project.sln /p:Configuration=Release /p:Platform={analysis['architecture']} /verbosity:minimal
+    & "{msbuild_path}" project.sln /p:Configuration=Release /p:Platform={analysis['architecture']} /verbosity:minimal
     
     # Test builds
     Write-Host "Testing builds..." -ForegroundColor Cyan
@@ -558,7 +595,7 @@ Write-Host "Build complete!" -ForegroundColor Green
         return scripts
 
     def _orchestrate_compilation(self, build_system: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Orchestrate the compilation process"""
+        """Orchestrate compilation using centralized VS2022 MSBuild"""
         results = {
             'attempted_builds': [],
             'successful_builds': [],
@@ -567,35 +604,48 @@ Write-Host "Build complete!" -ForegroundColor Green
             'error_logs': {},
             'success_rate': 0.0,
             'compilation_time': {},
-            'binary_outputs': {}
+            'binary_outputs': {},
+            'build_system_used': 'msbuild_vs2022',
+            'centralized_config': True
         }
         
-        # Try MSBuild only (Windows)
+        # Always use VS2022 MSBuild (centralized system)
         build_systems_to_try = ['msbuild']
         
+        # Log that we're using centralized build system
+        self.logger.info("🔧 Using centralized VS2022 MSBuild system (NO FALLBACKS)")
+        
         for build_system_name in build_systems_to_try:
-            if build_system_name in build_system['detected_systems']:
-                build_result = self._attempt_build(build_system_name, build_system, context)
-                results['attempted_builds'].append(build_system_name)
-                
-                if build_result['success']:
-                    results['successful_builds'].append(build_system_name)
-                    results['build_outputs'][build_system_name] = build_result['output']
-                    results['compilation_time'][build_system_name] = build_result['time']
-                    if build_result.get('binary_path'):
-                        results['binary_outputs'][build_system_name] = build_result['binary_path']
-                else:
-                    results['failed_builds'].append(build_system_name)
-                    results['error_logs'][build_system_name] = build_result['error']
+            # Always proceed with MSBuild since it's our only system
+            build_result = self._attempt_build(build_system_name, build_system, context)
+            results['attempted_builds'].append(f"{build_system_name}_vs2022")
+            
+            if build_result['success']:
+                results['successful_builds'].append(f"{build_system_name}_vs2022")
+                results['build_outputs'][f"{build_system_name}_vs2022"] = build_result['output']
+                results['compilation_time'][f"{build_system_name}_vs2022"] = build_result['time']
+                if build_result.get('binary_path'):
+                    results['binary_outputs'][f"{build_system_name}_vs2022"] = build_result['binary_path']
+                self.logger.info(f"✅ VS2022 MSBuild compilation successful in {build_result['time']:.2f}s")
+            else:
+                results['failed_builds'].append(f"{build_system_name}_vs2022")
+                results['error_logs'][f"{build_system_name}_vs2022"] = build_result['error']
+                self.logger.error(f"❌ VS2022 MSBuild compilation failed: {build_result['error']}")
         
         # Calculate success rate
         if results['attempted_builds']:
             results['success_rate'] = len(results['successful_builds']) / len(results['attempted_builds'])
         
+        # Log final results
+        if results['success_rate'] > 0:
+            self.logger.info(f"🎯 Compilation orchestration complete: {results['success_rate']:.1%} success rate")
+        else:
+            self.logger.warning("⚠️ Compilation orchestration failed - check VS2022 configuration")
+        
         return results
 
     def _attempt_build(self, build_system: str, build_config: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Attempt to build using specified build system"""
+        """Attempt to build using centralized build system - NO FALLBACKS"""
         result = {
             'success': False,
             'output': '',
@@ -605,10 +655,10 @@ Write-Host "Build complete!" -ForegroundColor Green
         }
         
         try:
-            # Create temporary build directory
+            # Create build directory using centralized output paths
             output_dir = context.get('output_paths', {}).get('compilation')
             if not output_dir:
-                # Fallback using config manager
+                # Use centralized config manager
                 from ..config_manager import get_config_manager
                 config_manager = get_config_manager()
                 binary_name = context.get('binary_name', 'unknown_binary')
@@ -619,19 +669,22 @@ Write-Host "Build complete!" -ForegroundColor Green
             start_time = time.time()
             
             if build_system == 'msbuild':
+                # Use centralized MSBuild system
                 result = self._build_with_msbuild(output_dir, build_config)
+            else:
+                result['error'] = f"Unsupported build system: {build_system}. Only MSBuild is supported."
             
             result['time'] = time.time() - start_time
             
         except Exception as e:
-            result['error'] = f"Build system {build_system} failed: {str(e)}"
+            result['error'] = f"Centralized build system failed: {str(e)}"
         
         return result
 
 
 
     def _build_with_msbuild(self, output_dir: str, build_config: Dict[str, Any]) -> Dict[str, Any]:
-        """Build using MSBuild"""
+        """Build using centralized MSBuild system - NO FALLBACKS"""
         result = {
             'success': False,
             'output': '',
@@ -645,23 +698,19 @@ Write-Host "Build complete!" -ForegroundColor Green
             with open(proj_file, 'w') as f:
                 f.write(build_config['build_files']['project.vcxproj'])
             
-            # Get MSBuild path from config or detect it
-            msbuild_path = self._get_msbuild_path()
-            
-            # Run MSBuild
-            msbuild_cmd = [msbuild_path, proj_file, '/p:Configuration=Release', '/p:Platform=x64']
-            msbuild_result = subprocess.run(
-                msbuild_cmd,
-                capture_output=True,
-                text=True,
-                timeout=120
+            # Use centralized build system manager
+            build_manager = self._get_build_manager()
+            success, output = build_manager.build_with_msbuild(
+                Path(proj_file),
+                configuration="Release",
+                platform="x64"
             )
             
-            result['output'] = msbuild_result.stdout
+            result['output'] = output
+            result['success'] = success
             
-            if msbuild_result.returncode == 0:
-                result['success'] = True
-                # Look for binary output
+            if success:
+                # Look for binary output using standard VS output structure
                 bin_dir = os.path.join(output_dir, 'bin', 'Release')
                 if os.path.exists(bin_dir):
                     for file in os.listdir(bin_dir):
@@ -669,66 +718,67 @@ Write-Host "Build complete!" -ForegroundColor Green
                             result['binary_path'] = os.path.join(bin_dir, file)
                             break
             else:
-                result['error'] = f"MSBuild failed: {msbuild_result.stderr}"
+                result['error'] = f"Centralized MSBuild failed: {output}"
             
-        except subprocess.TimeoutExpired:
-            result['error'] = "MSBuild timed out"
         except Exception as e:
-            result['error'] = f"MSBuild error: {str(e)}"
+            result['error'] = f"Centralized build system error: {str(e)}"
         
         return result
 
+    def _get_build_manager(self):
+        """Get centralized build system manager - REQUIRED"""
+        try:
+            from ..build_system_manager import get_build_manager
+            return get_build_manager()
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize build system manager: {e}")
+    
     def _get_msbuild_path(self) -> str:
-        """Get MSBuild path from config or auto-detect"""
-        # Check config first
-        config_path = self.config.get_value('build.msbuild.path', 'auto')
-        if config_path != 'auto' and os.path.exists(config_path):
-            return config_path
-        
-        # Auto-detect MSBuild (common locations in WSL)
-        common_paths = [
-            '/mnt/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe',
-            '/mnt/c/Program Files/Microsoft Visual Studio/2022/Professional/MSBuild/Current/Bin/MSBuild.exe',
-            '/mnt/c/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe',
-            '/mnt/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/MSBuild/Current/Bin/MSBuild.exe',
-            '/mnt/c/Program Files (x86)/Microsoft Visual Studio/2019/Professional/MSBuild/Current/Bin/MSBuild.exe',
-            '/mnt/c/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin/MSBuild.exe',
-            '/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319/MSBuild.exe'
-        ]
-        
-        for path in common_paths:
-            if os.path.exists(path):
-                self.logger.info(f"Found MSBuild at: {path}")
-                return path
-        
-        # Fallback to system PATH
-        return 'msbuild'
+        """Get MSBuild path from centralized configuration - NO FALLBACKS"""
+        return self._get_build_manager().get_msbuild_path()
 
     def _optimize_build_process(self, compilation_results: Dict[str, Any], build_system: Dict[str, Any]) -> Dict[str, Any]:
-        """Optimize the build process based on results"""
+        """Optimize the build process - VS2022 MSBuild only"""
         optimization = {
-            'recommended_system': None,
+            'recommended_system': 'msbuild_vs2022',  # Always VS2022 MSBuild
             'optimization_suggestions': [],
             'parallel_build_options': {},
             'cache_strategies': {},
             'efficiency_score': 0.0,
-            'performance_metrics': {}
+            'performance_metrics': {},
+            'centralized_config': True  # Always use centralized build config
         }
         
-        # Determine best build system (MSBuild only)
-        successful_builds = compilation_results.get('successful_builds', [])
-        if successful_builds:
-            optimization['recommended_system'] = 'msbuild'
+        # VS2022 MSBuild is always the recommended and only system
+        optimization['recommended_system'] = 'msbuild_vs2022'
         
-        # Generate optimization suggestions for Windows/MSBuild
+        # Generate VS2022-specific optimization suggestions
         optimization['optimization_suggestions'] = [
-            "Enable parallel compilation (/MP for MSBuild)",
-            "Use precompiled headers for large projects",
-            "Implement incremental builds with MSBuild",
-            "Configure build caching with MSBuild",
-            "Optimize linker settings for faster linking (/INCREMENTAL)",
-            "Use link-time code generation (/LTCG) for release builds"
+            "Enable parallel compilation (/MP with VS2022 MSBuild)",
+            "Use VS2022 precompiled headers for large projects",
+            "Implement incremental builds with VS2022 MSBuild",
+            "Configure VS2022 build caching and IntelliSense cache",
+            "Optimize VS2022 linker settings for faster linking (/INCREMENTAL)",
+            "Use VS2022 link-time code generation (/LTCG) for release builds",
+            "Leverage VS2022 Preview features for enhanced performance",
+            "Use centralized build configuration for consistency"
         ]
+        
+        # VS2022 parallel build options
+        optimization['parallel_build_options'] = {
+            'max_parallel_projects': 8,
+            'max_parallel_processes': 4,
+            'use_mp_flag': True,  # /MP compiler flag
+            'parallel_linking': True
+        }
+        
+        # VS2022 cache strategies
+        optimization['cache_strategies'] = {
+            'intellisense_cache': True,
+            'build_cache': True,
+            'precompiled_headers': True,
+            'incremental_linking': True
+        }
         
         # Calculate efficiency score
         success_rate = compilation_results.get('success_rate', 0.0)
@@ -739,6 +789,14 @@ Write-Host "Build complete!" -ForegroundColor Green
         # Efficiency score based on success rate and speed (lower time is better)
         time_score = max(0.0, 1.0 - (avg_time / 300.0))  # Normalize around 5 minutes
         optimization['efficiency_score'] = (success_rate + time_score) / 2.0
+        
+        # Performance metrics specific to VS2022
+        optimization['performance_metrics'] = {
+            'vs2022_toolset': 'v143',
+            'target_platform': 'Windows 10/11',
+            'build_system_version': 'VS2022 Preview',
+            'centralized_config_used': True
+        }
         
         return optimization
 

@@ -62,6 +62,7 @@ class MatrixCLIConfig:
     # Input/Output
     binary_path: Optional[str] = None
     output_dir: Optional[str] = None
+    update_mode: bool = False
     
     # Pipeline configuration
     pipeline_mode: str = "full_pipeline" if not MATRIX_AVAILABLE else PipelineMode.FULL_PIPELINE
@@ -127,6 +128,11 @@ class MatrixCLI:
         parser.add_argument(
             "-o", "--output-dir", 
             help="Output directory (defaults to output/timestamp)"
+        )
+        parser.add_argument(
+            "--update", 
+            action="store_true",
+            help="Update mode: save to output/{binary-name}/latest and only update files, don't remove them"
         )
         
         # Pipeline mode arguments
@@ -297,6 +303,7 @@ class MatrixCLI:
         # Input/Output
         config.binary_path = args.binary
         config.output_dir = args.output_dir
+        config.update_mode = args.update
         
         # Pipeline mode
         config.pipeline_mode = getattr(args, 'pipeline_mode', None) or PipelineMode.FULL_PIPELINE
@@ -512,6 +519,7 @@ class MatrixCLI:
 Usage Examples:
   %(prog)s                                    # Full pipeline on default binary
   %(prog)s launcher.exe                       # Full pipeline on specific binary
+  %(prog)s --update                           # Update mode: save to output/{binary}/latest
   %(prog)s --decompile-only                  # Decompilation only
   %(prog)s --agents 1,3,7                    # Run specific agents
   %(prog)s --agents 1-5                      # Run agent range
@@ -631,7 +639,7 @@ Usage Examples:
                 return False
             
             # Setup output directory
-            output_dir = self._setup_output_directory(config.output_dir, binary_path)
+            output_dir = self._setup_output_directory(config.output_dir, binary_path, config.update_mode)
             
             # Setup logging
             if config.debug:
@@ -775,7 +783,7 @@ Usage Examples:
             self.logger.error(f"Invalid binary path: {e}")
             return None
     
-    def _setup_output_directory(self, output_dir: Optional[str], binary_path: Optional[Path] = None) -> Path:
+    def _setup_output_directory(self, output_dir: Optional[str], binary_path: Optional[Path] = None, update_mode: bool = False) -> Path:
         """Setup output directory securely."""
         try:
             if output_dir:
@@ -794,13 +802,19 @@ Usage Examples:
             else:
                 # Use new path structure with config manager
                 binary_name = binary_path.stem if binary_path else 'unknown_binary'
-                if hasattr(self, 'config_manager'):
-                    path = self.config_manager.get_output_path(binary_name)
+                
+                if update_mode:
+                    # Update mode: use output/{binary-name}/latest
+                    path = project_root / "output" / binary_name / "latest"
                 else:
-                    # Fallback for initialization phase
-                    from core.config_manager import get_config_manager
-                    config_manager = get_config_manager()
-                    path = config_manager.get_output_path(binary_name)
+                    # Normal mode: use timestamped directory
+                    if hasattr(self, 'config_manager'):
+                        path = self.config_manager.get_output_path(binary_name)
+                    else:
+                        # Fallback for initialization phase
+                        from core.config_manager import get_config_manager
+                        config_manager = get_config_manager()
+                        path = config_manager.get_output_path(binary_name)
             
             # Validate final path is within project
             if not str(path.resolve()).startswith(str(project_root.resolve())):

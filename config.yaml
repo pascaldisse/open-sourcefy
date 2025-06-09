@@ -1,0 +1,93 @@
+# Open-Sourcefy Matrix Pipeline Configuration
+# Configuration for Claude 4 AI Integration
+
+# AI Configuration
+ai:
+  enabled: true  # Re-enabled with improved WSL support
+  provider: "claude_code"  # Use Claude Code CLI with Max subscription
+  # Alternative providers:
+  # "anthropic" - Direct API access (requires ANTHROPIC_API_KEY)
+  # "openai" - OpenAI GPT (requires OPENAI_API_KEY)
+  # "local_llm" - Local LangChain models
+  # "disabled" - No AI features
+  model: "claude-3-5-sonnet"  # Claude 3.5 Sonnet via subscription
+  api_key_env: "NONE"  # No API key needed with Claude Code CLI
+  temperature: 0.1
+  max_tokens: 4096
+  timeout: 60
+
+# Matrix Pipeline Configuration  
+matrix:
+  parallel_execution: true
+  batch_size: 8
+  agent_timeout: 300
+  max_retries: 2
+  quality_threshold: 0.75
+  enable_ai_enhancement: true
+  cleanup_temp: true
+
+# Paths Configuration
+paths:
+  temp_directory: "./temp"
+  output_directory: "./output"
+  ghidra_home: "./ghidra"
+
+# Ghidra Configuration
+ghidra:
+  enabled: true
+  timeout: 600
+  headless_script_timeout: 300
+  java_heap_size: "4G"
+
+# Build System Configuration - REFERENCES build_config.yaml
+build:
+  # IMPORTANT: All build paths are now in build_config.yaml
+  config_file: "./build_config.yaml"  # Central build configuration
+  enforce_config: true  # Always use build_config.yaml settings
+  allow_overrides: false  # Never allow runtime path changes
+
+# Analysis Configuration
+analysis:
+  min_entropy_threshold: 6.0
+  string_min_length: 4
+  hash_algorithms: ["md5", "sha1", "sha256"]
+  max_file_size_mb: 500
+
+# Agent-specific Configuration
+agents:
+  # Agent 01 - Sentinel
+  agent_01:
+    max_retries: 3
+    timeout: 300
+    quality_threshold: 0.6
+    max_file_size_mb: 500
+    
+  # Agent 02 - Architect  
+  agent_02:
+    max_retries: 3
+    timeout: 300
+    quality_threshold: 0.4
+    
+  # Agent 03 - Merovingian
+  agent_03:
+    max_retries: 3
+    timeout: 300
+    quality_threshold: 0.3
+    
+  # Agent 04 - Agent Smith
+  agent_04:
+    max_retries: 3
+    timeout: 300
+    quality_threshold: 0.5
+    
+  # Agent 05 - Neo  
+  agent_05:
+    max_retries: 2
+    timeout: 300
+    quality_threshold: 0.1  # Very low threshold to prevent retry loops
+
+# Debug Configuration
+debug:
+  enabled: false
+  log_level: "INFO"
+  log_to_file: true

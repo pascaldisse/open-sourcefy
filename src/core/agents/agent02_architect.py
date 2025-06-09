@@ -751,8 +751,9 @@ class ArchitectAgent(AnalysisAgent):
             Provide insights about development practices, build quality, and architectural decisions.
             """
             
-            # Execute AI analysis
-            ai_result = self.agent_executor.run(prompt)
+            # Execute AI analysis using centralized AI system
+            from ..ai_system import ai_request
+            ai_result = ai_request(prompt, "You are a reverse engineering expert. Analyze code patterns and architectural decisions to understand the original software design and purpose.")
             
             return {
                 'ai_insights': ai_result,

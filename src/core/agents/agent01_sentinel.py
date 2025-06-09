@@ -23,8 +23,8 @@ from ..shared_components import (
 )
 from ..exceptions import MatrixAgentError, ValidationError, ConfigurationError, BinaryAnalysisError
 
-# AI imports using centralized AI setup
-from ..ai_setup import get_ai_setup, is_ai_enabled, create_ai_tools, AIAgentExecutor
+# AI imports using centralized AI system
+from ..ai_system import ai_available, ai_analyze_security, ai_request
 
 # LangChain imports (conditional)
 try:
@@ -140,11 +140,8 @@ class SentinelAgent(AnalysisAgent):
         # Check binary analysis library availability
         self.available_parsers = self._check_parser_availability()
         
-        # Initialize AI components using centralized setup
-        self.ai_setup = get_ai_setup(self.config)
-        self.ai_enabled = self.ai_setup.is_enabled()
-        self.ai_interface = self.ai_setup.get_ai_interface()
-        self.agent_executor = AIAgentExecutor(self.ai_interface) if self.ai_interface else None
+        # Initialize AI components using centralized AI system
+        self.ai_enabled = ai_available()
         
         # Validate configuration
         self._validate_configuration()
@@ -247,7 +244,7 @@ class SentinelAgent(AnalysisAgent):
                 core_results.update(metadata_results)
             
             # Step 5: AI enhancement (if enabled)
-            if self.ai_enabled and self.agent_executor:
+            if self.ai_enabled:
                 progress.step("Applying AI-enhanced security analysis")
                 with self.error_handler.handle_matrix_operation("ai_enhancement"):
                     ai_results = self._execute_ai_analysis(core_results, context)
@@ -639,14 +636,14 @@ class SentinelAgent(AnalysisAgent):
             return []
     
     def _execute_ai_analysis(self, core_results: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute AI-enhanced analysis using centralized AI setup"""
-        if not self.ai_interface:
+        """Execute AI-enhanced analysis using centralized AI system"""
+        if not self.ai_enabled:
             return {
                 'ai_analysis_available': False,
-                'threat_assessment': 'AI analysis not available - AI interface not initialized',
+                'threat_assessment': 'AI analysis not available',
                 'behavioral_insights': 'Basic heuristics only',
                 'confidence_score': 0.0,
-                'ai_recommendations': 'Configure AI provider and API key'
+                'ai_recommendations': 'Enable AI in configuration'
             }
         
         try:
@@ -666,24 +663,22 @@ class SentinelAgent(AnalysisAgent):
                 'notable_strings': core_results.get('strings', [])[:10]  # First 10 strings
             }
             
-            # Execute AI security analysis
-            ai_response = self.ai_interface.analyze_binary_security(binary_info)
+            # Execute AI security analysis using centralized system
+            ai_response = ai_analyze_security(binary_info)
             
             if ai_response.success:
                 return {
                     'ai_insights': ai_response.content,
                     'ai_confidence': 0.8,  # High confidence when AI analysis succeeds
                     'ai_enabled': True,
-                    'ai_provider': ai_response.provider,
-                    'ai_model': ai_response.model,
-                    'ai_usage': ai_response.usage
+                    'ai_provider': 'claude_code'
                 }
             else:
                 self.logger.warning(f"AI analysis failed: {ai_response.error}")
                 return {
                     'ai_enabled': False, 
                     'ai_error': ai_response.error,
-                    'ai_provider': ai_response.provider
+                    'ai_provider': 'claude_code'
                 }
         except Exception as e:
             self.logger.warning(f"AI analysis exception: {e}")
