@@ -711,8 +711,19 @@ Write-Host "Build complete!" -ForegroundColor Green
                 if os.path.exists(bin_dir):
                     for file in os.listdir(bin_dir):
                         if file.endswith('.exe'):
-                            result['binary_path'] = os.path.join(bin_dir, file)
-                            break
+                            exe_path = os.path.join(bin_dir, file)
+                            # Validate this is a real PE executable, not a mock file
+                            if self._validate_executable(exe_path):
+                                result['binary_path'] = exe_path
+                                break
+                            else:
+                                self.logger.warning(f"⚠️ Invalid executable detected: {exe_path} - removing mock/invalid file")
+                                try:
+                                    os.remove(exe_path)
+                                except Exception as e:
+                                    self.logger.error(f"Failed to remove invalid file {exe_path}: {e}")
+                                result['error'] = "Generated file is not a valid executable - compilation failed"
+                                result['success'] = False
             else:
                 result['error'] = f"Centralized MSBuild failed: {output}"
             
@@ -720,6 +731,55 @@ Write-Host "Build complete!" -ForegroundColor Green
             result['error'] = f"Centralized build system error: {str(e)}"
         
         return result
+
+    def _validate_executable(self, exe_path: str) -> bool:
+        """
+        Validate that a file is a real PE executable, not a mock or text file.
+        
+        Args:
+            exe_path: Path to the executable file
+            
+        Returns:
+            True if it's a valid PE executable, False otherwise
+        """
+        try:
+            # Check if file exists and has reasonable size
+            if not os.path.exists(exe_path):
+                return False
+            
+            file_size = os.path.getsize(exe_path)
+            if file_size < 1024:  # Real executables are typically much larger than 1KB
+                self.logger.warning(f"File {exe_path} too small ({file_size} bytes) to be a real executable")
+                return False
+            
+            # Check if it starts with PE header (MZ signature)
+            with open(exe_path, 'rb') as f:
+                header = f.read(64)
+                if len(header) < 2 or not header.startswith(b'MZ'):
+                    self.logger.warning(f"File {exe_path} does not have valid PE header")
+                    return False
+                
+                # Check for PE signature at offset specified in DOS header
+                if len(header) >= 64:
+                    try:
+                        import struct
+                        pe_offset = struct.unpack('<I', header[60:64])[0]
+                        if pe_offset < len(header):
+                            return True  # Basic validation passed
+                        else:
+                            # Need to read more to check PE signature
+                            f.seek(pe_offset)
+                            pe_sig = f.read(4)
+                            if pe_sig == b'PE\x00\x00':
+                                return True
+                    except (struct.error, OSError):
+                        pass
+            
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"Error validating executable {exe_path}: {e}")
+            return False
 
     def _get_build_manager(self):
         """Get centralized build system manager - REQUIRED"""

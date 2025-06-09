@@ -139,11 +139,17 @@ class AISystem:
                 output_path = output_file.name
             
             try:
-                # Use simple file redirection that matches manual usage exactly
-                cmd = f"cat {input_path} | {self.claude_cmd} --print --output-format text > {output_path} 2>&1"
+                # Use subprocess with timeout instead of os.system for proper timeout handling
+                cmd = ["bash", "-c", f"cat {input_path} | {self.claude_cmd} --print --output-format text > {output_path} 2>&1"]
                 
-                # Use os.system which is closest to manual shell execution
-                exit_code = os.system(cmd)
+                self.logger.debug(f"Executing Claude CLI with {self.timeout}s timeout")
+                result = subprocess.run(
+                    cmd,
+                    timeout=self.timeout,  # Use configured timeout (default 10s)
+                    capture_output=False,  # We're using file redirection
+                    check=False
+                )
+                exit_code = result.returncode
                 
                 # Read the output file
                 with open(output_path, 'r') as f:
