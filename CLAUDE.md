@@ -357,7 +357,7 @@ python3 main.py --decompile-only
 
 **Installation**: Ghidra 11.0.3 included in `ghidra/` directory
 **Detection**: Automatic path resolution from project root
-**Usage**: Headless analysis with custom scripts
+**Usage**: Headless analysis and decompilation
 **Quality**: Assessment and confidence scoring
 **Management**: Temporary project creation and cleanup
 
@@ -407,9 +407,9 @@ open-sourcefy/
 │   │   └── shared_utils.py # Shared utilities and components
 │   ├── ml/                 # Machine learning components
 │   └── utils/              # Pure utility functions
-├── tests/                  # Test suites and validation scripts
+├── tests/                  # Test suites and validation
 ├── docs/                   # Project documentation and analysis reports
-├── ghidra/                 # Ghidra installation and custom scripts
+├── ghidra/                 # Ghidra installation and analysis tools
 ├── temp/                   # Temporary files and development artifacts
 ├── prompts/                # AI prompts and pipeline instructions
 ├── venv/                   # Python virtual environment

@@ -20,7 +20,7 @@ Clean up the entire open-sourcefy project by removing dummy code, refactoring im
 - **Utilities**: `src/utils/` - Remove stub implementations
 - **ML Components**: `src/ml/` - Replace placeholder algorithms
 - **Configuration**: Root level config files with dummy values
-- **Scripts**: Any utility scripts with placeholder functionality
+- **Utils**: Any utility modules with placeholder functionality
 
 **Search Patterns**: Look for functions that return:
 - Hardcoded placeholder values (`confidence: 0.75`)
@@ -62,7 +62,7 @@ def _analyze_control_flow(self, data):
 - **Duplicate Documentation**: Remove redundant README files and documentation
 - **Old Test Files**: Remove obsolete or non-functional test files
 - **Unused Configuration**: Remove unused config sections and parameters
-- **Legacy Scripts**: Remove old build scripts, batch files, or utilities no longer used
+- **Legacy Files**: Remove old build files, batch files, or utilities no longer used
 - **Placeholder Files**: Remove empty or minimal placeholder files
 - **Backup Files**: Remove .backup, .old, or temporary files
 
@@ -97,7 +97,7 @@ def _analyze_control_flow(self, data):
   - `/output/temp/` - Temporary files (auto-cleaned)
 - **Documentation**: Centralize all docs in `docs/` directory
 - **Configuration**: Centralize config files in logical locations
-- **Scripts**: Move utility scripts to dedicated `scripts/` directory
+- **Utils**: Organize utility modules in appropriate directories
 
 **Module Reorganization**:
 - **Agent Dependencies**: Simplify agent dependency chains where possible
@@ -334,23 +334,23 @@ if file_size > 10 * 1024 * 1024:  # Arbitrary threshold
 
 ## Automated Tools and Commands
 
-**🤖 AUTOMATION AVAILABLE**: Use the provided automation scripts in `scripts/` directory for these tasks.
+**Note**: Manual validation required for these cleanup tasks.
 
 ### Environment Validation (AUTOMATED)
 ```bash
 # Use automation script for environment validation
-./scripts/environment_validator.py
-./scripts/environment_validator.py --setup-help  # Get setup instructions
-./scripts/environment_validator.py --json        # JSON output for scripting
+python3 main.py --verify-env
+python3 main.py --verify-env --setup-help  # Get setup instructions
+python3 main.py --verify-env --json        # JSON output for scripting
 ```
 
 ### File Operations (AUTOMATED)
 ```bash
 # Use automation script for file operations
-./scripts/file_operations.py create-structure output/cleanup_session
-./scripts/file_operations.py clean-temp output/temp --max-age 24
-./scripts/file_operations.py directory-report . cleanup_report.json
-./scripts/file_operations.py find-files src "*.py"
+mkdir -p output/cleanup_session
+find output/temp -type f -mtime +1 -delete  # Clean temp files older than 1 day
+find . -name '*.py' | wc -l  # Count Python files
+find src -name '*.py'
 ```
 
 ### Manual Finding Dummy Code (when automation isn't sufficient)
@@ -387,7 +387,7 @@ python -m pylint src/ --disable=all --enable=duplicate-code
 ### Project Structure Analysis (AUTOMATED + Manual)
 ```bash
 # Use automation for comprehensive analysis
-./scripts/file_operations.py directory-report src/ src_analysis.json
+find src -name '*.py' -exec wc -l {} +  # Count lines in source files
 
 # Manual commands for specific needs
 find . -name "*.py" -exec basename {} \; | sort | uniq -d

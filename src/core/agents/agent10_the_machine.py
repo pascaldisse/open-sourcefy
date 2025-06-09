@@ -645,8 +645,11 @@ Write-Host "Build complete!" -ForegroundColor Green
             with open(proj_file, 'w') as f:
                 f.write(build_config['build_files']['project.vcxproj'])
             
+            # Get MSBuild path from config or detect it
+            msbuild_path = self._get_msbuild_path()
+            
             # Run MSBuild
-            msbuild_cmd = ['msbuild', proj_file, '/p:Configuration=Release']
+            msbuild_cmd = [msbuild_path, proj_file, '/p:Configuration=Release', '/p:Platform=x64']
             msbuild_result = subprocess.run(
                 msbuild_cmd,
                 capture_output=True,
@@ -674,6 +677,32 @@ Write-Host "Build complete!" -ForegroundColor Green
             result['error'] = f"MSBuild error: {str(e)}"
         
         return result
+
+    def _get_msbuild_path(self) -> str:
+        """Get MSBuild path from config or auto-detect"""
+        # Check config first
+        config_path = self.config.get_value('build.msbuild.path', 'auto')
+        if config_path != 'auto' and os.path.exists(config_path):
+            return config_path
+        
+        # Auto-detect MSBuild (common locations in WSL)
+        common_paths = [
+            '/mnt/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe',
+            '/mnt/c/Program Files/Microsoft Visual Studio/2022/Professional/MSBuild/Current/Bin/MSBuild.exe',
+            '/mnt/c/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe',
+            '/mnt/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/MSBuild/Current/Bin/MSBuild.exe',
+            '/mnt/c/Program Files (x86)/Microsoft Visual Studio/2019/Professional/MSBuild/Current/Bin/MSBuild.exe',
+            '/mnt/c/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin/MSBuild.exe',
+            '/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319/MSBuild.exe'
+        ]
+        
+        for path in common_paths:
+            if os.path.exists(path):
+                self.logger.info(f"Found MSBuild at: {path}")
+                return path
+        
+        # Fallback to system PATH
+        return 'msbuild'
 
     def _optimize_build_process(self, compilation_results: Dict[str, Any], build_system: Dict[str, Any]) -> Dict[str, Any]:
         """Optimize the build process based on results"""

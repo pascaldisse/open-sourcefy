@@ -605,14 +605,14 @@ python -c "from pathlib import Path; print(Path('output/test').resolve())"
 
 ```bash
 # AUTOMATED: Use pipeline helper for comprehensive debugging
-./scripts/pipeline_helper.py validate-env                    # Validate environment first
-./scripts/pipeline_helper.py run target.exe --debug         # Run with debug logging
-./scripts/pipeline_helper.py analyze output/[timestamp]     # Analyze results
-./scripts/pipeline_helper.py test-compile output/[timestamp] # Test compilation
+python3 main.py --verify-env                    # Validate environment first
+python3 main.py target.exe --debug         # Run with debug logging
+python3 main.py --config-summary     # Analyze configuration
+# Test compilation results manually
 
 # AUTOMATED: Environment and build system validation
-./scripts/environment_validator.py --json                   # JSON output for scripting
-./scripts/build_system_automation.py --output-dir output/test test --build-system auto
+python3 main.py --config-summary                   # JSON configuration output
+# Build system testing requires manual setup
 
 # Manual debugging (when automation isn't sufficient)
 python main.py target.exe --output-dir output/debug_test --debug --log-level DEBUG
