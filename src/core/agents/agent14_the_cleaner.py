@@ -45,11 +45,11 @@ class Agent14_TheCleaner(ReconstructionAgent):
         
         # Also check for any source code or compilation results from previous agents
         source_available = any(
-            agent_data.get('data', {}).get('source_files') or 
-            agent_data.get('data', {}).get('decompiled_code') or
-            agent_data.get('data', {}).get('build_system')
-            for agent_data in agent_results.values()
-            if hasattr(agent_data, 'data') and agent_data.data
+            agent_result.data.get('source_files') or 
+            agent_result.data.get('decompiled_code') or
+            agent_result.data.get('build_system')
+            for agent_result in agent_results.values()
+            if hasattr(agent_result, 'data') and agent_result.data and isinstance(agent_result.data, dict)
         )
         
         if source_available:

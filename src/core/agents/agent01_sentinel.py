@@ -567,16 +567,25 @@ class SentinelAgent(AnalysisAgent):
         }
     
     def _calculate_file_hashes(self, binary_path: Path) -> Dict[str, str]:
-        """Calculate file hashes for integrity verification"""
+        """Calculate file hashes for integrity verification using streaming I/O"""
         hashes = {}
         
         try:
-            with open(binary_path, 'rb') as f:
-                data = f.read()
-            
+            # Initialize all hash functions at once for streaming
+            hash_funcs = {}
             for algorithm in self.constants.HASH_ALGORITHMS:
-                hash_func = getattr(hashlib, algorithm)()
-                hash_func.update(data)
+                hash_funcs[algorithm] = getattr(hashlib, algorithm)()
+            
+            # Stream file in chunks for memory efficiency
+            chunk_size = 65536  # 64KB chunks for optimal performance
+            with open(binary_path, 'rb') as f:
+                while chunk := f.read(chunk_size):
+                    # Update all hash functions with same chunk
+                    for hash_func in hash_funcs.values():
+                        hash_func.update(chunk)
+            
+            # Finalize all hashes
+            for algorithm, hash_func in hash_funcs.items():
                 hashes[algorithm] = hash_func.hexdigest()
                 
         except Exception as e:

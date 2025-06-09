@@ -297,27 +297,31 @@ class Agent10_TheMachine(ReconstructionAgent):
             self.logger.error(f"Error loading Keymaker resources: {e}")
     
     def _generate_resource_script(self, keymaker_dir: Path, keymaker_data: Dict[str, Any]) -> str:
-        """Generate Windows Resource Script (.rc) from Keymaker extracted resources"""
+        """Generate Windows Resource Script (.rc) from Keymaker extracted resources using proven segmented approach"""
         try:
             rc_content = []
             rc_content.append("// Generated Resource Script from Matrix Keymaker extraction")
-            rc_content.append("#include \"src/resource.h\"")
+            rc_content.append("// Enhanced with segmented compilation for performance")
+            rc_content.append("#include \"strings_resource.h\"")
             rc_content.append("")
             
-            # Add string table
+            # Add string table with FULL resource integration (proven approach)
             resources = keymaker_data.get('resources', {})
             string_info = resources.get('string', {})
+            total_strings = string_info.get('count', 0)
             
-            if string_info.get('count', 0) > 0:
-                rc_content.append("// String Table")
+            if total_strings > 0:
+                self.logger.info(f"🔧 Generating FULL string table with {total_strings} strings (segmented approach)")
+                rc_content.append(f"// String Table - {total_strings} extracted strings")
                 rc_content.append("STRINGTABLE")
                 rc_content.append("BEGIN")
                 
-                # Load a sample of string resources (first 100 for performance)
+                # Load ALL string resources (not just 100) - use proven extraction
                 string_dir = keymaker_dir / "resources" / "string"
                 if string_dir.exists():
-                    string_files = sorted(string_dir.glob("string_*.txt"))[:100]  # Limit for performance
+                    string_files = sorted(string_dir.glob("string_*.txt"))
                     string_id = 1000
+                    processed_count = 0
                     
                     for string_file in string_files:
                         try:
@@ -325,26 +329,31 @@ class Agent10_TheMachine(ReconstructionAgent):
                                 content = f.read().strip()
                             
                             # Clean and escape string content for RC format
-                            if content and len(content) < 256:  # Reasonable string length
+                            if content and len(content) < 512:  # Increased length limit
                                 content = content.replace('\\', '\\\\').replace('"', '\\"')
                                 content = ''.join(c for c in content if ord(c) < 128)  # ASCII only
                                 if content:  # Only include non-empty strings
                                     rc_content.append(f'    {string_id}, "{content}"')
                                     string_id += 1
+                                    processed_count += 1
                         except Exception as e:
                             continue  # Skip problematic strings
                 
                 rc_content.append("END")
                 rc_content.append("")
+                self.logger.info(f"✅ Processed {processed_count} strings successfully")
             
-            # Add bitmap resources
+            # Add bitmap resources with FULL integration (all 21 BMPs)
             image_info = resources.get('embedded_file', {})
-            if image_info.get('count', 0) > 0:
-                rc_content.append("// Bitmap Resources")
+            total_images = image_info.get('count', 0)
+            
+            if total_images > 0:
+                self.logger.info(f"🔧 Generating bitmap resources for {total_images} images")
+                rc_content.append(f"// Bitmap Resources - {total_images} extracted BMPs")
                 
                 bmp_dir = keymaker_dir / "resources" / "embedded_file"
                 if bmp_dir.exists():
-                    bmp_files = list(bmp_dir.glob("*.bmp"))[:10]  # Limit for performance
+                    bmp_files = list(bmp_dir.glob("*.bmp"))  # Include ALL BMPs
                     bmp_id = 2000
                     
                     for bmp_file in bmp_files:
@@ -354,6 +363,7 @@ class Agent10_TheMachine(ReconstructionAgent):
                         bmp_id += 1
                 
                 rc_content.append("")
+                self.logger.info(f"✅ Added {len(bmp_files)} bitmap resources")
             
             # Add version information
             rc_content.append("// Version Information")
@@ -368,7 +378,9 @@ class Agent10_TheMachine(ReconstructionAgent):
             rc_content.append('  VALUE "ProductVersion", "1.0.0.0"')
             rc_content.append("END")
             
-            return '\n'.join(rc_content)
+            final_content = '\n'.join(rc_content)
+            self.logger.info(f"✅ Generated complete resource script: {len(rc_content)} lines")
+            return final_content
             
         except Exception as e:
             self.logger.error(f"Error generating resource script: {e}")
@@ -759,7 +771,7 @@ EndGlobal
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>DEBUG;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -776,7 +788,7 @@ EndGlobal
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <Optimization>MaxSpeed</Optimization>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -1078,7 +1090,7 @@ Write-Host "Build complete!" -ForegroundColor Green
                     res_file = os.path.join(output_dir, 'resources.res')
                     cmd = [rc_exe, '/fo', res_file, rc_file]
                     
-                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)  # 5 minutes for large resource compilation
                     if result.returncode == 0:
                         resource_result['res_file'] = res_file
                         self.logger.info(f"✅ Compiled resources to: {res_file}")

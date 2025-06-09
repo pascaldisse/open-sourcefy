@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_compl
 
 from .shared_utils import LoggingUtils
 from .config_manager import get_config_manager
+from .final_validation_orchestrator import FinalValidationOrchestrator
 
 
 class PipelineMode(Enum):
@@ -96,6 +97,7 @@ class PipelineConfig:
     save_reports: bool = True
     dry_run: bool = False
     profile_performance: bool = False
+    enable_final_validation: bool = True
 
 
 @dataclass
@@ -110,6 +112,11 @@ class MatrixPipelineResult:
     error_messages: List[str] = field(default_factory=list)
     performance_metrics: Dict[str, Any] = field(default_factory=dict)
     report_path: Optional[str] = None
+    
+    # Final validation results (automatically added when compilation output exists)
+    validation_report: Optional[Dict[str, Any]] = None
+    final_validation_success: bool = False
+    binary_match_percentage: float = 0.0
 
 
 class MatrixPipelineOrchestrator:
@@ -520,8 +527,94 @@ class MatrixPipelineOrchestrator:
             result.report_path = str(report_path)
             self.logger.info(f"📊 Pipeline report saved: {report_path}")
             
+            # Execute final validation automatically after successful pipeline completion
+            if (result.success and 
+                self.config.enable_final_validation and 
+                self._has_compilation_output(output_dir)):
+                await self._execute_final_validation(self.global_context.get('binary_path', ''), output_dir, result)
+            
         except Exception as e:
             self.logger.error(f"Failed to save pipeline report: {e}")
+    
+    def _has_compilation_output(self, output_dir: str) -> bool:
+        """Check if compilation output exists"""
+        try:
+            output_path = Path(output_dir)
+            compilation_dir = output_path / "compilation"
+            
+            # Look for compiled binary
+            bin_dirs = [
+                compilation_dir / "bin" / "Release" / "Win32",
+                compilation_dir / "bin" / "Debug" / "Win32",
+                compilation_dir
+            ]
+            
+            for bin_dir in bin_dirs:
+                if bin_dir.exists():
+                    exe_files = list(bin_dir.glob("*.exe"))
+                    if exe_files:
+                        return True
+            
+            return False
+            
+        except Exception:
+            return False
+    
+    async def _execute_final_validation(self, binary_path: str, output_dir: str, result):
+        """Execute final validation for perfect binary recompilation"""
+        try:
+            self.logger.info("🏆 Starting Final Validation for Perfect Binary Recompilation")
+            
+            # Find original and recompiled binaries
+            original_binary = Path(binary_path)
+            
+            # Find recompiled binary
+            output_path = Path(output_dir)
+            compilation_dir = output_path / "compilation"
+            
+            recompiled_binary = None
+            bin_dirs = [
+                compilation_dir / "bin" / "Release" / "Win32",
+                compilation_dir / "bin" / "Debug" / "Win32",
+                compilation_dir
+            ]
+            
+            for bin_dir in bin_dirs:
+                if bin_dir.exists():
+                    exe_files = list(bin_dir.glob("*.exe"))
+                    if exe_files:
+                        recompiled_binary = exe_files[0]
+                        break
+            
+            if not recompiled_binary or not recompiled_binary.exists():
+                self.logger.warning("No recompiled binary found for final validation")
+                return
+            
+            # Execute final validation
+            validator = FinalValidationOrchestrator(self.config_manager)
+            validation_report = await validator.execute_final_validation(
+                original_binary, 
+                recompiled_binary,
+                output_path / "reports"
+            )
+            
+            # Update result with validation info
+            result.validation_report = validation_report
+            result.final_validation_success = validation_report['final_validation']['success']
+            result.binary_match_percentage = validation_report['final_validation']['total_match_percentage']
+            
+            # Log final status
+            match_pct = validation_report['final_validation']['total_match_percentage']
+            if validation_report['final_validation']['success']:
+                self.logger.info(f"🎯 Final Validation: SUCCESS - {match_pct:.2f}% binary match achieved")
+            else:
+                self.logger.info(f"⚠️ Final Validation: {match_pct:.2f}% binary match - improvement needed")
+            
+        except Exception as e:
+            self.logger.error(f"Final validation failed: {e}")
+            result.validation_report = None
+            result.final_validation_success = False
+            result.binary_match_percentage = 0.0
 
 
 async def execute_matrix_pipeline_orchestrated(

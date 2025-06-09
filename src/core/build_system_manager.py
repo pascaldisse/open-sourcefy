@@ -300,7 +300,7 @@ class BuildSystemManager:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=300,  # 5 minutes
+                timeout=600,  # 10 minutes for large resource compilation
                 cwd=actual_output.parent,
                 env=env
             )
@@ -380,7 +380,7 @@ class BuildSystemManager:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=600,  # 10 minutes
+                timeout=300,  # 5 minutes for MSBuild with resources
                 cwd=str(project_file.parent)
             )
             

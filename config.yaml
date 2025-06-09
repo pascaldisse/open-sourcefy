@@ -83,8 +83,8 @@ agents:
   # Agent 05 - Neo  
   agent_05:
     max_retries: 2
-    timeout: 600  # Increased to 10 minutes for Ghidra analysis
-    ghidra_timeout: 600  # Ghidra-specific timeout
+    timeout: 120  # Reduced for testing
+    ghidra_timeout: 30  # Reduced to 30 seconds for testing
     quality_threshold: 0.1  # Very low threshold to prevent retry loops
 
 # Debug Configuration

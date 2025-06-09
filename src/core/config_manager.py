@@ -70,15 +70,15 @@ class ConfigManager:
             # Pipeline defaults
             "pipeline.parallel_mode": ("thread", "Parallel execution mode (thread/process)"),
             "pipeline.batch_size": (4, "Number of agents to run in parallel"),
-            "pipeline.timeout_agent": (300, "Default agent timeout in seconds"),
-            "pipeline.timeout_ghidra": (600, "Ghidra analysis timeout in seconds"),
+            "pipeline.timeout_agent": (-1, "Default agent timeout in seconds (-1 for unlimited)"),
+            "pipeline.timeout_ghidra": (-1, "Ghidra analysis timeout in seconds (-1 for unlimited)"),
             "pipeline.timeout_compilation": (900, "Compilation timeout in seconds"),
             "pipeline.max_retries": (3, "Maximum retry attempts for failed agents"),
             "pipeline.memory_limit_per_agent": ("512MB", "Memory limit per agent"),
             
             # Ghidra defaults
             "ghidra.max_memory": ("4G", "Maximum memory for Ghidra JVM"),
-            "ghidra.timeout": (600, "Ghidra operation timeout"),
+            "ghidra.timeout": (-1, "Ghidra operation timeout (-1 for unlimited)"),
             
             # AI Engine defaults
             "ai_engine.provider": ("langchain", "AI engine provider"),
@@ -97,7 +97,11 @@ class ConfigManager:
             "matrix.parallel_agents": (16, "Number of parallel agents"),
             "matrix.execution_mode": ("master_first_parallel", "Execution mode"),
             "matrix.agent_independence": (True, "Enable agent independence"),
-            "matrix.shared_memory_enabled": (True, "Enable shared memory between agents")
+            "matrix.shared_memory_enabled": (True, "Enable shared memory between agents"),
+            
+            # Neo Agent defaults
+            "agents.agent_05.enable_multithreading": (True, "Enable multithreading for Neo agent"),
+            "agents.agent_05.max_threads": (4, "Maximum worker threads for Neo agent")
         }
         
         for key, (value, description) in defaults.items():
@@ -153,7 +157,11 @@ class ConfigManager:
             
             # Matrix environment variables
             "MATRIX_EXECUTION_MODE": "matrix.execution_mode",
-            "MATRIX_PARALLEL_AGENTS": "matrix.parallel_agents"
+            "MATRIX_PARALLEL_AGENTS": "matrix.parallel_agents",
+            
+            # Neo Agent environment variables
+            "NEO_ENABLE_MULTITHREADING": "agents.agent_05.enable_multithreading",
+            "NEO_MAX_THREADS": "agents.agent_05.max_threads"
         }
         
         for env_var, config_key in env_mappings.items():
@@ -192,7 +200,11 @@ class ConfigManager:
                      'max_retries', 'timeout', 'max_tokens', 'parallel_agents']
         if any(field in config_key for field in int_fields):
             try:
-                return int(value)
+                int_val = int(value)
+                # Allow -1 for unlimited timeouts
+                if 'timeout' in config_key and int_val == -1:
+                    return -1
+                return int_val
             except ValueError:
                 pass
         
@@ -263,8 +275,8 @@ class ConfigManager:
         """Get configuration value object with metadata"""
         return self.config_values.get(key)
     
-    def get_timeout(self, component: str, default: int = 300) -> int:
-        """Get timeout for specific component"""
+    def get_timeout(self, component: str, default: int = -1) -> int:
+        """Get timeout for specific component (-1 means unlimited)"""
         timeout_mapping = {
             "agent": "pipeline.timeout_agent",
             "ghidra": "pipeline.timeout_ghidra", 
@@ -273,7 +285,9 @@ class ConfigManager:
         }
         
         timeout_key = timeout_mapping.get(component, "pipeline.timeout_agent")
-        return self.get_value(timeout_key, default)
+        timeout_value = self.get_value(timeout_key, default)
+        # Return -1 for unlimited timeout, otherwise return the configured value
+        return timeout_value if timeout_value != -1 else -1
     
     def get_limit(self, limit_type: str, default: Any = None) -> Any:
         """Get limit value for specific type"""

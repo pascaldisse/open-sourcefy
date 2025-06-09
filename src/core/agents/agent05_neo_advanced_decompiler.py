@@ -26,6 +26,9 @@ from dataclasses import dataclass
 import json
 import re
 import time
+import threading
+import concurrent.futures
+from functools import partial
 
 # Matrix framework imports
 from ..matrix_agents import DecompilerAgent, AgentResult, AgentStatus, MatrixCharacter
@@ -89,12 +92,12 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
         
         # Load Neo-specific configuration from parent config
         
-        # Load Neo-specific configuration with optimized Ghidra settings
+        # Load Neo-specific configuration with unlimited timeouts by default
         self.quality_threshold = self.config.get_value('agents.agent_05.quality_threshold', 0.25)
         self.max_analysis_passes = self.config.get_value('agents.agent_05.max_passes', 1)
-        self.timeout_seconds = self.config.get_value('agents.agent_05.timeout', 120)  # Increased to 2 minutes
-        self.ghidra_timeout = self.config.get_value('agents.agent_05.ghidra_timeout', 60)  # Reduced to 1 minute for performance
-        self.ghidra_memory_limit = self.config.get_value('agents.agent_05.ghidra_memory', '4G')  # Increased memory
+        self.timeout_seconds = self.config.get_timeout('agent', -1)  # Use configuration manager for timeout (-1 = unlimited)
+        self.ghidra_timeout = self.config.get_timeout('ghidra', -1)  # Use configuration manager for Ghidra timeout (-1 = unlimited)
+        self.ghidra_memory_limit = self.config.get_value('ghidra.max_memory', '4G')  # Use configuration manager for memory
         
         # Initialize components
         self.start_time = None
@@ -105,7 +108,8 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
         try:
             self.ghidra_analyzer = GhidraHeadless(
                 ghidra_home=str(self.config.get_path('ghidra_home')),
-                enable_accuracy_optimizations=True
+                enable_accuracy_optimizations=True,
+                analysis_timeout=None if self.ghidra_timeout == -1 else self.ghidra_timeout  # Pass None for unlimited timeout
             )
             self.ghidra_available = True
         except Exception as e:
@@ -129,6 +133,16 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
         
         # Initialize retry counter
         self.retry_count = 0
+        
+        # Performance optimization settings
+        self.enable_multithreading = self.config.get_value('agents.agent_05.enable_multithreading', True)
+        self.max_worker_threads = self.config.get_value('agents.agent_05.max_threads', 4)
+    
+    def _log_progress(self, current_step: int, total_steps: int, message: str) -> None:
+        """Log progress with percentage and timing information"""
+        elapsed_time = time.time() - self.start_time if self.start_time else 0
+        progress_percent = (current_step / total_steps) * 100
+        self.logger.info(f"[{progress_percent:.1f}%] Neo Step {current_step}/{total_steps}: {message} (elapsed: {elapsed_time:.1f}s)")
 
     def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -142,10 +156,13 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
         5. Provide Matrix-themed insights and annotations
         """
         self.start_time = time.time()
+        total_phases = 6
         
         try:
-            # Validate prerequisites - Neo needs the foundation
+            # Step 1: Validate prerequisites - Neo needs the foundation
+            self.logger.info("Step 1/6: Validating prerequisites and dependencies...")
             self._validate_neo_prerequisites(context)
+            self._log_progress(1, total_phases, "Prerequisites validated")
             
             # Get binary and analysis context
             binary_path = context.get('binary_path')
@@ -159,44 +176,48 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
             if not agent2_result or agent2_result.status != AgentStatus.SUCCESS:
                 raise RuntimeError("Agent 2 (Architect) dependency not satisfied - Neo requires architecture analysis data")
             agent2_data = agent2_result.data  # Architecture analysis
-            # Note: Agent 5 depends on Agents 1,2 per Matrix dependency map, not Agent 4
             
             self.logger.info("Neo beginning advanced decompilation - seeing beyond the Matrix...")
             
-            # Phase 1: Enhanced Ghidra Analysis (REQUIRED)
+            # Step 2: Enhanced Ghidra Analysis (REQUIRED)
             if not self.ghidra_available:
                 raise RuntimeError("Ghidra is required for Neo's advanced decompilation - no fallback available")
             
-            self.logger.info("Phase 1: Enhanced Ghidra analysis with custom scripts")
+            self.logger.info("Step 2/6: Enhanced Ghidra analysis with custom scripts...")
             ghidra_results = self._perform_enhanced_ghidra_analysis(
                 binary_path, agent1_data, agent2_data, context
             )
+            self._log_progress(2, total_phases, "Ghidra analysis completed")
             
-            # Phase 2: Semantic Decompilation Analysis
-            self.logger.info("Phase 2: Semantic decompilation analysis")
+            # Step 3: Semantic Decompilation Analysis
+            self.logger.info("Step 3/6: Semantic decompilation analysis...")
             semantic_results = self._perform_semantic_decompilation(
                 ghidra_results, agent1_data, agent2_data
             )
+            self._log_progress(3, total_phases, "Semantic analysis completed")
             
-            # Phase 3: Multi-pass Quality Enhancement
-            self.logger.info("Phase 3: Multi-pass quality enhancement")
+            # Step 4: Multi-pass Quality Enhancement
+            self.logger.info("Step 4/6: Multi-pass quality enhancement...")
             enhanced_results = self._perform_multipass_enhancement(
                 semantic_results, context
             )
+            self._log_progress(4, total_phases, "Quality enhancement completed")
             
-            # Phase 4: AI-Enhanced Analysis (if available)
+            # Step 5: AI-Enhanced Analysis (if available)
             if self.ai_enabled:
-                self.logger.info("Phase 4: AI-enhanced variable naming and pattern recognition")
+                self.logger.info("Step 5/6: AI-enhanced variable naming and pattern recognition...")
                 ai_enhanced_results = self._perform_ai_enhancement(enhanced_results)
+                self._log_progress(5, total_phases, "AI enhancement completed")
             else:
+                self.logger.info("Step 5/6: Skipping AI enhancement (not available)...")
                 ai_enhanced_results = enhanced_results
+                self._log_progress(5, total_phases, "AI enhancement skipped (not available)")
             
-            # Phase 5: Matrix-Level Insights
-            self.logger.info("Phase 5: Generating Matrix-level insights")
+            # Step 6: Matrix-Level Insights and Quality Validation
+            self.logger.info("Step 6/6: Generating Matrix-level insights and validating quality...")
             final_results = self._generate_matrix_insights(ai_enhanced_results, context)
-            
-            # Phase 5: Quality Validation
             quality_metrics = self._calculate_quality_metrics(final_results)
+            self._log_progress(6, total_phases, "Matrix insights and quality validation completed")
             
             if quality_metrics.overall_score < self.quality_threshold:
                 if self.retry_count < min(self.max_analysis_passes, 2):  # Hard limit of 2 retries
@@ -305,8 +326,12 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
         if not self.ghidra_available:
             raise RuntimeError("Ghidra is required for Neo's advanced decompilation")
         
+        # Add detailed substep logging for Ghidra analysis
+        self.logger.info("  → Substep 2a: Creating custom Ghidra analysis script...")
+        
         # Create custom Ghidra script for Neo's analysis
         neo_script = self._create_neo_ghidra_script(arch_info)
+        self.logger.info("  → Substep 2b: Setting up analysis environment and temporary directories...")
         
         try:
             # Create temporary output directory in the proper output path
@@ -315,9 +340,19 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
             
             @contextmanager
             def timeout_context(seconds):
-                """Context manager for timeout handling - WSL compatible"""
+                """Context manager for timeout handling - WSL compatible, supports unlimited timeout"""
                 import threading
                 import time
+                
+                # If timeout is -1 or None, skip timeout handling
+                if seconds == -1 or seconds is None:
+                    start_time = time.time()
+                    try:
+                        yield
+                    finally:
+                        elapsed = time.time() - start_time
+                        self.logger.info(f"Neo Ghidra operation completed in {elapsed:.2f} seconds (unlimited timeout)")
+                    return
                 
                 timeout_occurred = threading.Event()
                 
@@ -358,27 +393,68 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
             
             try:
                 # Log the timeout value for debugging
-                self.logger.info(f"Neo using Ghidra timeout: {self.ghidra_timeout} seconds")
+                timeout_msg = "unlimited" if self.ghidra_timeout == -1 else f"{self.ghidra_timeout} seconds"
+                self.logger.info(f"  → Substep 2c: Starting Ghidra headless analysis (timeout: {timeout_msg})...")
                 
-                # Run enhanced Ghidra analysis with proper timeout protection
-                with timeout_context(self.ghidra_timeout):  # Use configured timeout
-                    success, output = self.ghidra_analyzer.run_ghidra_analysis(
-                        binary_path=binary_path,
-                        output_dir=str(neo_temp_dir),
-                        script_name="CompleteDecompiler.java",
-                        timeout=self.ghidra_timeout  # Use aggressive internal timeout
-                    )
-                    
-                    if not success:
-                        self.logger.error(f"Ghidra analysis failed: {output}")
-                        raise RuntimeError(f"Ghidra analysis failed: {output}")
+                # OPTIMIZATION: Add progress monitoring for long-running Ghidra analysis
+                import threading
                 
+                def log_progress():
+                    """Log progress every 15 seconds during Ghidra analysis"""
+                    progress_counter = 0
+                    while not analysis_complete.is_set():
+                        if progress_counter > 0:  # Skip first immediate log
+                            elapsed = time.time() - analysis_start_time
+                            self.logger.info(f"  → Ghidra analysis still running... ({elapsed:.1f}s elapsed)")
+                        progress_counter += 1
+                        if analysis_complete.wait(15):  # Wait 15 seconds or until complete
+                            break
+                
+                analysis_complete = threading.Event()
+                analysis_start_time = time.time()
+                
+                # Start progress monitoring thread
+                progress_thread = threading.Thread(target=log_progress, daemon=True)
+                progress_thread.start()
+                
+                try:
+                    # Run enhanced Ghidra analysis with proper timeout protection
+                    with timeout_context(self.ghidra_timeout):  # Use configured timeout (supports unlimited)
+                        # Pass None to internal timeout if unlimited, otherwise pass the value
+                        internal_timeout = None if self.ghidra_timeout == -1 else self.ghidra_timeout
+                        self.logger.info("  → Substep 2d: Executing Ghidra binary analysis and decompilation...")
+                        
+                        # Log binary size for context
+                        binary_size_mb = Path(binary_path).stat().st_size / (1024 * 1024)
+                        self.logger.info(f"  → Binary size: {binary_size_mb:.1f}MB (larger binaries take longer)")
+                        
+                        success, output = self.ghidra_analyzer.run_ghidra_analysis(
+                            binary_path=binary_path,
+                            output_dir=str(neo_temp_dir),
+                            script_name="CompleteDecompiler.java",
+                            timeout=internal_timeout  # Use None for unlimited internal timeout
+                        )
+                        
+                        analysis_elapsed = time.time() - analysis_start_time
+                        self.logger.info(f"  → Ghidra analysis completed in {analysis_elapsed:.1f}s")
+                        
+                        if not success:
+                            self.logger.error(f"Ghidra analysis failed: {output}")
+                            raise RuntimeError(f"Ghidra analysis failed: {output}")
+                        
+                finally:
+                    # Signal progress monitoring to stop
+                    analysis_complete.set()
+                    progress_thread.join(timeout=1)
+                
+                self.logger.info("  → Substep 2e: Parsing Ghidra analysis results...")
                 # Parse Ghidra analysis results from output
                 analysis_results = self._parse_ghidra_output(output, success)
                         
             except TimeoutError:
-                self.logger.error(f"Ghidra analysis timed out after {self.ghidra_timeout} seconds")
-                raise RuntimeError(f"Ghidra analysis timed out after {self.ghidra_timeout} seconds")
+                timeout_msg = "unlimited" if self.ghidra_timeout == -1 else f"{self.ghidra_timeout} seconds"
+                self.logger.error(f"Ghidra analysis timed out after {timeout_msg}")
+                raise RuntimeError(f"Ghidra analysis timed out after {timeout_msg}")
             except Exception as e:
                 self.logger.error(f"Ghidra analysis failed: {e}")
                 raise RuntimeError(f"Ghidra analysis failed: {e}")
@@ -392,6 +468,7 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
                     self.logger.warning(f"Failed to cleanup temp directory {neo_temp_dir}: {e}")
             
             # Enhance with Neo's pattern recognition
+            self.logger.info("  → Substep 2f: Applying Neo's advanced pattern recognition...")
             enhanced_results = self._apply_neo_pattern_recognition(analysis_results)
             
             return enhanced_results
@@ -1454,9 +1531,80 @@ public class NeoAdvancedAnalysis extends GhidraScript {{
     
     def _perform_multipass_enhancement(self, semantic_results: Dict[str, Any], 
                                      context: Dict[str, Any]) -> Dict[str, Any]:
-        """Perform multi-pass quality enhancement on semantic results"""
+        """Perform multi-pass quality enhancement on semantic results with optional multithreading"""
         self.logger.info("Neo performing multi-pass quality enhancement...")
         
+        enhanced_results = semantic_results.copy()
+        
+        if self.enable_multithreading and self.max_worker_threads > 1:
+            # Parallel enhancement passes
+            self.logger.info(f"Using multithreading with {self.max_worker_threads} workers for enhancement")
+            enhanced_results = self._perform_parallel_enhancement(enhanced_results, context)
+        else:
+            # Sequential enhancement passes (original behavior)
+            self.logger.info("Using sequential enhancement (multithreading disabled)")
+            enhanced_results = self._perform_sequential_enhancement(enhanced_results, context)
+        
+        return enhanced_results
+    
+    def _perform_parallel_enhancement(self, semantic_results: Dict[str, Any], 
+                                    context: Dict[str, Any]) -> Dict[str, Any]:
+        """Perform enhancement passes in parallel for better performance"""
+        enhanced_results = semantic_results.copy()
+        
+        # Define enhancement tasks that can run in parallel
+        enhancement_tasks = []
+        
+        # Task 1: Function name enhancement
+        if 'semantic_functions' in semantic_results or 'enhanced_functions' in semantic_results:
+            functions = semantic_results.get('semantic_functions', semantic_results.get('enhanced_functions', []))
+            enhancement_tasks.append(('function_names', partial(self._enhance_function_names, functions)))
+        
+        # Task 2: Variable name enhancement (depends on function enhancement, so we'll do it after)
+        # Task 3: Code structure enhancement
+        if 'semantic_code' in semantic_results or 'enhanced_code' in semantic_results:
+            code = semantic_results.get('semantic_code', semantic_results.get('enhanced_code', ''))
+            if code:
+                enhancement_tasks.append(('code_structure', partial(self._enhance_code_structure, code)))
+        
+        # Execute parallel tasks
+        if enhancement_tasks:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(self.max_worker_threads, len(enhancement_tasks))) as executor:
+                future_to_task = {executor.submit(task[1]): task[0] for task in enhancement_tasks}
+                
+                for future in concurrent.futures.as_completed(future_to_task):
+                    task_name = future_to_task[future]
+                    try:
+                        result = future.result()
+                        if task_name == 'function_names':
+                            if 'semantic_functions' in enhanced_results:
+                                enhanced_results['semantic_functions'] = result
+                            else:
+                                enhanced_results['enhanced_functions'] = result
+                        elif task_name == 'code_structure':
+                            enhanced_results['enhanced_code'] = result
+                        self.logger.info(f"Parallel enhancement task '{task_name}' completed")
+                    except Exception as e:
+                        self.logger.warning(f"Parallel enhancement task '{task_name}' failed: {e}")
+        
+        # Sequential tasks that depend on previous results
+        # Variable name enhancement (needs enhanced functions)
+        if 'semantic_functions' in enhanced_results:
+            enhanced_results['semantic_functions'] = self._enhance_variable_names_in_functions(
+                enhanced_results['semantic_functions']
+            )
+        
+        # Generate enhanced code if not done in parallel
+        if 'enhanced_code' not in enhanced_results:
+            enhanced_results['enhanced_code'] = self._create_enhanced_code_output(
+                enhanced_results, context
+            )
+        
+        return enhanced_results
+    
+    def _perform_sequential_enhancement(self, semantic_results: Dict[str, Any], 
+                                      context: Dict[str, Any]) -> Dict[str, Any]:
+        """Perform enhancement passes sequentially (original behavior)"""
         enhanced_results = semantic_results.copy()
         
         # Pass 1: Function name enhancement

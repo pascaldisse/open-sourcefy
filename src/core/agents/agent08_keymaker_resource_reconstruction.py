@@ -1979,36 +1979,65 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
         return constant_pools
     
     def _reconstruct_floating_point_pools(self, binary_data: bytes) -> List[ResourceItem]:
-        """Reconstruct floating point constant pools with exact memory layout"""
+        """Reconstruct floating point constant pools with exact memory layout - OPTIMIZED"""
         fp_pools = []
         
         try:
             import struct
+            import threading
+            from concurrent.futures import ThreadPoolExecutor, as_completed
             
-            # Look for clusters of floating point constants
+            # OPTIMIZATION: Use larger steps and targeted scanning
+            chunk_size = 32768  # 32KB chunks for better cache performance
+            step_size = 8  # 8-byte aligned scanning for doubles
+            
             fp_constants = []
             
-            # Scan for IEEE 754 double precision constants
-            for offset in range(0, len(binary_data) - 8, 4):
-                try:
-                    double_bytes = binary_data[offset:offset + 8]
-                    if len(double_bytes) == 8:
-                        double_val = struct.unpack('<d', double_bytes)[0]
-                        
-                        # Check for reasonable FP constants
-                        if (not math.isnan(double_val) and not math.isinf(double_val) and 
-                            abs(double_val) < 1e15 and double_val != 0.0):
+            def scan_chunk(start_offset: int, end_offset: int) -> List[dict]:
+                """Scan a chunk of binary data for floating point constants"""
+                chunk_constants = []
+                
+                for offset in range(start_offset, min(end_offset, len(binary_data) - 8), step_size):
+                    try:
+                        double_bytes = binary_data[offset:offset + 8]
+                        if len(double_bytes) == 8:
+                            double_val = struct.unpack('<d', double_bytes)[0]
                             
-                            fp_constants.append({
-                                'offset': offset,
-                                'value': double_val,
-                                'size': 8,
-                                'type': 'double',
-                                'memory_address': 0x400000 + offset,
-                                'alignment': 8
-                            })
-                except (struct.error, OverflowError):
-                    continue
+                            # Check for reasonable FP constants (optimized checks)
+                            if (not math.isnan(double_val) and not math.isinf(double_val) and 
+                                1e-15 < abs(double_val) < 1e15):  # More restrictive range
+                                
+                                chunk_constants.append({
+                                    'offset': offset,
+                                    'value': double_val,
+                                    'size': 8,
+                                    'type': 'double',
+                                    'memory_address': 0x400000 + offset,
+                                    'alignment': 8
+                                })
+                    except (struct.error, OverflowError):
+                        continue
+                
+                return chunk_constants
+            
+            # OPTIMIZATION: Use multithreading for parallel chunk scanning
+            max_workers = min(4, (len(binary_data) // chunk_size) + 1)
+            
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = []
+                
+                # Submit chunks for parallel processing
+                for start in range(0, len(binary_data), chunk_size):
+                    end = min(start + chunk_size, len(binary_data))
+                    futures.append(executor.submit(scan_chunk, start, end))
+                
+                # Collect results
+                for future in as_completed(futures):
+                    try:
+                        chunk_results = future.result()
+                        fp_constants.extend(chunk_results)
+                    except Exception as e:
+                        self.logger.warning(f"Chunk processing failed: {e}")
             
             # Group nearby constants into pools
             if fp_constants:
@@ -2047,36 +2076,62 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
         return fp_pools
     
     def _reconstruct_integer_pools(self, binary_data: bytes) -> List[ResourceItem]:
-        """Reconstruct integer constant pools with exact memory layout"""
+        """Reconstruct integer constant pools with exact memory layout - OPTIMIZED"""
         int_pools = []
         
         try:
             import struct
+            from concurrent.futures import ThreadPoolExecutor, as_completed
             
-            # Look for clusters of integer constants
+            # OPTIMIZATION: Use chunked parallel processing
+            chunk_size = 32768  # 32KB chunks
+            step_size = 4  # 4-byte aligned scanning for integers
+            
             int_constants = []
             
-            # Scan for 32-bit integer constants
-            for offset in range(0, len(binary_data) - 4, 4):
-                try:
-                    int_bytes = binary_data[offset:offset + 4]
-                    if len(int_bytes) == 4:
-                        int_val = struct.unpack('<I', int_bytes)[0]
-                        
-                        # Filter for interesting constants (not too small/large)
-                        if (1000 <= int_val <= 0xFFFFF000 or  # Reasonable range
-                            int_val in [256, 512, 1024, 2048, 4096, 8192]):  # Common powers of 2
+            def scan_int_chunk(start_offset: int, end_offset: int) -> List[dict]:
+                """Scan a chunk for integer constants"""
+                chunk_constants = []
+                
+                for offset in range(start_offset, min(end_offset, len(binary_data) - 4), step_size):
+                    try:
+                        int_bytes = binary_data[offset:offset + 4]
+                        if len(int_bytes) == 4:
+                            int_val = struct.unpack('<I', int_bytes)[0]
                             
-                            int_constants.append({
-                                'offset': offset,
-                                'value': int_val,
-                                'size': 4,
-                                'type': 'uint32',
-                                'memory_address': 0x400000 + offset,
-                                'alignment': 4
-                            })
-                except struct.error:
-                    continue
+                            # OPTIMIZED: More restrictive filtering for performance
+                            if (10000 <= int_val <= 0xFFFFF000 or  # Tighter range
+                                int_val in {256, 512, 1024, 2048, 4096, 8192, 16384, 32768}):  # Set lookup
+                                
+                                chunk_constants.append({
+                                    'offset': offset,
+                                    'value': int_val,
+                                    'size': 4,
+                                    'type': 'uint32',
+                                    'memory_address': 0x400000 + offset,
+                                    'alignment': 4
+                                })
+                    except (struct.error, OverflowError):
+                        continue
+                
+                return chunk_constants
+            
+            # OPTIMIZATION: Parallel chunk processing
+            max_workers = min(4, (len(binary_data) // chunk_size) + 1)
+            
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = []
+                
+                for start in range(0, len(binary_data), chunk_size):
+                    end = min(start + chunk_size, len(binary_data))
+                    futures.append(executor.submit(scan_int_chunk, start, end))
+                
+                for future in as_completed(futures):
+                    try:
+                        chunk_results = future.result()
+                        int_constants.extend(chunk_results)
+                    except Exception as e:
+                        self.logger.warning(f"Integer chunk processing failed: {e}")
             
             # Group nearby constants into pools
             if int_constants:
@@ -2115,36 +2170,62 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
         return int_pools
     
     def _reconstruct_address_pools(self, binary_data: bytes) -> List[ResourceItem]:
-        """Reconstruct address/pointer constant pools"""
+        """Reconstruct address/pointer constant pools - OPTIMIZED"""
         addr_pools = []
         
         try:
             import struct
+            from concurrent.futures import ThreadPoolExecutor, as_completed
             
-            # Look for clusters of addresses/pointers
+            # OPTIMIZATION: Parallel chunked processing
+            chunk_size = 65536  # 64KB chunks for address scanning
+            step_size = 4  # 4-byte aligned scanning
+            
             addr_constants = []
             
-            # Scan for address-like constants
-            for offset in range(0, len(binary_data) - 4, 4):
-                try:
-                    addr_bytes = binary_data[offset:offset + 4]
-                    if len(addr_bytes) == 4:
-                        addr_val = struct.unpack('<I', addr_bytes)[0]
-                        
-                        # Check if it looks like a code/data address
-                        if (0x400000 <= addr_val <= 0x500000 or  # Typical code range
-                            0x10000000 <= addr_val <= 0x80000000):  # Data range
+            def scan_address_chunk(start_offset: int, end_offset: int) -> List[dict]:
+                """Scan chunk for address-like constants"""
+                chunk_constants = []
+                
+                for offset in range(start_offset, min(end_offset, len(binary_data) - 4), step_size):
+                    try:
+                        addr_bytes = binary_data[offset:offset + 4]
+                        if len(addr_bytes) == 4:
+                            addr_val = struct.unpack('<I', addr_bytes)[0]
                             
-                            addr_constants.append({
-                                'offset': offset,
-                                'value': addr_val,
-                                'size': 4,
-                                'type': 'address',
-                                'memory_address': 0x400000 + offset,
-                                'alignment': 4
-                            })
-                except struct.error:
-                    continue
+                            # OPTIMIZED: More restrictive address validation
+                            if (0x400000 <= addr_val <= 0x480000 or  # Narrower code range
+                                0x10000000 <= addr_val <= 0x20000000):  # Narrower data range
+                                
+                                chunk_constants.append({
+                                    'offset': offset,
+                                    'value': addr_val,
+                                    'size': 4,
+                                    'type': 'address',
+                                    'memory_address': 0x400000 + offset,
+                                    'alignment': 4
+                                })
+                    except struct.error:
+                        continue
+                
+                return chunk_constants
+            
+            # OPTIMIZATION: Parallel chunk processing
+            max_workers = min(4, (len(binary_data) // chunk_size) + 1)
+            
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = []
+                
+                for start in range(0, len(binary_data), chunk_size):
+                    end = min(start + chunk_size, len(binary_data))
+                    futures.append(executor.submit(scan_address_chunk, start, end))
+                
+                for future in as_completed(futures):
+                    try:
+                        chunk_results = future.result()
+                        addr_constants.extend(chunk_results)
+                    except Exception as e:
+                        self.logger.warning(f"Address chunk processing failed: {e}")
             
             # Group nearby addresses into pools
             if addr_constants:

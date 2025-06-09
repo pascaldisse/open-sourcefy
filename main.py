@@ -237,6 +237,11 @@ class MatrixCLI:
             action="store_false", dest="validate_results",
             help="Skip result validation"
         )
+        behavior_group.add_argument(
+            "--no-final-validation", 
+            action="store_false", dest="enable_final_validation",
+            help="Skip automatic final validation for perfect binary recompilation"
+        )
         
         # Development options
         dev_group = parser.add_argument_group("Development Options")
@@ -353,6 +358,7 @@ class MatrixCLI:
         config.save_reports = args.save_reports
         config.continue_on_failure = args.continue_on_failure
         config.validate_results = args.validate_results
+        config.enable_final_validation = getattr(args, 'enable_final_validation', True)
         
         # Development options
         config.dry_run = args.dry_run

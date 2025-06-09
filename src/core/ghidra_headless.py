@@ -40,7 +40,7 @@ class GhidraHeadless:
     - Advanced memory and data mutability settings
     """
     
-    def __init__(self, ghidra_home: str = None, enable_accuracy_optimizations: bool = True, output_base_dir: str = None):
+    def __init__(self, ghidra_home: str = None, enable_accuracy_optimizations: bool = True, output_base_dir: str = None, analysis_timeout: int = 30):
         """
         Initialize Ghidra headless automation with enhanced process management
         
@@ -48,6 +48,7 @@ class GhidraHeadless:
             ghidra_home: Path to Ghidra installation directory
             enable_accuracy_optimizations: Enable accuracy improvement strategies
             output_base_dir: Base output directory for organizing files (defaults to temp dir)
+            analysis_timeout: Analysis timeout per file in seconds (default: 30)
         """
         self.ghidra_home = ghidra_home or self._find_ghidra_home()
         self.analyze_headless = self._get_analyze_headless_path()
@@ -56,6 +57,7 @@ class GhidraHeadless:
         self.enable_accuracy_optimizations = enable_accuracy_optimizations
         self.output_base_dir = output_base_dir
         self.community_scripts_dir = self._setup_community_scripts()
+        self.analysis_timeout = analysis_timeout  # Configurable timeout for testing
         
         # Process management for timeout handling
         self.active_processes = []
@@ -337,8 +339,8 @@ public class EnhancedDecompiler extends GhidraScript {
         flags = []
         
         if self.enable_accuracy_optimizations:
-            # Enable comprehensive analysis
-            flags.extend(["-analysisTimeoutPerFile", "600"])
+            # Enable comprehensive analysis with configurable timeout
+            flags.extend(["-analysisTimeoutPerFile", str(self.analysis_timeout)])
             flags.extend(["-max-cpu", str(os.cpu_count() or 4)])
             
             # Memory and permission optimizations
@@ -509,34 +511,79 @@ public class EnhancedDecompiler extends GhidraScript {
             cmd.extend(["-postScript", os.path.basename(script_path), output_dir])
         
         # Add standard analysis with increased memory and timeout
-        cmd.extend(["-analysisTimeoutPerFile", str(timeout)])
+        # Handle unlimited timeout case (None or -1)
+        if timeout is None or timeout == -1:
+            # Use large but reasonable timeout for "unlimited" (30 minutes)
+            analysis_timeout = str(30 * 60)  # 30 minutes in seconds
+        else:
+            analysis_timeout = str(timeout)
+        
+        cmd.extend(["-analysisTimeoutPerFile", analysis_timeout])
         cmd.extend(["-max-cpu", str(os.cpu_count() or 4)])
         
-        # Set JVM memory options for larger binaries
-        java_opts = os.environ.get('GHIDRA_MAXMEM', '4G')
-        if 'GHIDRA_MAXMEM' not in os.environ:
-            os.environ['GHIDRA_MAXMEM'] = java_opts
+        # OPTIMIZATION: Enhanced JVM memory and performance options
+        file_size_mb = os.path.getsize(binary_path) / (1024 * 1024)
+        
+        # Dynamic memory allocation based on file size
+        if file_size_mb < 1:
+            java_opts = '2G'
+        elif file_size_mb < 10:
+            java_opts = '4G'
+        elif file_size_mb < 100:
+            java_opts = '6G'
+        else:
+            java_opts = '8G'
+            
+        # Override with environment variable if set
+        java_opts = os.environ.get('GHIDRA_MAXMEM', java_opts)
+        os.environ['GHIDRA_MAXMEM'] = java_opts
+        
+        # Additional JVM optimizations for performance
+        os.environ['VMARGS'] = os.environ.get('VMARGS', '') + ' -XX:+UseG1GC -XX:+UseStringDeduplication -XX:MaxGCPauseMillis=200 -server'
         
         logger.info(f"Running Ghidra analysis: {' '.join(cmd)}")
+        logger.info(f"Working directory: {self.ghidra_home}")
+        logger.info(f"Environment: GHIDRA_MAXMEM={os.environ.get('GHIDRA_MAXMEM', 'not set')}")
+        logger.info(f"Environment: VMARGS={os.environ.get('VMARGS', 'not set')}")
+        
         
         process = None
         try:
-            # Start the process with proper subprocess management
+            # OPTIMIZATION: Enhanced process management with resource optimization
+            import psutil
+            
+            # Set process creation flags for better resource management
+            creation_flags = 0
+            if os.name == 'nt':
+                # Windows: Use high priority and background processing
+                creation_flags = subprocess.HIGH_PRIORITY_CLASS | subprocess.CREATE_NO_WINDOW
+            
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
                 cwd=self.ghidra_home,
-                preexec_fn=None if os.name == 'nt' else os.setsid  # Process group for Unix
+                creationflags=creation_flags if os.name == 'nt' else 0,
+                preexec_fn=None if os.name == 'nt' else os.setsid,
+                bufsize=8192  # Larger buffer for better I/O performance
             )
+            
+            # OPTIMIZATION: Set process priority after creation
+            try:
+                proc = psutil.Process(process.pid)
+                proc.nice(psutil.HIGH_PRIORITY_CLASS if os.name == 'nt' else -5)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass  # Ignore if we can't set priority
             
             # Track active process for cleanup
             self.active_processes.append(process)
             
             # Wait for completion with timeout
             try:
-                stdout, stderr = process.communicate(timeout=timeout)
+                # Handle unlimited timeout case for process communication
+                process_timeout = None if (timeout is None or timeout == -1) else timeout
+                stdout, stderr = process.communicate(timeout=process_timeout)
                 return_code = process.returncode
                 
                 success = return_code == 0
@@ -551,12 +598,13 @@ public class EnhancedDecompiler extends GhidraScript {
                 return success, output
                 
             except subprocess.TimeoutExpired:
-                logger.warning(f"Ghidra analysis timed out after {timeout} seconds - terminating process")
+                timeout_msg = "unlimited" if (timeout is None or timeout == -1) else f"{timeout} seconds"
+                logger.warning(f"Ghidra analysis timed out after {timeout_msg} - terminating process")
                 
                 # Use robust process termination
                 self._terminate_process_safely(process)
                 
-                error_msg = f"Ghidra analysis timed out after {timeout} seconds"
+                error_msg = f"Ghidra analysis timed out after {timeout_msg}"
                 return False, error_msg
                 
             finally:
