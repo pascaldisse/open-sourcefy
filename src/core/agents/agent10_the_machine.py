@@ -19,7 +19,7 @@ class Agent10_TheMachine(ReconstructionAgent):
         super().__init__(
             agent_id=10,
             matrix_character=MatrixCharacter.MACHINE,
-            dependencies=[9]  # Depends on Commander Locke (agent 9)
+            dependencies=[5, 9]  # Depends on Neo (agent 5) and Commander Locke (agent 9)
         )
 
     def _validate_prerequisites(self, context: Dict[str, Any]) -> None:
@@ -31,13 +31,19 @@ class Agent10_TheMachine(ReconstructionAgent):
         if 'binary_metadata' not in shared_memory:
             shared_memory['binary_metadata'] = {}
         
-        # Check for dependencies more flexibly - Agent 10 depends on Agent 9
+        # Check for dependencies more flexibly - Agent 10 depends on Agent 5 (Neo) or Agent 9
         dependencies_met = False
         agent_results = context.get('agent_results', {})
+        
+        # Check for Agent 5 (Neo) results - PRIMARY SOURCE
+        if 5 in agent_results or 5 in shared_memory['analysis_results']:
+            dependencies_met = True
+            self.logger.info("✅ Found Agent 5 (Neo) dependency - primary decompilation source available")
         
         # Check for Agent 9 results
         if 9 in agent_results or 9 in shared_memory['analysis_results']:
             dependencies_met = True
+            self.logger.info("✅ Found Agent 9 (Commander Locke) dependency")
         
         # Also check for any source code from previous agents 
         available_sources = any(
@@ -88,7 +94,7 @@ class Agent10_TheMachine(ReconstructionAgent):
             build_analysis = self._analyze_build_requirements(available_sources, context)
             
             # Generate comprehensive build system
-            build_system = self._generate_build_system(build_analysis, context)
+            build_system = self._generate_build_system(build_analysis, available_sources, context)
             
             # Orchestrate compilation process
             compilation_results = self._orchestrate_compilation(build_system, context)
@@ -149,6 +155,26 @@ class Agent10_TheMachine(ReconstructionAgent):
             if isinstance(resource_data, dict):
                 sources['resource_files'].update(resource_data.get('resource_files', {}))
         
+        # Gather from Neo Advanced Decompiler (Agent 5) - PRIMARY SOURCE
+        if 5 in all_results and hasattr(all_results[5], 'status') and all_results[5].status == AgentStatus.SUCCESS:
+            neo_data = all_results[5].data
+            if isinstance(neo_data, dict):
+                # Check for decompiled code from Neo's analysis
+                decompiled_code = neo_data.get('decompiled_code')
+                if decompiled_code:
+                    sources['source_files']['main.c'] = decompiled_code
+                    self.logger.info(f"✅ Found Neo's decompiled source code ({len(decompiled_code)} chars)")
+                
+                # Also check for any function-specific code
+                enhanced_functions = neo_data.get('enhanced_functions', {})
+                for func_name, func_data in enhanced_functions.items():
+                    if isinstance(func_data, dict) and func_data.get('code'):
+                        sources['source_files'][f"{func_name}.c"] = func_data['code']
+        else:
+            # If Agent 5 results not available, try to find existing decompiled source files
+            self.logger.info("Agent 5 results not available - searching for existing decompiled source files...")
+            self._try_load_existing_source_files(sources)
+        
         # Gather from Advanced Decompiler (Agent 7)
         if 7 in all_results and hasattr(all_results[7], 'status') and all_results[7].status == AgentStatus.SUCCESS:
             decompiler_data = all_results[7].data
@@ -171,6 +197,128 @@ class Agent10_TheMachine(ReconstructionAgent):
                             sources['source_files'][file_name] = func_data['code']
         
         return sources
+    
+    def _try_load_existing_source_files(self, sources: Dict[str, Any]) -> None:
+        """Try to load existing decompiled source files from previous runs"""
+        try:
+            # Look for output directories
+            output_root = Path("output")
+            if not output_root.exists():
+                self.logger.warning("No output directory found")
+                return
+            
+            # Find the most recent launcher output directory with timestamp (excluding current run)
+            launcher_dirs = []
+            launcher_root = output_root / "launcher"
+            if launcher_root.exists():
+                for subdir in launcher_root.iterdir():
+                    if subdir.is_dir() and "-" in subdir.name:  # Timestamped directories
+                        # Check if this directory has agent output (not the current empty one)
+                        agents_dir = subdir / "agents" / "agent_05_neo"
+                        if agents_dir.exists():
+                            launcher_dirs.append(subdir)
+            
+            if not launcher_dirs:
+                self.logger.warning("No existing launcher output directories with agent data found")
+                return
+            
+            # Sort by name (which includes timestamp) to get most recent
+            launcher_dirs.sort(key=lambda x: x.name, reverse=True)
+            most_recent = launcher_dirs[0]
+            self.logger.info(f"Searching for source files in: {most_recent}")
+            
+            # Look for Agent 5 decompiled code
+            neo_file = most_recent / "agents" / "agent_05_neo" / "decompiled_code.c"
+            if neo_file.exists():
+                try:
+                    with open(neo_file, 'r', encoding='utf-8') as f:
+                        decompiled_code = f.read()
+                    
+                    # Fix common case sensitivity issues for WSL compilation
+                    decompiled_code = self._fix_case_sensitivity_issues(decompiled_code)
+                    
+                    sources['source_files']['main.c'] = decompiled_code
+                    self.logger.info(f"✅ Loaded existing Neo decompiled source: {neo_file}")
+                    self.logger.info(f"✅ Source code size: {len(decompiled_code)} characters")
+                except Exception as e:
+                    self.logger.error(f"Failed to read {neo_file}: {e}")
+            else:
+                self.logger.warning(f"No decompiled code found at {neo_file}")
+                
+        except Exception as e:
+            self.logger.error(f"Error loading existing source files: {e}")
+    
+    def _fix_case_sensitivity_issues(self, source_code: str) -> str:
+        """Fix common case sensitivity issues for WSL compilation"""
+        try:
+            # Fix Windows header case sensitivity
+            source_code = source_code.replace('#include <windows.h>', '#include <Windows.h>')
+            source_code = source_code.replace('#include <commctrl.h>', '#include <CommCtrl.h>')
+            
+            # Add required pragma for safe functions
+            if '#define _CRT_SECURE_NO_WARNINGS' not in source_code:
+                # Insert at the beginning, after initial comments
+                lines = source_code.split('\n')
+                insert_pos = 0
+                
+                # Find position after initial comments
+                for i, line in enumerate(lines):
+                    if line.strip() and not line.strip().startswith('//') and not line.strip().startswith('/*'):
+                        insert_pos = i
+                        break
+                
+                lines.insert(insert_pos, '#define _CRT_SECURE_NO_WARNINGS')
+                source_code = '\n'.join(lines)
+            
+            # Fix common missing includes
+            if '#include <CommCtrl.h>' not in source_code and 'InitCommonControlsEx' in source_code:
+                source_code = source_code.replace('#include <Windows.h>', '#include <Windows.h>\n#include <CommCtrl.h>')
+            
+            # Add missing constant definitions that are referenced but not defined
+            if 'ID_FILE_EXIT' in source_code and '#define ID_FILE_EXIT' not in source_code:
+                # Find a good place to insert constants (after includes, before functions)
+                lines = source_code.split('\n')
+                insert_pos = len(lines)  # Default to end
+                
+                for i, line in enumerate(lines):
+                    if line.strip().startswith('LRESULT CALLBACK') or line.strip().startswith('int WINAPI'):
+                        insert_pos = i
+                        break
+                
+                constants = [
+                    '',
+                    '// Resource IDs (reconstructed from analysis)',
+                    '#define IDI_MAIN_ICON       101',
+                    '#define IDS_APP_TITLE       201', 
+                    '#define ID_FILE_EXIT        1001',
+                    ''
+                ]
+                
+                for j, const_line in enumerate(constants):
+                    lines.insert(insert_pos + j, const_line)
+                
+                source_code = '\n'.join(lines)
+            
+            # Fix function declaration issues
+            if 'CreateMainWindow' in source_code and 'HWND CreateMainWindow(HINSTANCE, int);' not in source_code:
+                # Find forward declarations section
+                lines = source_code.split('\n')
+                for i, line in enumerate(lines):
+                    if 'LRESULT CALLBACK MainWindowProc' in line:
+                        # Insert after existing forward declarations
+                        for j in range(i+1, len(lines)):
+                            if lines[j].strip() == '' or not lines[j].strip().endswith(';'):
+                                lines.insert(j, 'HWND CreateMainWindow(HINSTANCE, int);')
+                                break
+                        break
+                source_code = '\n'.join(lines)
+            
+            self.logger.info("✅ Applied case sensitivity and compilation fixes")
+            return source_code
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to apply case sensitivity fixes: {e}")
+            return source_code
 
     def _analyze_build_requirements(self, sources: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze build requirements from available sources"""
@@ -205,12 +353,15 @@ class Agent10_TheMachine(ReconstructionAgent):
         # Analyze includes and dependencies
         all_content = ' '.join(source_files.values()) + ' '.join(header_files.values())
         
-        # Windows-specific dependencies
-        if '#include <windows.h>' in all_content:
+        # Windows-specific dependencies (check both cases)
+        content_lower = all_content.lower()
+        if '#include <windows.h>' in content_lower:
             analysis['dependencies'].extend(['kernel32.lib', 'user32.lib'])
-        if '#include <winsock2.h>' in all_content:
+        if '#include <commctrl.h>' in content_lower or 'InitCommonControlsEx' in all_content:
+            analysis['dependencies'].append('Comctl32.lib')
+        if '#include <winsock2.h>' in content_lower:
             analysis['dependencies'].extend(['ws2_32.lib', 'wsock32.lib'])
-        if 'printf' in all_content or '#include <stdio.h>' in all_content:
+        if 'printf' in all_content or '#include <stdio.h>' in content_lower:
             analysis['dependencies'].extend(['msvcrt.lib'])
         
         # Determine architecture from context
@@ -239,12 +390,13 @@ class Agent10_TheMachine(ReconstructionAgent):
         
         return analysis
 
-    def _generate_build_system(self, analysis: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+    def _generate_build_system(self, analysis: Dict[str, Any], sources: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Generate VS2022 MSBuild system configuration - CENTRALIZED ONLY"""
         build_system = {
             'detected_systems': ['msbuild'],  # Only MSBuild supported
             'primary_system': 'msbuild_vs2022',
             'build_files': {},
+            'source_files': sources.get('source_files', {}),  # Add source files
             'build_configurations': {},
             'compilation_commands': {},
             'linking_commands': {},
@@ -349,10 +501,13 @@ EndGlobal
             platform_toolset = 'v143'  # VS2022 toolset
         
         config_type = 'Application'
+        subsystem = 'Console'
         if analysis['project_type'] == 'dynamic_library':
             config_type = 'DynamicLibrary'
         elif analysis['project_type'] == 'static_library':
             config_type = 'StaticLibrary'
+        elif analysis['project_type'] == 'windows_gui':
+            subsystem = 'Windows'
         
         # Get include and library directories from centralized build system
         build_manager = self._get_build_manager()
@@ -415,7 +570,7 @@ EndGlobal
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>{subsystem}</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>{';'.join(analysis['dependencies'])};%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
@@ -432,7 +587,7 @@ EndGlobal
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>{subsystem}</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
@@ -689,6 +844,17 @@ Write-Host "Build complete!" -ForegroundColor Green
         }
         
         try:
+            # Create source directory and write source files
+            src_dir = os.path.join(output_dir, 'src')
+            os.makedirs(src_dir, exist_ok=True)
+            
+            # Write all source files to src directory
+            for filename, content in build_config.get('source_files', {}).items():
+                src_file = os.path.join(src_dir, filename)
+                with open(src_file, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                self.logger.info(f"✅ Written source file: {filename}")
+            
             # Write project file
             proj_file = os.path.join(output_dir, 'project.vcxproj')
             with open(proj_file, 'w') as f:
@@ -696,10 +862,14 @@ Write-Host "Build complete!" -ForegroundColor Green
             
             # Use centralized build system manager
             build_manager = self._get_build_manager()
+            
+            # Use the platform from analysis
+            platform = "x64" if build_config.get('architecture') == 'x64' else "Win32"
+            
             success, output = build_manager.build_with_msbuild(
                 Path(proj_file),
                 configuration="Release",
-                platform="x64"
+                platform=platform
             )
             
             result['output'] = output

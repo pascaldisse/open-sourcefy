@@ -307,9 +307,14 @@ class BuildSystemManager:
         try:
             msbuild_path = self.get_msbuild_path()
             
+            # Convert paths to Windows format for MSBuild
+            win_msbuild_path = self._convert_wsl_path_to_windows(msbuild_path)
+            win_project_path = self._convert_wsl_path_to_windows(str(project_file))
+            
+            # Execute MSBuild directly from WSL using the WSL path
             cmd = [
-                msbuild_path,
-                str(project_file),
+                msbuild_path,  # Use WSL path directly
+                win_project_path,  # Project file in Windows format
                 f"/p:Configuration={configuration}",
                 f"/p:Platform={platform}",
                 "/verbosity:minimal",
@@ -317,22 +322,23 @@ class BuildSystemManager:
             ]
             
             self.logger.info(f"Building with MSBuild: {project_file}")
-            self.logger.debug(f"MSBuild command: {' '.join(cmd)}")
+            self.logger.info(f"MSBuild command: {' '.join(cmd)}")
             
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=600,  # 10 minutes
-                cwd=project_file.parent
+                cwd=str(project_file.parent)
             )
             
             if result.returncode == 0:
                 self.logger.info("✅ MSBuild successful")
                 return True, result.stdout
             else:
-                self.logger.error(f"❌ MSBuild failed: {result.stderr}")
-                return False, result.stderr
+                error_output = result.stderr or result.stdout or f"Exit code: {result.returncode}"
+                self.logger.error(f"❌ MSBuild failed: {error_output}")
+                return False, error_output
                 
         except Exception as e:
             error_msg = f"MSBuild error: {e}"
@@ -452,9 +458,12 @@ class BuildSystemManager:
         
         return content
     
-    def _convert_wsl_path_to_windows(self, path: Path) -> str:
+    def _convert_wsl_path_to_windows(self, path) -> str:
         """Convert WSL path to Windows path for the compiler"""
-        path_str = str(path.absolute())
+        if isinstance(path, str):
+            path_str = path
+        else:
+            path_str = str(path.absolute())
         
         # Convert /mnt/c/ to C:\
         if path_str.startswith('/mnt/c/'):
