@@ -199,53 +199,8 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
             if not self.ai_enabled:
                 return
             
-            # Setup LLM for resource analysis
-            self.llm = LlamaCpp(
-                model_path=str(model_path),
-                temperature=self.config.get_value('ai.model.temperature', 0.1),
-                max_tokens=self.config.get_value('ai.model.max_tokens', 2048),
-                verbose=self.config.get_value('debug.enabled', False)
-            )
-            
-            # Create Keymaker-specific AI tools
-            tools = [
-                Tool(
-                    name="classify_resource_types",
-                    description="Classify and categorize extracted resources",
-                    func=self._ai_classify_resource_types
-                ),
-                Tool(
-                    name="analyze_resource_patterns",
-                    description="Analyze patterns in resource usage and organization",
-                    func=self._ai_analyze_resource_patterns
-                ),
-                Tool(
-                    name="reconstruct_project_structure",
-                    description="Reconstruct original project structure from resources",
-                    func=self._ai_reconstruct_project_structure
-                ),
-                Tool(
-                    name="validate_resource_integrity",
-                    description="Validate integrity and completeness of extracted resources",
-                    func=self._ai_validate_resource_integrity
-                )
-            ]
-            
-            # Create agent executor
-            memory = ConversationBufferMemory()
-            agent = ReActDocstoreAgent.from_llm_and_tools(
-                llm=self.llm,
-                tools=tools,
-                verbose=self.config.get_value('debug.enabled', False)
-            )
-            
-            self.ai_agent = AgentExecutor.from_agent_and_tools(
-                agent=agent,
-                tools=tools,
-                memory=memory,
-                verbose=self.config.get_value('debug.enabled', False),
-                max_iterations=self.config.get_value('ai.max_iterations', 3)
-            )
+            # AI system is now centralized - no local setup needed
+            self.logger.info("Keymaker AI agent successfully initialized with centralized AI system")
             
         except Exception as e:
             self.logger.error(f"Failed to setup Keymaker AI agent: {e}")
