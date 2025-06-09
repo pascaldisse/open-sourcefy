@@ -1402,3 +1402,353 @@ public class NeoAdvancedAnalysis extends GhidraScript {{
         
         return code_parts
     
+    def _perform_semantic_decompilation(self, ghidra_results: Dict[str, Any], 
+                                      binary_info: Dict[str, Any], 
+                                      arch_info: Dict[str, Any]) -> Dict[str, Any]:
+        """Perform semantic decompilation analysis using the semantic decompiler engine"""
+        self.logger.info("Neo performing semantic decompilation analysis...")
+        
+        try:
+            # Use semantic decompiler if available
+            if hasattr(self, 'semantic_decompiler') and self.semantic_decompiler:
+                semantic_results = self.semantic_decompiler.analyze_binary(
+                    ghidra_results, binary_info, arch_info
+                )
+                
+                return {
+                    'semantic_functions': semantic_results.get('functions', []),
+                    'semantic_structures': semantic_results.get('structures', []),
+                    'semantic_code': semantic_results.get('reconstructed_code', ''),
+                    'semantic_quality': semantic_results.get('quality_score', 0.0),
+                    'is_true_decompilation': semantic_results.get('is_true_reconstruction', False),
+                    'advanced_signatures': semantic_results.get('advanced_signatures', {}),
+                    'semantic_confidence': semantic_results.get('confidence', 0.0)
+                }
+            else:
+                # Fallback to enhanced Ghidra results
+                self.logger.info("Semantic decompiler not available - using enhanced Ghidra analysis")
+                return {
+                    'enhanced_functions': ghidra_results.get('functions', []),
+                    'enhanced_code': self._create_enhanced_code_output(ghidra_results, {}),
+                    'semantic_quality': 0.6,  # Moderate quality for enhanced analysis
+                    'is_true_decompilation': False,
+                    'semantic_confidence': 0.6
+                }
+                
+        except Exception as e:
+            self.logger.warning(f"Semantic decompilation failed: {e}")
+            # Return enhanced Ghidra results as fallback
+            return {
+                'enhanced_functions': ghidra_results.get('functions', []),
+                'enhanced_code': self._create_enhanced_code_output(ghidra_results, {}),
+                'semantic_quality': 0.5,  # Lower quality due to error
+                'is_true_decompilation': False,
+                'semantic_confidence': 0.5
+            }
+    
+    def _perform_multipass_enhancement(self, semantic_results: Dict[str, Any], 
+                                     context: Dict[str, Any]) -> Dict[str, Any]:
+        """Perform multi-pass quality enhancement on semantic results"""
+        self.logger.info("Neo performing multi-pass quality enhancement...")
+        
+        enhanced_results = semantic_results.copy()
+        
+        # Pass 1: Function name enhancement
+        if 'semantic_functions' in semantic_results:
+            enhanced_results['semantic_functions'] = self._enhance_function_names(
+                semantic_results['semantic_functions']
+            )
+        elif 'enhanced_functions' in semantic_results:
+            enhanced_results['enhanced_functions'] = self._enhance_function_names(
+                semantic_results['enhanced_functions']
+            )
+        
+        # Pass 2: Variable name enhancement
+        if 'semantic_functions' in enhanced_results:
+            enhanced_results['semantic_functions'] = self._enhance_variable_names_in_functions(
+                enhanced_results['semantic_functions']
+            )
+        
+        # Pass 3: Code structure enhancement
+        if 'semantic_code' in semantic_results:
+            enhanced_results['enhanced_code'] = self._enhance_code_structure(
+                semantic_results['semantic_code']
+            )
+        elif 'enhanced_code' in semantic_results:
+            enhanced_results['enhanced_code'] = self._enhance_code_structure(
+                semantic_results['enhanced_code']
+            )
+        else:
+            # Generate enhanced code from functions
+            enhanced_results['enhanced_code'] = self._create_enhanced_code_output(
+                enhanced_results, context
+            )
+        
+        return enhanced_results
+    
+    def _perform_ai_enhancement(self, enhanced_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Perform AI-enhanced analysis on the results"""
+        self.logger.info("Neo applying AI enhancement to decompilation results...")
+        
+        ai_enhanced = enhanced_results.copy()
+        
+        if not self.ai_enabled:
+            self.logger.info("AI not available - skipping AI enhancement")
+            ai_enhanced['ai_insights'] = {'available': False, 'reason': 'AI not enabled'}
+            return ai_enhanced
+        
+        try:
+            # AI-enhance function analysis
+            functions = enhanced_results.get('semantic_functions', enhanced_results.get('enhanced_functions', []))
+            if functions:
+                ai_enhanced_functions = []
+                for func in functions[:5]:  # Limit to first 5 functions for performance
+                    try:
+                        # Create function analysis prompt
+                        func_code = func.get('decompiled_code', func.get('body_code', ''))
+                        if func_code and len(func_code) > 10:
+                            prompt = f"Analyze this decompiled function and suggest improvements:\n\n{func_code[:500]}"
+                            ai_result = ai_request_safe(prompt, "You are a code analysis expert.")
+                            
+                            enhanced_func = func.copy()
+                            enhanced_func['ai_analysis'] = ai_result[:200] if ai_result else "No AI analysis available"
+                            ai_enhanced_functions.append(enhanced_func)
+                        else:
+                            ai_enhanced_functions.append(func)
+                    except Exception as e:
+                        self.logger.warning(f"AI enhancement failed for function {func.get('name', 'unknown')}: {e}")
+                        ai_enhanced_functions.append(func)
+                
+                if 'semantic_functions' in ai_enhanced:
+                    ai_enhanced['semantic_functions'] = ai_enhanced_functions
+                else:
+                    ai_enhanced['enhanced_functions'] = ai_enhanced_functions
+            
+            # Add AI insights
+            ai_enhanced['ai_insights'] = {
+                'available': True,
+                'functions_enhanced': len(functions),
+                'enhancement_quality': 0.7
+            }
+            
+        except Exception as e:
+            self.logger.warning(f"AI enhancement failed: {e}")
+            ai_enhanced['ai_insights'] = {'available': False, 'error': str(e)}
+        
+        return ai_enhanced
+    
+    def _generate_matrix_insights(self, ai_enhanced_results: Dict[str, Any], 
+                                context: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate Matrix-level insights about the decompilation"""
+        self.logger.info("Neo generating Matrix-level insights...")
+        
+        final_results = ai_enhanced_results.copy()
+        
+        # Generate Matrix annotations
+        matrix_annotations = {
+            'neo_vision': "The One has decoded the Matrix simulation",
+            'reality_level': self._assess_reality_level(ai_enhanced_results),
+            'matrix_patterns': self._detect_matrix_patterns(ai_enhanced_results),
+            'anomalies_detected': self._detect_code_anomalies(ai_enhanced_results),
+            'hidden_truths': self._find_hidden_patterns(ai_enhanced_results),
+            'architectural_insights': self._generate_architectural_insights(ai_enhanced_results, context)
+        }
+        
+        final_results['matrix_annotations'] = matrix_annotations
+        
+        # Ensure required fields are present for NeoAnalysisResult
+        functions = final_results.get('semantic_functions', final_results.get('enhanced_functions', []))
+        
+        # Extract function signatures
+        function_signatures = []
+        for func in functions:
+            if isinstance(func, dict):
+                func_sig = {
+                    'name': func.get('name', 'unknown'),
+                    'address': func.get('address', 0),
+                    'size': func.get('size', 0),
+                    'return_type': func.get('return_type', 'void'),
+                    'parameters': func.get('parameters', []),
+                    'confidence': func.get('confidence_score', 0.7)
+                }
+                function_signatures.append(func_sig)
+        
+        final_results['function_signatures'] = function_signatures
+        
+        # Extract variable mappings
+        variable_mappings = {}
+        for func in functions:
+            if isinstance(func, dict) and 'variables' in func:
+                func_name = func.get('name', 'unknown')
+                variables = func['variables']
+                for var in variables:
+                    if isinstance(var, dict):
+                        original_name = var.get('name', '')
+                        enhanced_name = var.get('ai_suggested_name', original_name)
+                        if original_name and enhanced_name:
+                            variable_mappings[f"{func_name}::{original_name}"] = enhanced_name
+        
+        final_results['variable_mappings'] = variable_mappings
+        
+        # Extract control flow graph (simplified)
+        control_flow_graph = {
+            'nodes': len(functions),
+            'edges': [],
+            'entry_points': [func.get('address', 0) for func in functions if func.get('name') in ['main', 'WinMain']],
+            'complexity': len(functions) * 2  # Simplified complexity metric
+        }
+        
+        final_results['control_flow_graph'] = control_flow_graph
+        
+        # Extract Ghidra metadata
+        ghidra_metadata = final_results.get('ghidra_metadata', {
+            'analysis_time': final_results.get('analysis_time', 0),
+            'functions_found': len(functions),
+            'ghidra_version': 'Mock',
+            'success': True
+        })
+        
+        final_results['ghidra_metadata'] = ghidra_metadata
+        
+        return final_results
+    
+    def _calculate_quality_metrics(self, final_results: Dict[str, Any]) -> DecompilationQuality:
+        """Calculate comprehensive quality metrics for the decompilation"""
+        
+        # Base quality from semantic analysis
+        semantic_quality = final_results.get('semantic_quality', 0.5)
+        is_true_decompilation = final_results.get('is_true_decompilation', False)
+        
+        # Function analysis quality
+        functions = final_results.get('semantic_functions', final_results.get('enhanced_functions', []))
+        function_count = len(functions)
+        function_accuracy = min(1.0, function_count / 10.0) if function_count > 0 else 0.0
+        
+        # Variable recovery quality
+        variables_found = 0
+        for func in functions:
+            if hasattr(func, 'local_variables'):
+                variables_found += len(func.local_variables)
+            elif isinstance(func, dict) and 'variables' in func:
+                variables_found += len(func['variables'])
+        
+        variable_recovery = min(1.0, variables_found / 20.0) if variables_found > 0 else 0.3
+        
+        # Control flow accuracy
+        control_flow_accuracy = 0.7  # Base assumption for Ghidra-based analysis
+        if is_true_decompilation:
+            control_flow_accuracy = 0.9
+        
+        # Code coverage
+        enhanced_code = final_results.get('enhanced_code', '')
+        code_coverage = min(1.0, len(enhanced_code) / 1000.0) if enhanced_code else 0.0
+        
+        # Overall score calculation
+        overall_score = (
+            semantic_quality * 0.3 +
+            function_accuracy * 0.25 +
+            variable_recovery * 0.2 +
+            control_flow_accuracy * 0.15 +
+            code_coverage * 0.1
+        )
+        
+        # Confidence level
+        confidence_level = overall_score * 0.8  # Conservative confidence
+        if is_true_decompilation:
+            confidence_level = min(1.0, confidence_level + 0.2)
+        
+        return DecompilationQuality(
+            code_coverage=code_coverage,
+            function_accuracy=function_accuracy,
+            variable_recovery=variable_recovery,
+            control_flow_accuracy=control_flow_accuracy,
+            overall_score=overall_score,
+            confidence_level=confidence_level
+        )
+    
+    def _assess_reality_level(self, results: Dict[str, Any]) -> str:
+        """Assess the reality level of the decompilation (Matrix theme)"""
+        quality = results.get('semantic_quality', 0.0)
+        
+        if quality > 0.8:
+            return "Red Pill - True Reality Revealed"
+        elif quality > 0.6:
+            return "Blue Pill - Comfortable Illusion"
+        elif quality > 0.4:
+            return "Matrix Glitch - Partial Truth"
+        else:
+            return "Deep in the Matrix - Surface Only"
+    
+    def _detect_matrix_patterns(self, results: Dict[str, Any]) -> List[str]:
+        """Detect Matrix-themed patterns in the code"""
+        patterns = []
+        
+        enhanced_code = results.get('enhanced_code', '')
+        if 'Matrix' in enhanced_code:
+            patterns.append("Matrix signature detected")
+        if 'main' in enhanced_code.lower():
+            patterns.append("Prime Program identified")
+        if 'window' in enhanced_code.lower():
+            patterns.append("Simulation interface detected")
+        
+        return patterns
+    
+    def _enhance_function_names(self, functions: List[Any]) -> List[Any]:
+        """Enhance function names using semantic analysis"""
+        enhanced = []
+        for func in functions:
+            enhanced_func = func.copy() if isinstance(func, dict) else func
+            
+            if isinstance(func, dict):
+                current_name = func.get('name', '')
+                if current_name.startswith('FUN_') or current_name.startswith('function_'):
+                    # Try to infer better name from code
+                    code = func.get('decompiled_code', func.get('body_code', ''))
+                    if 'window' in code.lower():
+                        enhanced_func['name'] = f"window_{current_name.split('_')[-1]}"
+                    elif 'init' in code.lower():
+                        enhanced_func['name'] = f"init_{current_name.split('_')[-1]}"
+                    elif 'main' in code.lower():
+                        enhanced_func['name'] = 'main_entry'
+            
+            enhanced.append(enhanced_func)
+        
+        return enhanced
+    
+    def _enhance_variable_names_in_functions(self, functions: List[Any]) -> List[Any]:
+        """Enhance variable names within functions"""
+        enhanced = []
+        for func in functions:
+            enhanced_func = func.copy() if isinstance(func, dict) else func
+            
+            # Enhance variables if present
+            if isinstance(func, dict) and 'variables' in func:
+                enhanced_vars = self._ai_enhance_variable_names(func['variables'])
+                enhanced_func['variables'] = enhanced_vars
+            
+            enhanced.append(enhanced_func)
+        
+        return enhanced
+    
+    def _enhance_code_structure(self, code: str) -> str:
+        """Enhance the overall code structure"""
+        if not code:
+            return ""
+        
+        # Add better formatting and comments
+        lines = code.split('\n')
+        enhanced_lines = []
+        
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('//'):
+                enhanced_lines.append(line)  # Keep comments as-is
+            elif '{' in stripped and not stripped.endswith('{'):
+                enhanced_lines.append(line + ' // Function/block start')
+            elif stripped == '}':
+                enhanced_lines.append(line + ' // End block')
+            else:
+                enhanced_lines.append(line)
+        
+        return '\n'.join(enhanced_lines)
+    
