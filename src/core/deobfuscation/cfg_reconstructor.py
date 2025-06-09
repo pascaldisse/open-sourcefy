@@ -84,9 +84,9 @@ class AdvancedControlFlowAnalyzer:
             self.disasm_x64.detail = True
         
         # Analysis configuration
-        self.max_indirect_targets = self.config.get('cfg.max_indirect_targets', 50) if self.config else 50
-        self.max_analysis_depth = self.config.get('cfg.max_analysis_depth', 1000) if self.config else 1000
-        self.enable_symbolic_execution = self.config.get('cfg.enable_symbolic_execution', True) if self.config else True
+        self.max_indirect_targets = self.config.get_value('cfg.max_indirect_targets', 50) if self.config else 50
+        self.max_analysis_depth = self.config.get_value('cfg.max_analysis_depth', 1000) if self.config else 1000
+        self.enable_symbolic_execution = self.config.get_value('cfg.enable_symbolic_execution', True) if self.config else True
     
     def analyze_control_flow(self, binary_data: bytes, base_addr: int = 0x400000, 
                            entry_point: int = None) -> CFGAnalysisResult:

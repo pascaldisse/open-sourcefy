@@ -36,7 +36,6 @@ from ..shared_components import MatrixErrorHandler
 # Centralized AI system imports
 from ..ai_system import ai_available, ai_analyze_code, ai_enhance_code, ai_request_safe
 
-
 @dataclass
 class BinaryDifference:
     """Represents a difference between two binary components"""
@@ -48,7 +47,6 @@ class BinaryDifference:
     description: str
     metadata: Dict[str, Any]
 
-
 @dataclass
 class ComparisonMetrics:
     """Metrics for binary comparison quality"""
@@ -57,7 +55,6 @@ class ComparisonMetrics:
     code_similarity: float  # Source code similarity
     optimization_detection: float  # Quality of optimization detection
     overall_confidence: float  # Confidence in comparison results
-
 
 @dataclass
 class TwinsAnalysisResult:
@@ -69,7 +66,6 @@ class TwinsAnalysisResult:
     functional_changes: Dict[str, Any]
     ai_insights: Optional[Dict[str, Any]] = None
     twins_synchronization: Optional[Dict[str, Any]] = None
-
 
 class Agent6_Twins_BinaryDiff(AnalysisAgent):
     """
@@ -124,7 +120,6 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
             'structure_level': self._compare_structure_level,
             'optimization_level': self._compare_optimization_level
         }
-
 
     def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -724,12 +719,12 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
             if result.returncode == 0:
                 return result.stdout
             else:
-                self.logger.warning("objdump failed, using basic analysis")
-                return "// Basic assembly analysis - objdump not available"
+                self.logger.error("objdump analysis failed")
+                raise RuntimeError("objdump analysis failed - assembly extraction required for binary differential analysis")
                 
         except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
-            self.logger.warning(f"Assembly extraction failed: {e}")
-            return "// Assembly extraction failed - using placeholder"
+            self.logger.error(f"Assembly extraction failed: {e}")
+            raise RuntimeError(f"Assembly extraction failed: {e} - required for binary differential analysis")
     
     def _analyze_binary_entropy(self, binary_data: bytes) -> Dict[str, Any]:
         """Analyze binary entropy distribution"""

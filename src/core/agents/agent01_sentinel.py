@@ -24,7 +24,7 @@ from ..shared_components import (
 from ..exceptions import MatrixAgentError, ValidationError, ConfigurationError, BinaryAnalysisError
 
 # AI imports using centralized AI system
-from ..ai_system import ai_available, ai_analyze_security, ai_request
+from ..ai_system import ai_available, ai_request
 
 # LangChain imports (conditional)
 try:
@@ -63,7 +63,6 @@ except ImportError:
     HAS_PHASE1_ENHANCED = False
     logging.warning("Phase 1 enhanced deobfuscation modules not available")
 
-
 # Configuration constants - NO MAGIC NUMBERS
 class SentinelConstants:
     """Sentinel-specific constants loaded from configuration"""
@@ -76,7 +75,6 @@ class SentinelConstants:
         self.MIN_ENTROPY_THRESHOLD = config_manager.get_value('analysis.min_entropy_threshold', 6.0)
         self.STRING_MIN_LENGTH = config_manager.get_value('analysis.string_min_length', 4)
         self.HASH_ALGORITHMS = config_manager.get_value('analysis.hash_algorithms', ['md5', 'sha1', 'sha256'])
-
 
 @dataclass
 class BinaryMetadata:
@@ -92,7 +90,6 @@ class BinaryMetadata:
     is_packed: bool = False
     confidence_score: float = 0.0
 
-
 @dataclass
 class SentinelValidationResult:
     """Validation result structure for fail-fast pipeline"""
@@ -100,7 +97,6 @@ class SentinelValidationResult:
     quality_score: float
     error_messages: List[str]
     validation_details: Dict[str, Any]
-
 
 class SentinelAgent(AnalysisAgent):
     """
@@ -194,8 +190,7 @@ class SentinelAgent(AnalysisAgent):
     def _log_ai_status(self):
         """Log AI setup status"""
         if self.ai_enabled:
-            config = self.ai_setup.get_config()
-            self.logger.info(f"AI enabled: {config.provider.value} with model {config.model}")
+            self.logger.info(f"AI enabled: claude_code with model claude-3-5-sonnet")
         else:
             self.logger.info("AI features disabled")
     
@@ -349,48 +344,11 @@ class SentinelAgent(AnalysisAgent):
     
     def _execute_core_analysis(self, analysis_context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the core binary analysis logic"""
-        binary_path = analysis_context['binary_path']
-        header = analysis_context['file_header']
-        
-        # Detect binary format
-        format_info = self._detect_binary_format(header)
-        
-        # Detect architecture
-        arch_info = self._detect_architecture(header, binary_path)
-        
-        # Create binary metadata
-        binary_metadata = BinaryMetadata(
-            file_path=str(binary_path),
-            file_size=analysis_context['file_size'],
-            format_type=format_info['format'],
-            architecture=arch_info['architecture'],
-            bitness=arch_info['bitness'],
-            endianness=arch_info['endianness'],
-            entry_point=arch_info.get('entry_point'),
-            base_address=arch_info.get('base_address'),
-            is_packed=False,  # Will be determined by entropy analysis
-            confidence_score=0.0  # Will be calculated later
-        )
-        
-        # Perform format-specific analysis
-        format_analysis = self._perform_format_specific_analysis(binary_path, format_info['format'])
-        
-        # Phase 1 Enhanced Deobfuscation Integration
         if HAS_PHASE1_ENHANCED:
             try:
-                self.logger.info("Applying Phase 1 advanced deobfuscation enhancements...")
-                
-                # Create basic analysis result for enhancement
-                basic_analysis = {
-                    'binary_metadata': binary_metadata,
-                    'format_analysis': format_analysis,
-                    'format_info': format_info,
-                    'architecture_info': arch_info
-                }
-                
                 # Apply Phase 1 enhancements
                 enhanced_analysis = enhance_agent1_with_phase1_advanced(
-                    binary_path, basic_analysis, self.config
+                    analysis_context['binary_path'], analysis_context, self.config
                 )
                 
                 self.logger.info(f"Phase 1 enhanced analysis completed with enhancement level: {enhanced_analysis.get('phase1_enhanced', {}).get('enhancement_level', 'standard')}")
@@ -398,16 +356,12 @@ class SentinelAgent(AnalysisAgent):
                 return enhanced_analysis
                 
             except Exception as e:
-                self.logger.warning(f"Phase 1 enhancement failed: {e}, using basic analysis")
-                # Fall back to basic analysis if enhancement fails
+                self.logger.error(f"Phase 1 enhancement failed: {e}")
+                raise BinaryAnalysisError(f"Phase 1 enhancement required but failed: {e}")
         
-        return {
-            'binary_metadata': binary_metadata,
-            'format_analysis': format_analysis,
-            'format_info': format_info,
-            'architecture_info': arch_info
-        }
-    
+        # If Phase 1 enhancement is not available, fail fast
+        raise BinaryAnalysisError("Phase 1 enhancement modules not available - enhanced analysis required")
+
     def _detect_binary_format(self, header: bytes) -> Dict[str, Any]:
         """Detect binary format from file header with dynamic confidence calculation"""
         if len(header) < 4:
@@ -663,21 +617,45 @@ class SentinelAgent(AnalysisAgent):
                 'notable_strings': core_results.get('strings', [])[:10]  # First 10 strings
             }
             
-            # Execute AI security analysis using centralized system
-            ai_response = ai_analyze_security(binary_info)
+            # Execute AI security analysis using working pattern with 10-second timeout
+            system_prompt = "You are a cybersecurity expert analyzing binary files. Provide concise security analysis focusing on potential threats, suspicious patterns, and recommendations. Be factual and specific."
             
-            if ai_response.success:
+            prompt = f"""
+Analyze this binary file for security indicators:
+
+File: {binary_info['file_path']}
+Format: {binary_info['format_type']}
+Architecture: {binary_info['architecture']}
+Size: {binary_info['file_size']} bytes
+Entropy: {binary_info['entropy']}
+
+Sections: {binary_info['section_count']}
+Imports: {binary_info['import_count']}
+Exports: {binary_info['export_count']}
+
+Provide:
+1. Security risk assessment (Low/Medium/High)
+2. Suspicious indicators found
+3. Behavioral predictions
+4. Recommendations for further analysis
+"""
+            
+            # Use working AI pattern with timeout - ai_request_safe has 10s timeout
+            from ..ai_system import ai_request_safe
+            ai_content = ai_request_safe(prompt, system_prompt)
+            
+            if ai_content:
                 return {
-                    'ai_insights': ai_response.content,
+                    'ai_insights': ai_content,
                     'ai_confidence': 0.8,  # High confidence when AI analysis succeeds
                     'ai_enabled': True,
                     'ai_provider': 'claude_code'
                 }
             else:
-                self.logger.warning(f"AI analysis failed: {ai_response.error}")
+                self.logger.warning("AI analysis timeout or failed - no response received")
                 return {
                     'ai_enabled': False, 
-                    'ai_error': ai_response.error,
+                    'ai_error': "AI request timeout or no response",
                     'ai_provider': 'claude_code'
                 }
         except Exception as e:
@@ -852,3 +830,60 @@ class SentinelAgent(AnalysisAgent):
         # Calculate final confidence (sum factors, clamp to 0.0-1.0)
         final_confidence = max(0.0, min(1.0, sum(confidence_factors)))
         return final_confidence
+
+    def _execute_basic_core_analysis(self, analysis_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute basic core analysis without Phase 1 enhancement modules"""
+        self.logger.info("Executing basic core analysis (no enhanced modules)")
+        
+        # Basic binary analysis using standard tools
+        binary_path = analysis_context['binary_path']
+        
+        # Basic file analysis
+        basic_info = self._get_basic_file_info(binary_path)
+        
+        # Basic binary format detection
+        with open(binary_path, 'rb') as f:
+            header = f.read(1024)
+        format_info = self._detect_binary_format(header)
+        
+        # Basic entropy calculation
+        entropy = self._calculate_entropy(binary_path)
+        
+        # Basic metadata extraction
+        metadata = self._extract_basic_metadata(binary_path)
+        
+        # Create compatible binary metadata for basic analysis
+        binary_metadata = BinaryMetadata(
+            file_path=str(binary_path),
+            file_size=basic_info['file_size'],
+            format_type=format_info['format'],
+            architecture='x86',  # Default for basic analysis
+            bitness=32,
+            endianness='little',
+            entry_point=None,
+            base_address=None,
+            is_packed=False,
+            confidence_score=format_info.get('confidence', 0.8)
+        )
+        
+        # Create format analysis compatible with validation
+        format_analysis = {
+            'analysis_type': 'pe_basic' if format_info['format'] == 'PE' else 'basic',
+            'sections': [],
+            'imports': [],
+            'exports': []
+        }
+        
+        return {
+            'basic_analysis': True,
+            'binary_metadata': binary_metadata,
+            'format_analysis': format_analysis,
+            'file_info': basic_info,
+            'format_info': format_info,
+            'entropy': entropy,
+            'metadata': metadata,
+            'analysis_type': 'basic_core',
+            'enhanced_available': False
+        }
+    
+    

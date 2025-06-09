@@ -42,7 +42,6 @@ except ImportError:
     class Tool:
         pass
 
-
 # Configuration constants - NO MAGIC NUMBERS
 class ArchitectConstants:
     """Architect-specific constants loaded from configuration"""
@@ -53,7 +52,6 @@ class ArchitectConstants:
         self.QUALITY_THRESHOLD = config_manager.get_value(f'agents.agent_{agent_id:02d}.quality_threshold', 0.35)
         self.MIN_CONFIDENCE_THRESHOLD = config_manager.get_value('analysis.min_confidence_threshold', 0.7)
         self.MAX_PATTERN_MATCHES = config_manager.get_value('analysis.max_pattern_matches', 100)
-
 
 @dataclass 
 class CompilerSignature:
@@ -66,7 +64,6 @@ class CompilerSignature:
     def __post_init__(self):
         if self.evidence is None:
             self.evidence = []
-
 
 @dataclass
 class OptimizationAnalysis:
@@ -82,7 +79,6 @@ class OptimizationAnalysis:
         if self.optimization_artifacts is None:
             self.optimization_artifacts = []
 
-
 @dataclass
 class ArchitectValidationResult:
     """Validation result structure for fail-fast pipeline"""
@@ -90,7 +86,6 @@ class ArchitectValidationResult:
     quality_score: float
     error_messages: List[str]
     validation_details: Dict[str, Any]
-
 
 class ArchitectAgent(AnalysisAgent):
     """
@@ -417,16 +412,8 @@ class ArchitectAgent(AnalysisAgent):
             dependency_met = True
         
         if not dependency_met:
-            self.logger.warning("Sentinel dependency not found - proceeding with limited analysis")
-            # Create minimal discovery data to allow analysis to proceed
-            if 'binary_metadata' not in shared_memory:
-                shared_memory['binary_metadata'] = {}
-            if 'discovery' not in shared_memory['binary_metadata']:
-                shared_memory['binary_metadata']['discovery'] = {
-                    'binary_info': {'format_type': 'Unknown', 'architecture': 'x86'},
-                    'format_analysis': {'sections': [], 'imports': []},
-                    'strings': []
-                }
+            self.logger.error("Sentinel dependency not satisfied - cannot proceed with analysis")
+            raise ValidationError("Agent 1 (Sentinel) dependency not satisfied - Architect requires Sentinel's discovery data")
     
     def _initialize_analysis(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize analysis context with Sentinel data"""

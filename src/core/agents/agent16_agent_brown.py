@@ -30,7 +30,6 @@ from ..shared_utils import ErrorHandler as MatrixErrorHandler
 # Centralized AI system imports
 from ..ai_system import ai_available, ai_analyze_code, ai_enhance_code, ai_request_safe
 
-
 @dataclass
 class QualityMetrics:
     """Comprehensive quality metrics for final validation"""
@@ -42,7 +41,6 @@ class QualityMetrics:
     maintainability: float
     overall_quality: float
 
-
 @dataclass
 class OptimizationResult:
     """Result of code optimization process"""
@@ -51,7 +49,6 @@ class OptimizationResult:
     performance_improvement: float
     optimizations_applied: List[str]
     quality_score: float
-
 
 @dataclass
 class AgentBrownResult:
@@ -62,7 +59,6 @@ class AgentBrownResult:
     final_recommendations: List[str]
     production_readiness: str
     agent_brown_insights: Optional[Dict[str, Any]] = None
-
 
 class Agent16_AgentBrown(ValidationAgent):
     """
@@ -132,53 +128,14 @@ class Agent16_AgentBrown(ValidationAgent):
     def _setup_agent_brown_ai(self) -> None:
         """Setup Agent Brown's AI-enhanced quality assurance capabilities"""
         try:
-            model_path = self.config.get_path('ai.model.path')
-            if not model_path.exists():
-                self.ai_enabled = False
+            # Use centralized AI system instead of local model
+            from ..ai_system import ai_available
+            self.ai_enabled = ai_available()
+            if not self.ai_enabled:
                 return
             
-            # Setup LLM for quality analysis
-            self.llm = LlamaCpp(
-                model_path=str(model_path),
-                temperature=self.config.get_value('ai.model.temperature', 0.1),
-                max_tokens=self.config.get_value('ai.model.max_tokens', 3072),
-                verbose=self.config.get_value('debug.enabled', False)
-            )
-            
-            # Create Agent Brown-specific AI tools
-            tools = [
-                Tool(
-                    name="analyze_code_quality",
-                    description="Analyze overall code quality and maintainability",
-                    func=self._ai_analyze_code_quality
-                ),
-                Tool(
-                    name="suggest_optimizations",
-                    description="Suggest performance and code optimizations",
-                    func=self._ai_suggest_optimizations
-                ),
-                Tool(
-                    name="assess_production_readiness",
-                    description="Assess production readiness and deployment considerations",
-                    func=self._ai_assess_production_readiness
-                )
-            ]
-            
-            # Create agent executor
-            memory = ConversationBufferMemory()
-            agent = ReActDocstoreAgent.from_llm_and_tools(
-                llm=self.llm,
-                tools=tools,
-                verbose=self.config.get_value('debug.enabled', False)
-            )
-            
-            self.ai_agent = AgentExecutor.from_agent_and_tools(
-                agent=agent,
-                tools=tools,
-                memory=memory,
-                verbose=self.config.get_value('debug.enabled', False),
-                max_iterations=self.config.get_value('ai.max_iterations', 3)
-            )
+            # AI system is now centralized - no local setup needed
+            self.logger.info("Agent Brown AI successfully initialized with centralized AI system")
             
         except Exception as e:
             self.logger.error(f"Failed to setup Agent Brown AI: {e}")

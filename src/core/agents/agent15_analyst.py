@@ -29,7 +29,6 @@ from ..shared_utils import ErrorHandler as MatrixErrorHandler
 # Centralized AI system imports
 from ..ai_system import ai_available, ai_analyze_code, ai_enhance_code, ai_request_safe
 
-
 @dataclass
 class MetadataQuality:
     """Quality metrics for metadata analysis"""
@@ -38,7 +37,6 @@ class MetadataQuality:
     intelligence_synthesis: float
     data_consistency: float
     overall_quality: float
-
 
 @dataclass
 class AnalystResult:
@@ -49,7 +47,6 @@ class AnalystResult:
     cross_references: Dict[str, Any]
     quality_assessment: MetadataQuality
     analyst_insights: Optional[Dict[str, Any]] = None
-
 
 class Agent15_Analyst(ReconstructionAgent):
     """
@@ -110,53 +107,14 @@ class Agent15_Analyst(ReconstructionAgent):
     def _setup_analyst_ai_agent(self) -> None:
         """Setup The Analyst's AI-enhanced metadata analysis capabilities"""
         try:
-            model_path = self.config.get_path('ai.model.path')
-            if not model_path.exists():
-                self.ai_enabled = False
+            # Use centralized AI system instead of local model
+            from ..ai_system import ai_available
+            self.ai_enabled = ai_available()
+            if not self.ai_enabled:
                 return
             
-            # Setup LLM for metadata analysis
-            self.llm = LlamaCpp(
-                model_path=str(model_path),
-                temperature=self.config.get_value('ai.model.temperature', 0.1),
-                max_tokens=self.config.get_value('ai.model.max_tokens', 4096),
-                verbose=self.config.get_value('debug.enabled', False)
-            )
-            
-            # Create Analyst-specific AI tools
-            tools = [
-                Tool(
-                    name="synthesize_metadata",
-                    description="Synthesize comprehensive metadata from agent outputs",
-                    func=self._ai_synthesize_metadata
-                ),
-                Tool(
-                    name="generate_documentation",
-                    description="Generate comprehensive documentation for source code",
-                    func=self._ai_generate_documentation
-                ),
-                Tool(
-                    name="analyze_patterns",
-                    description="Analyze patterns across all agent outputs",
-                    func=self._ai_analyze_patterns
-                )
-            ]
-            
-            # Create agent executor
-            memory = ConversationBufferMemory()
-            agent = ReActDocstoreAgent.from_llm_and_tools(
-                llm=self.llm,
-                tools=tools,
-                verbose=self.config.get_value('debug.enabled', False)
-            )
-            
-            self.ai_agent = AgentExecutor.from_agent_and_tools(
-                agent=agent,
-                tools=tools,
-                memory=memory,
-                verbose=self.config.get_value('debug.enabled', False),
-                max_iterations=self.config.get_value('ai.max_iterations', 5)
-            )
+            # AI system is now centralized - no local setup needed
+            self.logger.info("Analyst AI agent successfully initialized with centralized AI system")
             
         except Exception as e:
             self.logger.error(f"Failed to setup Analyst AI agent: {e}")

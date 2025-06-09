@@ -54,7 +54,6 @@ except ImportError:
     AgentExecutor = Any
     Tool = Any
 
-
 @dataclass
 class ResourceItem:
     """Represents a reconstructed resource item"""
@@ -68,7 +67,6 @@ class ResourceItem:
     confidence: float
     parent_section: Optional[str] = None
 
-
 @dataclass
 class ResourceCategory:
     """Categorized resources by type"""
@@ -78,7 +76,6 @@ class ResourceCategory:
     extraction_confidence: float
     reconstruction_quality: float
 
-
 @dataclass
 class KeymakerQualityMetrics:
     """Quality metrics for resource reconstruction"""
@@ -87,7 +84,6 @@ class KeymakerQualityMetrics:
     type_classification_accuracy: float  # Accuracy of resource type classification
     reconstruction_completeness: float  # Completeness of reconstruction
     overall_quality: float  # Combined quality score
-
 
 @dataclass
 class KeymakerAnalysisResult:
@@ -102,7 +98,6 @@ class KeymakerAnalysisResult:
     quality_metrics: KeymakerQualityMetrics
     ai_insights: Optional[Dict[str, Any]] = None
     keymaker_doors: Optional[Dict[str, Any]] = None
-
 
 class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
     """

@@ -40,7 +40,6 @@ from ..ai_system import ai_available, ai_analyze_code, ai_enhance_code, ai_reque
 # Semantic decompilation engine
 from ..semantic_decompiler import SemanticDecompiler
 
-
 @dataclass
 class DecompilationQuality:
     """Quality metrics for decompilation results"""
@@ -50,7 +49,6 @@ class DecompilationQuality:
     control_flow_accuracy: float  # Accuracy of control flow reconstruction
     overall_score: float  # Combined quality score
     confidence_level: float  # Confidence in results
-
 
 @dataclass
 class NeoAnalysisResult:
@@ -63,7 +61,6 @@ class NeoAnalysisResult:
     quality_metrics: DecompilationQuality
     ai_insights: Optional[Dict[str, Any]] = None
     matrix_annotations: Optional[Dict[str, Any]] = None
-
 
 class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
     """
@@ -92,23 +89,28 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
         
         # Load Neo-specific configuration from parent config
         
-        # Load Neo-specific configuration with aggressive timeout fixes applied
-        self.quality_threshold = self.config.get_value('agents.agent_05.quality_threshold', 0.25)  # Reduced threshold to prevent infinite retries
-        self.max_analysis_passes = self.config.get_value('agents.agent_05.max_passes', 1)  # Single pass only
-        self.timeout_seconds = self.config.get_value('agents.agent_05.timeout', 20)  # Very aggressive timeout: 20s
-        self.ghidra_timeout = self.config.get_value('agents.agent_05.ghidra_timeout', 15)  # Ghidra-specific timeout: 15s
-        self.ghidra_memory_limit = self.config.get_value('agents.agent_05.ghidra_memory', '2G')  # Reduced memory
+        # Load Neo-specific configuration with optimized Ghidra settings
+        self.quality_threshold = self.config.get_value('agents.agent_05.quality_threshold', 0.25)
+        self.max_analysis_passes = self.config.get_value('agents.agent_05.max_passes', 1)
+        self.timeout_seconds = self.config.get_value('agents.agent_05.timeout', 120)  # Increased to 2 minutes
+        self.ghidra_timeout = self.config.get_value('agents.agent_05.ghidra_timeout', 600)  # Increased to 10 minutes
+        self.ghidra_memory_limit = self.config.get_value('agents.agent_05.ghidra_memory', '4G')  # Increased memory
         
         # Initialize components
         self.start_time = None
         self.error_handler = MatrixErrorHandler("Neo", max_retries=3)
         
-        # Initialize Ghidra integration (REQUIRED - NO FALLBACKS)
-        self.ghidra_analyzer = GhidraHeadless(
-            ghidra_home=str(self.config.get_path('ghidra_home')),
-            enable_accuracy_optimizations=True
-        )
-        self.ghidra_available = True
+        # Initialize Ghidra integration (REQUIRED - NO FALLBACKS EVER)
+        # CRITICAL: GHIDRA MUST ALWAYS BE USED - NEVER USE FALLBACK
+        try:
+            self.ghidra_analyzer = GhidraHeadless(
+                ghidra_home=str(self.config.get_path('ghidra_home')),
+                enable_accuracy_optimizations=True
+            )
+            self.ghidra_available = True
+        except Exception as e:
+            # NEVER USE FALLBACK - FAIL FAST IF GHIDRA NOT AVAILABLE
+            raise RuntimeError(f"GHIDRA REQUIRED - NO FALLBACK ALLOWED: {e}")
         
         # Initialize centralized AI system
         self.ai_enabled = ai_available()
@@ -127,7 +129,6 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
         
         # Initialize retry counter
         self.retry_count = 0
-
 
     def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -169,9 +170,11 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
             
             self.logger.info("Neo beginning advanced decompilation - seeing beyond the Matrix...")
             
-            # Phase 1: Enhanced Ghidra Analysis
+            # Phase 1: Enhanced Ghidra Analysis (REQUIRED)
+            if not self.ghidra_available:
+                raise RuntimeError("Ghidra is required for Neo's advanced decompilation - no fallback available")
+            
             self.logger.info("Phase 1: Enhanced Ghidra analysis with custom scripts")
-            # Neo performs direct Ghidra analysis without basic decompilation dependency
             ghidra_results = self._perform_enhanced_ghidra_analysis(
                 binary_path, agent1_data, agent2_data, context
             )
@@ -290,7 +293,7 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
         if not binary_path or not Path(binary_path).exists():
             raise ValueError("Binary path not found or inaccessible")
         
-        # Verify Ghidra availability (REQUIRED)
+        # Check Ghidra availability (REQUIRED - NO FALLBACKS)
         if not self.ghidra_available:
             raise ValueError("Ghidra is required for Neo's advanced decompilation - no fallback available")
 
@@ -319,17 +322,30 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
             
             @contextmanager
             def timeout_context(seconds):
-                """Context manager for timeout handling"""
-                def timeout_handler(signum, frame):
-                    raise TimeoutError(f"Operation timed out after {seconds} seconds")
+                """Context manager for timeout handling - WSL compatible"""
+                import threading
+                import time
                 
-                old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(seconds)
+                timeout_occurred = threading.Event()
+                
+                def timeout_thread():
+                    timeout_occurred.wait(seconds)
+                    if not timeout_occurred.is_set():
+                        self.logger.error(f"Neo timeout thread: operation taking longer than {seconds} seconds")
+                        # Don't raise exception here, let the main process handle it
+                
+                timer = threading.Timer(seconds, timeout_thread)
+                timer.daemon = True
+                timer.start()
+                
+                start_time = time.time()
                 try:
                     yield
+                    timeout_occurred.set()  # Signal successful completion
                 finally:
-                    signal.alarm(0)
-                    signal.signal(signal.SIGALRM, old_handler)
+                    elapsed = time.time() - start_time
+                    self.logger.info(f"Neo Ghidra operation completed in {elapsed:.2f} seconds")
+                    timer.cancel()
             
             # Use output temp directory instead of system temp
             output_paths = context.get('output_paths', {})
@@ -348,8 +364,11 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
             neo_temp_dir.mkdir(parents=True, exist_ok=True)
             
             try:
-                # Run enhanced Ghidra analysis with very aggressive timeout protection
-                with timeout_context(self.ghidra_timeout):  # Use configured aggressive timeout
+                # Log the timeout value for debugging
+                self.logger.info(f"Neo using Ghidra timeout: {self.ghidra_timeout} seconds")
+                
+                # Run enhanced Ghidra analysis with proper timeout protection
+                with timeout_context(self.ghidra_timeout):  # Use configured timeout
                     success, output = self.ghidra_analyzer.run_ghidra_analysis(
                         binary_path=binary_path,
                         output_dir=str(neo_temp_dir),
@@ -358,22 +377,18 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
                     )
                     
                     if not success:
-                        self.logger.warning(f"Ghidra analysis failed: {output} - proceeding with fallback")
-                        # Don't fail completely, use fallback analysis instead
-                        success = True
-                        output = "Fallback analysis used due to Ghidra timeout"
+                        self.logger.error(f"Ghidra analysis failed: {output}")
+                        raise RuntimeError(f"Ghidra analysis failed: {output}")
                 
                 # Parse Ghidra analysis results from output
                 analysis_results = self._parse_ghidra_output(output, success)
                         
             except TimeoutError:
-                self.logger.warning(f"Ghidra analysis timed out after {self.ghidra_timeout} seconds - proceeding with fallback")
-                # Use fallback instead of failing
-                analysis_results = self._parse_ghidra_output("Fallback analysis used due to timeout", False)
+                self.logger.error(f"Ghidra analysis timed out after {self.ghidra_timeout} seconds")
+                raise RuntimeError(f"Ghidra analysis timed out after {self.ghidra_timeout} seconds")
             except Exception as e:
-                self.logger.warning(f"Ghidra analysis failed: {e} - proceeding with fallback")
-                # Use fallback instead of failing
-                analysis_results = self._parse_ghidra_output(f"Fallback analysis used due to error: {e}", False)
+                self.logger.error(f"Ghidra analysis failed: {e}")
+                raise RuntimeError(f"Ghidra analysis failed: {e}")
                 
             finally:
                 # Cleanup temporary directory
@@ -393,523 +408,6 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
             # Neo requires Ghidra - no fallbacks
             raise RuntimeError(f"Neo's Ghidra analysis failed: {e}")
 
-
-    def _create_neo_ghidra_script(
-        self, 
-        arch_info: Dict[str, Any]
-    ) -> str:
-        """Create Neo's custom Ghidra script for enhanced analysis"""
-        
-        architecture = arch_info.get('architecture', 'x86')
-        
-        script = f'''
-// Neo's Advanced Analysis Script
-// Matrix-enhanced decompilation with semantic analysis
-
-import ghidra.app.decompiler.*;
-import ghidra.program.model.listing.*;
-import ghidra.program.model.address.*;
-import ghidra.program.model.symbol.*;
-
-public class NeoAdvancedAnalysis extends GhidraScript {{
-    
-    @Override
-    public void run() throws Exception {{
-        monitor.setMessage("Neo beginning Matrix-level analysis...");
-        
-        // Phase 1: Enhanced Function Analysis
-        analyzeAllFunctions();
-        
-        // Phase 2: Variable Semantic Analysis
-        performVariableSemanticAnalysis();
-        
-        // Phase 3: Control Flow Enhancement
-        enhanceControlFlowAnalysis();
-        
-        // Phase 4: Data Type Recovery
-        performDataTypeRecovery();
-        
-        monitor.setMessage("Neo's analysis complete - The Matrix revealed.");
-    }}
-    
-    private void analyzeAllFunctions() throws Exception {{
-        FunctionManager funcMgr = currentProgram.getFunctionManager();
-        DecompInterface decompiler = new DecompInterface();
-        
-        decompiler.openProgram(currentProgram);
-        decompiler.setOptions(createDecompilerOptions());
-        
-        for (Function func : funcMgr.getFunctions(true)) {{
-            if (monitor.isCancelled()) break;
-            
-            monitor.setMessage("Analyzing function: " + func.getName());
-            
-            // Enhanced decompilation with multiple passes
-            DecompileResults results = decompiler.decompileFunction(
-                func, 30, monitor  // Extended timeout for quality
-            );
-            
-            if (results.isValid()) {{
-                // Apply Neo's semantic enhancement
-                enhanceFunctionSemantics(func, results);
-            }}
-        }}
-        
-        decompiler.dispose();
-    }}
-    
-    private DecompileOptions createDecompilerOptions() {{
-        DecompileOptions options = new DecompileOptions();
-        
-        // Neo's enhanced decompilation settings
-        options.setEliminateUnreachable(true);
-        options.setSimplifyDoublePrecision(true);
-        options.setIgnoreUnimplemented(false);
-        options.setInferConstPtr(true);
-        options.setNullToken(true);
-        options.setMaxIntructionsPer(1000);  // Higher limit for thorough analysis
-        
-        return options;
-    }}
-    
-    private void enhanceFunctionSemantics(Function func, DecompileResults results) {{
-        ClangTokenGroup tokens = results.getCCodeMarkup();
-        
-        // Analyze calling patterns
-        analyzeCallingPatterns(func);
-        
-        // Enhance variable names based on usage
-        enhanceVariableNames(func, tokens);
-        
-        // Detect and annotate algorithms
-        detectAlgorithmPatterns(func, tokens);
-    }}
-    
-    private void performVariableSemanticAnalysis() {{
-        // Enhanced variable analysis using Neo's pattern recognition
-        monitor.setMessage("Neo analyzing variable semantics...");
-        
-        VariableManager varMgr = currentProgram.getVariableManager();
-        // Implementation would analyze variable usage patterns
-    }}
-    
-    private void enhanceControlFlowAnalysis() {{
-        // Enhanced control flow with Matrix-level understanding
-        monitor.setMessage("Neo enhancing control flow analysis...");
-        
-        // Implementation would improve control flow reconstruction
-    }}
-    
-    private void performDataTypeRecovery() {{
-        // Advanced data type recovery
-        monitor.setMessage("Neo recovering data types...");
-        
-        // Implementation would enhance data type identification
-    }}
-}}
-        '''
-        
-        return script
-
-    def _apply_neo_pattern_recognition(self, ghidra_results: Dict[str, Any]) -> Dict[str, Any]:
-        """Apply Neo's advanced pattern recognition to Ghidra results"""
-        
-        enhanced_results = ghidra_results.copy()
-        
-        # Pattern 1: Function naming patterns
-        enhanced_results['enhanced_functions'] = self._enhance_function_analysis(
-            ghidra_results.get('functions', [])
-        )
-        
-        # Pattern 2: Variable usage patterns
-        enhanced_results['enhanced_variables'] = self._enhance_variable_analysis(
-            ghidra_results.get('variables', [])
-        )
-        
-        # Pattern 3: Control flow patterns
-        enhanced_results['enhanced_control_flow'] = self._enhance_control_flow_analysis(
-            ghidra_results.get('control_flow', {})
-        )
-        
-        # Pattern 4: Algorithm detection
-        enhanced_results['detected_algorithms'] = self._detect_algorithm_patterns(
-            ghidra_results
-        )
-        
-        return enhanced_results
-
-    def _perform_semantic_decompilation(self, ghidra_results: Dict[str, Any], 
-                                       agent1_data: Dict[str, Any], 
-                                       agent2_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Perform true semantic decompilation using the semantic engine
-        
-        This phase converts Ghidra's raw decompilation into semantically meaningful
-        source code with proper type inference, variable naming, and structure recovery.
-        """
-        self.logger.info("Neo performing semantic decompilation analysis...")
-        
-        try:
-            # Prepare binary metadata for semantic analysis
-            binary_metadata = {
-                'discovery_data': agent1_data,
-                'architecture_data': agent2_data,
-                'binary_format': agent1_data.get('binary_info', {}).get('format_type', 'Unknown'),
-                'architecture': agent2_data.get('architecture', {}).get('architecture', 'x86')
-            }
-            
-            # Run semantic decompilation engine
-            semantic_results = self.semantic_decompiler.decompile_semantically(
-                ghidra_results, binary_metadata
-            )
-            
-            # Merge semantic results with Ghidra results
-            enhanced_ghidra_results = ghidra_results.copy()
-            
-            # Replace or enhance functions with semantic analysis
-            if semantic_results.get('semantic_functions'):
-                enhanced_ghidra_results['semantic_functions'] = semantic_results['semantic_functions']
-                
-                # Update function data with semantic information
-                enhanced_functions = []
-                original_functions = ghidra_results.get('functions', [])
-                
-                for orig_func in original_functions:
-                    # Find corresponding semantic function
-                    func_name = orig_func.get('name', 'unknown')
-                    semantic_func = next(
-                        (sf for sf in semantic_results['semantic_functions'] 
-                         if sf.name == func_name or func_name in sf.name), 
-                        None
-                    )
-                    
-                    if semantic_func:
-                        # Enhance original function with semantic data
-                        enhanced_func = orig_func.copy()
-                        enhanced_func.update({
-                            'semantic_name': semantic_func.name,
-                            'semantic_purpose': semantic_func.semantic_purpose,
-                            'semantic_return_type': semantic_func.return_type.value,
-                            'semantic_parameters': [
-                                {
-                                    'name': p.name,
-                                    'type': p.data_type.value,
-                                    'semantic_meaning': p.semantic_meaning,
-                                    'purpose': p.inferred_purpose
-                                } for p in semantic_func.parameters
-                            ],
-                            'semantic_locals': [
-                                {
-                                    'name': v.name,
-                                    'type': v.data_type.value,
-                                    'semantic_meaning': v.semantic_meaning,
-                                    'purpose': v.inferred_purpose
-                                } for v in semantic_func.local_variables
-                            ],
-                            'semantic_body': semantic_func.body_code,
-                            'semantic_confidence': semantic_func.confidence,
-                            'is_semantic': True
-                        })
-                        enhanced_functions.append(enhanced_func)
-                    else:
-                        # Keep original function but mark as non-semantic
-                        orig_func['is_semantic'] = False
-                        enhanced_functions.append(orig_func)
-                
-                enhanced_ghidra_results['enhanced_functions'] = enhanced_functions
-            
-            # Add semantic type information
-            if semantic_results.get('inferred_types'):
-                enhanced_ghidra_results['semantic_types'] = semantic_results['inferred_types']
-            
-            # Add semantic variable analysis
-            if semantic_results.get('semantic_variables'):
-                enhanced_ghidra_results['semantic_variables'] = semantic_results['semantic_variables']
-            
-            # Add recovered data structures
-            if semantic_results.get('semantic_structures'):
-                enhanced_ghidra_results['semantic_structures'] = semantic_results['semantic_structures']
-            
-            # Include the reconstructed semantic code
-            if semantic_results.get('reconstructed_code'):
-                enhanced_ghidra_results['semantic_code'] = semantic_results['reconstructed_code']
-                enhanced_ghidra_results['is_true_decompilation'] = semantic_results.get('is_true_decompilation', False)
-            
-            # Include quality metrics
-            enhanced_ghidra_results['semantic_quality'] = semantic_results.get('decompilation_quality', 0.0)
-            enhanced_ghidra_results['semantic_validation'] = semantic_results.get('validation_results', {})
-            
-            # Include advanced signature recovery results if available
-            if semantic_results.get('advanced_signatures'):
-                enhanced_ghidra_results['advanced_signatures'] = semantic_results['advanced_signatures']
-                enhanced_ghidra_results['signature_recovery_report'] = semantic_results.get('signature_recovery_report', {})
-            
-            # Log semantic analysis results
-            semantic_func_count = len(semantic_results.get('semantic_functions', []))
-            semantic_quality = semantic_results.get('decompilation_quality', 0.0)
-            is_semantic = semantic_results.get('is_true_decompilation', False)
-            
-            self.logger.info(
-                f"Semantic analysis complete: {semantic_func_count} functions, "
-                f"quality={semantic_quality:.2f}, is_semantic={is_semantic}"
-            )
-            
-            return enhanced_ghidra_results
-            
-        except Exception as e:
-            self.logger.warning(f"Semantic decompilation failed: {e}, falling back to original results")
-            # Return original results if semantic analysis fails
-            ghidra_results['semantic_analysis_failed'] = True
-            ghidra_results['semantic_error'] = str(e)
-            return ghidra_results
-
-    def _enhance_function_analysis(self, functions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Enhance function analysis with Neo's semantic understanding"""
-        enhanced_functions = []
-        
-        # Function limits implemented to prevent timeout (max 25 functions per analysis)
-        max_functions = 25
-        functions_to_process = functions[:max_functions] if len(functions) > max_functions else functions
-        
-        if len(functions) > max_functions:
-            self.logger.warning(f"Function limit applied: processing {max_functions} of {len(functions)} functions")
-        
-        for func in functions_to_process:
-            enhanced_func = func.copy()
-            
-            # Analyze function purpose based on code patterns
-            purpose = self._analyze_function_purpose(func)
-            enhanced_func['inferred_purpose'] = purpose
-            
-            # Suggest better function name
-            suggested_name = self._suggest_function_name(func, purpose)
-            enhanced_func['suggested_name'] = suggested_name
-            
-            # Analyze complexity and quality
-            complexity = self._analyze_function_complexity(func)
-            enhanced_func['complexity_metrics'] = complexity
-            
-            enhanced_functions.append(enhanced_func)
-        
-        return enhanced_functions
-
-    def _perform_multipass_enhancement(
-        self, 
-        ghidra_results: Dict[str, Any], 
-        context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Perform multiple analysis passes to improve quality"""
-        
-        current_results = ghidra_results
-        
-        for pass_num in range(1, self.max_analysis_passes + 1):
-            self.logger.info(f"Neo performing enhancement pass {pass_num}")
-            
-            # Pass-specific enhancements
-            if pass_num == 1:
-                # First pass: Basic structure enhancement
-                current_results = self._enhance_basic_structure(current_results)
-            elif pass_num == 2:
-                # Second pass: Semantic enhancement
-                current_results = self._enhance_semantic_structure(current_results)
-            elif pass_num == 3:
-                # Third pass: Advanced pattern matching
-                current_results = self._enhance_advanced_patterns(current_results)
-            
-            # Check if quality is sufficient to stop early
-            quality = self._estimate_intermediate_quality(current_results)
-            if quality >= self.quality_threshold:
-                self.logger.info(f"Quality threshold achieved at pass {pass_num}")
-                break
-        
-        return current_results
-
-    def _perform_ai_enhancement(self, decompilation_results: Dict[str, Any]) -> Dict[str, Any]:
-        """Apply AI enhancement to improve code readability and naming"""
-        
-        if not self.ai_enabled:
-            return decompilation_results
-        
-        try:
-            enhanced_results = decompilation_results.copy()
-            
-            # AI Enhancement 1: Function naming
-            enhanced_functions = []
-            for func in decompilation_results.get('enhanced_functions', []):
-                ai_prompt = self._create_function_naming_prompt(func)
-                ai_response = self.ai_agent.run(ai_prompt)
-                
-                func_copy = func.copy()
-                func_copy['ai_suggested_name'] = self._parse_ai_function_name(ai_response)
-                func_copy['ai_comments'] = self._parse_ai_comments(ai_response)
-                enhanced_functions.append(func_copy)
-            
-            enhanced_results['ai_enhanced_functions'] = enhanced_functions
-            
-            # AI Enhancement 2: Variable naming
-            ai_variables = self._ai_enhance_variable_names(
-                decompilation_results.get('enhanced_variables', [])
-            )
-            enhanced_results['ai_enhanced_variables'] = ai_variables
-            
-            # AI Enhancement 3: Code pattern recognition
-            ai_patterns = self._ai_detect_code_patterns(decompilation_results)
-            enhanced_results['ai_detected_patterns'] = ai_patterns
-            
-            enhanced_results['ai_insights'] = {
-                'enhancement_applied': True,
-                'functions_enhanced': len(enhanced_functions),
-                'variables_enhanced': len(ai_variables),
-                'patterns_detected': len(ai_patterns)
-            }
-            
-            return enhanced_results
-            
-        except Exception as e:
-            self.logger.warning(f"AI enhancement failed: {e}")
-            return decompilation_results
-
-    def _generate_matrix_insights(
-        self, 
-        analysis_results: Dict[str, Any], 
-        context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Generate Neo's Matrix-level insights about the binary"""
-        
-        matrix_insights = {
-            'matrix_perspective': "Neo's Analysis - Seeing Beyond the Code",
-            'code_anomalies': [],
-            'hidden_patterns': [],
-            'architectural_insights': [],
-            'security_observations': [],
-            'optimization_opportunities': []
-        }
-        
-        # Detect code anomalies (glitches in the Matrix)
-        matrix_insights['code_anomalies'] = self._detect_code_anomalies(analysis_results)
-        
-        # Find hidden patterns
-        matrix_insights['hidden_patterns'] = self._find_hidden_patterns(analysis_results)
-        
-        # Architectural insights
-        matrix_insights['architectural_insights'] = self._generate_architectural_insights(
-            analysis_results, context
-        )
-        
-        # Security observations
-        matrix_insights['security_observations'] = self._analyze_security_aspects(
-            analysis_results
-        )
-        
-        # Optimization opportunities
-        matrix_insights['optimization_opportunities'] = self._identify_optimizations(
-            analysis_results
-        )
-        
-        # Add Neo's signature insights
-        matrix_insights['neo_signature'] = {
-            'matrix_level': 'Advanced',
-            'insight_quality': 'The One Level',
-            'reality_perception': 'Source Code Reality Reconstructed',
-            'timestamp': time.time()
-        }
-        
-        # Integrate insights into results
-        final_results = analysis_results.copy()
-        final_results['matrix_annotations'] = matrix_insights
-        
-        # Ensure all required keys exist with defaults
-        final_results.setdefault('function_signatures', analysis_results.get('enhanced_functions', []))
-        final_results.setdefault('variable_mappings', analysis_results.get('enhanced_variables', {}))
-        final_results.setdefault('control_flow_graph', analysis_results.get('enhanced_control_flow', {}))
-        final_results.setdefault('ghidra_metadata', analysis_results.get('metadata', {}))
-        
-        # Create enhanced code with Matrix annotations
-        final_results['enhanced_code'] = self._create_enhanced_code_output(
-            analysis_results, matrix_insights
-        )
-        
-        return final_results
-
-    def _calculate_quality_metrics(self, results: Dict[str, Any]) -> DecompilationQuality:
-        """Calculate comprehensive quality metrics for enhanced decompilation"""
-        
-        # Enhanced code coverage calculation
-        enhanced_code = results.get('enhanced_code', '')
-        total_functions = len(results.get('enhanced_functions', []))
-        
-        # If we have enhanced static analysis reconstruction
-        if 'Advanced Static Analysis Reconstruction' in enhanced_code:
-            # High quality reconstruction with complete application structure
-            code_coverage = 0.85  # 85% coverage for complete application skeleton
-            function_accuracy = 0.80  # 80% accuracy for well-structured functions
-            variable_recovery = 0.75  # 75% for meaningful variable names and types
-            cf_accuracy = 0.85  # 85% for proper control flow structure
-            
-            self.logger.info("Neo applied advanced static analysis - high quality reconstruction achieved")
-            
-        elif total_functions > 0:
-            # Ghidra-based decompilation quality
-            decompiled_functions = len([f for f in results.get('enhanced_functions', []) 
-                                      if f.get('decompiled_code')])
-            code_coverage = decompiled_functions / max(total_functions, 1)
-            
-            # Function accuracy - quality of function detection and analysis
-            accurate_functions = len([f for f in results.get('enhanced_functions', [])
-                                    if f.get('confidence_score', 0) > 0.7])
-            function_accuracy = accurate_functions / max(total_functions, 1)
-            
-            # Variable recovery - quality of variable name and type recovery
-            variables = results.get('enhanced_variables', [])
-            meaningful_variables = len([v for v in variables 
-                                      if not v.get('name', 'var').startswith('var')])
-            variable_recovery = meaningful_variables / max(len(variables), 1)
-            
-            # Control flow accuracy - quality of control flow reconstruction
-            control_flow = results.get('enhanced_control_flow', {})
-            cf_accuracy = control_flow.get('accuracy_score', 0.5)
-            
-        else:
-            # Basic reconstruction fallback (should not happen with enhanced Neo)
-            code_coverage = 0.15
-            function_accuracy = 0.10
-            variable_recovery = 0.05
-            cf_accuracy = 0.20
-        
-        # Calculate overall score with enhanced weighting
-        overall_score = (
-            code_coverage * 0.35 +      # Higher weight for code coverage
-            function_accuracy * 0.25 +   # Function accuracy
-            variable_recovery * 0.20 +   # Variable recovery
-            cf_accuracy * 0.20          # Control flow accuracy
-        )
-        
-        # Enhanced confidence level calculation
-        base_confidence = results.get('ghidra_metadata', {}).get('analysis_confidence', 0.5)
-        ai_confidence = results.get('ai_insights', {}).get('confidence', 0.5) if self.ai_enabled else 0.7
-        
-        # Boost confidence for static analysis reconstruction
-        if 'Advanced Static Analysis Reconstruction' in enhanced_code:
-            static_analysis_confidence = 0.85
-            confidence_factors = [base_confidence, ai_confidence, static_analysis_confidence, overall_score]
-        else:
-            confidence_factors = [base_confidence, ai_confidence, overall_score]
-            
-        confidence_level = sum(confidence_factors) / len(confidence_factors)
-        
-        # Ensure minimum quality thresholds for enhanced Neo
-        overall_score = max(overall_score, 0.75)  # Minimum 75% for enhanced reconstruction
-        confidence_level = max(confidence_level, 0.80)  # Minimum 80% confidence
-        
-        return DecompilationQuality(
-            code_coverage=code_coverage,
-            function_accuracy=function_accuracy,
-            variable_recovery=variable_recovery,
-            control_flow_accuracy=cf_accuracy,
-            overall_score=overall_score,
-            confidence_level=confidence_level
-        )
-
     def _save_neo_results(self, neo_result: NeoAnalysisResult, output_paths: Dict[str, Path]) -> None:
         """Save Neo's comprehensive analysis results and generate documentation"""
         
@@ -925,8 +423,7 @@ public class NeoAdvancedAnalysis extends GhidraScript {{
             f.write("// Neo's Advanced Decompilation Results\n")
             f.write("// The Matrix has been decoded...\n\n")
             f.write(neo_result.decompiled_code)
-        
-        
+
         # Save comprehensive analysis
         analysis_file = agent_output_dir / "neo_analysis.json"
         analysis_data = {
@@ -973,78 +470,6 @@ public class NeoAdvancedAnalysis extends GhidraScript {{
     def _ai_generate_code_comments(self, code_section: str) -> str:
         """AI tool for generating meaningful comments"""
         return f"Generated comments for: {code_section[:100]}..."
-
-    def _generate_fallback_functions(self) -> List[Dict[str, Any]]:
-        """Generate fallback function analysis when Ghidra fails"""
-        self.logger.info("Generating fallback static analysis reconstruction")
-        
-        # Create minimal but reasonable function analysis for testing
-        fallback_functions = [
-            {
-                'name': 'main',
-                'address': 0x401000,
-                'size': 128,
-                'decompiled_code': '''/* Main function reconstructed via fallback analysis */
-int main(int argc, char* argv[]) {
-    // Initialize application components
-    if (initialize_application() != 0) {
-        return 1;
-    }
-    
-    // Main program loop
-    int result = run_main_logic(argc, argv);
-    
-    // Cleanup and exit
-    cleanup_application();
-    return result;
-}''',
-                'confidence_score': 0.6,
-                'analysis_method': 'fallback_static_reconstruction'
-            },
-            {
-                'name': 'initialize_application',
-                'address': 0x401100,
-                'size': 64,
-                'decompiled_code': '''/* Application initialization */
-int initialize_application(void) {
-    // Setup application state
-    // Initialize global variables
-    // Configure system resources
-    return 0; // Success
-}''',
-                'confidence_score': 0.5,
-                'analysis_method': 'fallback_static_reconstruction'
-            },
-            {
-                'name': 'run_main_logic',
-                'address': 0x401200,
-                'size': 256,
-                'decompiled_code': '''/* Main application logic */
-int run_main_logic(int argc, char* argv[]) {
-    // Process command line arguments
-    // Execute core functionality
-    // Handle user interactions
-    return 0; // Success
-}''',
-                'confidence_score': 0.5,
-                'analysis_method': 'fallback_static_reconstruction'
-            },
-            {
-                'name': 'cleanup_application',
-                'address': 0x401300,
-                'size': 32,
-                'decompiled_code': '''/* Application cleanup */
-void cleanup_application(void) {
-    // Free allocated resources
-    // Close file handles
-    // Cleanup system state
-}''',
-                'confidence_score': 0.5,
-                'analysis_method': 'fallback_static_reconstruction'
-            }
-        ]
-        
-        return fallback_functions
 
     # Placeholder methods for pattern recognition and analysis
     def _analyze_function_purpose(self, func: Dict[str, Any]) -> str:
@@ -1107,8 +532,7 @@ void cleanup_application(void) {
             total_quality += min(1.0, func_quality)
         
         return total_quality / len(functions)
-    
-    
+
     def _create_function_naming_prompt(self, func: Dict[str, Any]) -> str:
         """Create AI prompt for function naming"""
         return f"Suggest a better name for this function: {func}"
@@ -1258,13 +682,10 @@ void cleanup_application(void) {
             }
         }
         
-        if not success or not output or "Fallback analysis used" in output:
-            # Generate fallback analysis when Ghidra fails or times out
-            self.logger.info("Using fallback analysis due to Ghidra timeout/failure")
-            analysis_results['functions'] = self._generate_fallback_functions()
-            analysis_results['metadata']['analysis_confidence'] = 0.4  # Lower confidence for fallback
-            analysis_results['metadata']['analysis_type'] = 'fallback_static_analysis'
-            return analysis_results
+        if not success or not output:
+            # Ghidra analysis failed - no fallbacks allowed
+            self.logger.error("Ghidra analysis failed and no fallback is permitted")
+            raise RuntimeError("Ghidra analysis failed - pipeline requires successful Ghidra execution")
         
         # Parse function information from Ghidra output
         functions = []

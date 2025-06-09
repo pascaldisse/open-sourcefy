@@ -12,7 +12,6 @@ from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 from ..matrix_agents import ReconstructionAgent, AgentResult, AgentStatus, MatrixCharacter
 
-
 class Agent10_TheMachine(ReconstructionAgent):
     """Agent 10: The Machine - Compilation orchestration and build systems"""
     
@@ -336,7 +335,6 @@ EndGlobal
 """
         
         return sln_content
-
 
     def _generate_vcxproj_file(self, analysis: Dict[str, Any]) -> str:
         """Generate VS2022 Visual Studio project file using centralized build system"""
@@ -680,8 +678,6 @@ Write-Host "Build complete!" -ForegroundColor Green
             result['error'] = f"Centralized build system failed: {str(e)}"
         
         return result
-
-
 
     def _build_with_msbuild(self, output_dir: str, build_config: Dict[str, Any]) -> Dict[str, Any]:
         """Build using centralized MSBuild system - NO FALLBACKS"""

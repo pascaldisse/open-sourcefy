@@ -34,7 +34,7 @@ except ImportError:
     logging.warning("pefile or yara not available, using fallback detection")
 
 from .entropy_analyzer import EntropyAnalyzer
-from .packer_detector import PackerDetector, PackerSignature, UnpackingRecommendation
+from .packer_detector import PackerDetector, PackerSignature
 
 
 class ModernPackerType(Enum):

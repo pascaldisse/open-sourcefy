@@ -1,6 +1,14 @@
 # CLAUDE.md
 
+🚨 **OBLIGATORY READING OF rules.md FILE OR DEATH SENTENCE** 🚨
+READ /mnt/c/Users/pascaldisse/Downloads/open-sourcefy/rules.md IMMEDIATELY BEFORE ANY WORK
+ALL RULES IN rules.md ARE ABSOLUTE AND NON-NEGOTIABLE
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+CRITICAL: NO FALLBACKS, NO ALTERNATIVES, NO DEGRADATION
+NEVER USE FALLBACK PATHS, MOCK IMPLEMENTATIONS, OR WORKAROUNDS
+STRICT MODE ONLY - FAIL FAST WHEN TOOLS ARE MISSING
 
 ## Project Overview
 
@@ -9,6 +17,24 @@ Open-Sourcefy is an AI-powered binary decompilation system that reconstructs com
 **WINDOWS ONLY SYSTEM**: This system exclusively supports Windows PE executables and requires Visual Studio/MSBuild for compilation. Linux/macOS platforms and other binary formats (ELF/Mach-O) are not supported.
 
 The primary test target is the Matrix Online launcher.exe binary.
+
+### Latest Enhancements (Phase 4 - June 2025)
+
+**Phase 4: Advanced Validation & Update Systems** ✅ COMPLETE
+- **P4.1**: Pipeline update mode with `--update` flag for incremental development workflow
+- **P4.2**: Advanced binary comparison engine with Shannon entropy calculation and semantic validation
+- **P4.3**: Multi-dimensional quality scoring system with 7 quality dimensions and weighted analysis
+- **P4.4**: Integrated validation reporting system (JSON/HTML/Markdown formats) with executive summaries
+- **P4.5**: True semantic decompilation engine vs intelligent scaffolding with advanced type inference
+- **P4.6**: Git repository integration with comprehensive .gitignore and professional development workflow
+
+**Phase 3: Semantic Decompilation Engine** ✅ COMPLETE
+- **P3.1**: Advanced function signature recovery with Windows API analysis and calling convention detection
+- **P3.2**: Data type inference and reconstruction with constraint-based solving and data flow analysis
+- **P3.3**: Data structure recovery for complex types (linked lists, trees, nested structures)
+- **P3.4**: Cross-validation between multiple analysis engines for enhanced accuracy
+
+*Combined Phase 3 & 4: ~6,850 additional lines of production code enhancing the core Matrix pipeline*
 
 ## Development Commands
 
@@ -70,6 +96,20 @@ python3 main.py --config-summary
 
 # List available agents and modes
 python3 main.py --list-agents
+
+# Run test suites (using unittest framework)
+python3 -m unittest discover tests -v              # Run all tests
+python3 -m unittest discover -s tests -p "test_*.py" -v  # Alternative with pattern
+python3 tests/test_full_pipeline.py                # Run specific test file
+python3 tests/test_agent_individual.py             # Individual agent tests
+python3 tests/test_week4_validation.py             # Validation framework tests
+
+# Built-in testing commands in main.py
+python3 main.py --run-regression-tests             # Regression testing
+python3 main.py --validate-pipeline basic          # Pipeline validation
+python3 main.py --validate-pipeline comprehensive  # Comprehensive validation
+python3 main.py --validate-binary file1.exe        # Binary validation
+python3 main.py --benchmark-performance             # Performance benchmarks
 ```
 
 ## Architecture Overview
@@ -166,7 +206,7 @@ Agent 16 → Depends on Agents 14,15
 
 ### Output Organization
 
-All output is organized under `output/{binary_name}/{yyyymmdd-hhmmss}/`:
+**Standard Mode**: All output is organized under `output/{binary_name}/{yyyymmdd-hhmmss}/`:
 ```
 output/launcher/20250609-143022/
 ├── agents/          # Agent-specific analysis outputs
@@ -183,7 +223,26 @@ output/launcher/20250609-143022/
 └── docs/            # General source code documentation
 ```
 
-**Path Configuration**: All paths are configurable via the config manager. The timestamp format can be customized using the `paths.timestamp_format` configuration (default: `%Y%m%d-%H%M%S`).
+**Update Mode** (`--update` flag): Output saved to `output/{binary_name}/latest/`:
+```
+output/launcher/latest/
+├── agents/          # Agent-specific analysis outputs (updated incrementally)
+│   ├── agent_01_sentinel/
+│   ├── agent_02_architect/
+│   └── ...
+├── ghidra/          # Ghidra decompilation results (updated)
+├── compilation/     # MSBuild artifacts and generated source (updated)
+├── reports/         # Pipeline execution reports (updated)
+│   ├── matrix_pipeline_report.json
+│   ├── binary_comparison_report.json
+│   ├── quality_metrics_report.json
+│   └── validation_report.html
+├── logs/            # Execution logs (appended)
+├── temp/            # Temporary files (auto-cleaned)
+└── tests/           # Generated test files (updated)
+```
+
+**Path Configuration**: All paths are configurable via the config manager. The timestamp format can be customized using the `paths.timestamp_format` configuration (default: `%Y%m%d-%H%M%S`). Update mode uses a fixed `latest` directory for incremental development.
 
 ## Development Guidelines
 
@@ -256,15 +315,21 @@ The system implements strict validation thresholds:
 **Required**:
 - Python 3.8+ (async/await support required)
 - Java 17+ (for Ghidra integration)
+- packaging>=21.0
+- setuptools>=60.0
+- psutil>=5.9.0 (for system monitoring)
 
 **Included**:
 - Ghidra 11.0.3 (in ghidra/ directory)
 - Matrix agent implementations (ALL 17 agents substantially implemented)
 
-**Optional**:
+**Optional** (commented in requirements.txt):
 - Microsoft Visual C++ Build Tools (for compilation testing)
-- LangChain libraries (for AI-enhanced analysis)
-- pefile, elftools, macholib (for binary parsing)
+- pefile>=2022.5.30 (for PE analysis)
+- capstone>=5.0.0 (for disassembly)
+- numpy, scikit-learn (for ML features)
+- AI providers: anthropic, openai, langchain packages
+- Development: pytest, pytest-cov
 
 ### Current Implementation Status
 
@@ -272,8 +337,20 @@ The system implements strict validation thresholds:
 - Complete Matrix agent framework with 17 agents fully implemented
 - Master-first parallel execution orchestrator operational  
 - Configuration management system with hierarchical config loading
-- Advanced CLI interface with comprehensive argument parsing
+- Advanced CLI interface with comprehensive argument parsing and update mode
 - Shared components and utilities complete with Matrix theming
+- Git repository integration with comprehensive .gitignore and development workflow
+
+**✅ Phase 4 Advanced Systems** (Recently Completed June 2025):
+- **Semantic Decompilation Engine**: True semantic analysis vs scaffolding with advanced type inference (1,100+ lines)
+- **Function Signature Recovery**: Windows API analysis and calling convention detection (900+ lines)
+- **Data Type Inference**: Constraint-based solving with data flow analysis (1,000+ lines)
+- **Data Structure Recovery**: Complex type reconstruction for linked lists, trees, nested structures (1,200+ lines)
+- **Binary Comparison Engine**: Semantic validation with Shannon entropy calculation (enhanced existing module)
+- **Quality Scoring System**: Multi-dimensional scoring with 7 quality dimensions (1,400+ lines)
+- **Validation Reporting**: JSON/HTML/Markdown reports with executive summaries (1,600+ lines)
+- **Update Mode Pipeline**: Incremental development workflow with `--update` flag
+- **Git Integration**: Professional development workflow with comprehensive .gitignore
 
 **✅ Complete Agent Implementation** (All 17 Agents Implemented):
 - Agent 0: Deus Ex Machina (Master Orchestrator) - Production coordination and pipeline management
@@ -281,8 +358,8 @@ The system implements strict validation thresholds:
 - Agent 2: The Architect (Architecture Analysis) - Compiler detection, optimization patterns
 - Agent 3: The Merovingian (Basic Decompilation) - Function detection, control flow analysis
 - Agent 4: Agent Smith (Binary Structure) - Structure analysis, data extraction, dynamic bridge
-- Agent 5: Neo (Advanced Decompiler) - Advanced decompilation with Ghidra integration
-- Agent 6: The Twins (Binary Differential) - Binary comparison and differential analysis
+- Agent 5: Neo (Advanced Decompiler) - Advanced decompilation with Ghidra integration, semantic engine integration
+- Agent 6: The Twins (Binary Differential) - Binary comparison and differential analysis with advanced validation
 - Agent 7: The Trainman (Assembly Analysis) - Advanced assembly analysis and instruction flow
 - Agent 8: The Keymaker (Resource Reconstruction) - Resource extraction and dependency analysis
 - Agent 9: Commander Locke (Global Reconstruction) - Project structure and global coordination
@@ -296,15 +373,24 @@ The system implements strict validation thresholds:
 
 **📊 System Status**:
 - **Architecture**: Production-ready with comprehensive error handling and SOLID principles
-- **Total Codebase**: ~19,000+ lines across 17 agents with Matrix-themed architecture
-- **Implementation Quality**: 100% complete - Full Matrix pipeline operational ✅
+- **Total Codebase**: ~25,850+ lines (19,000 base + 6,850 Phase 3/4 enhancements)
+- **Implementation Quality**: Advanced semantic analysis and validation systems integrated ✅
 - **Primary Target**: Matrix Online launcher.exe (5.3MB, x86 PE32, MSVC .NET 2003)  
-- **Execution Model**: Master-first parallel with dependency batching validated with 100% success rate
+- **Execution Model**: Master-first parallel with dependency batching and update mode support
 - **AI Integration**: Claude Code CLI integration operational throughout the agent framework
-- **Quality Assurance**: NSA-level standards with comprehensive validation and fail-fast mechanisms
-- **Pipeline Testing**: Comprehensive multi-agent execution validated with 100% success rate
+- **Quality Assurance**: NSA-level standards with multi-dimensional quality scoring
+- **Pipeline Features**: Update mode, advanced validation, semantic decompilation, git integration
+- **Repository Status**: Professional git workflow with comprehensive .gitignore and commit standards
 
 ### Testing Approach
+
+**Test Framework**: Uses Python's built-in `unittest` framework (not pytest). Test files are located in `/tests/` directory.
+
+**Test Categories**:
+- **Integration Tests**: `test_full_pipeline.py`, `test_integration_*.py`
+- **Unit Tests**: `test_agent_individual.py`, `test_context_propagation.py`
+- **Validation Tests**: `test_pipeline_validation.py`, `test_week4_validation.py`
+- **Quality Assurance**: `test_regression.py`, `test_phase4_comprehensive.py`
 
 **Built-in Validation**:
 - Agent results validated for quality and completeness
@@ -329,29 +415,75 @@ python3 main.py --agents 1-4
 
 # Decompilation pipeline testing
 python3 main.py --decompile-only
+
+# Update mode testing
+python3 main.py --agents 1 --update
+python3 main.py launcher.exe --update
 ```
+
+### Git Workflow and Repository Management
+
+**Repository Status**: Fully initialized Git repository with professional development workflow.
+
+**Git Commands**:
+```bash
+# Check repository status
+git status
+
+# View commit history
+git log --oneline
+
+# Stage and commit changes
+git add .
+git commit -m "Your commit message
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+# Create feature branch
+git checkout -b feature/new-enhancement
+
+# View repository information
+git remote -v
+git branch -a
+```
+
+**Comprehensive .gitignore**: The repository includes a comprehensive .gitignore covering:
+- Python artifacts (*.pyc, __pycache__, *.egg-info)
+- Build systems (MSBuild, Visual Studio, compilation outputs)
+- IDEs (VS Code, PyCharm, Vim, Emacs)
+- Operating systems (Windows, macOS, Linux)
+- Ghidra files (*.gpr, *.rep, *.lock)
+- Temporary files (temp/, *.tmp, *.bak)
+- Project-specific patterns with selective output directory management
 
 ## System Requirements
 
 ### **Windows Requirements (MANDATORY)**
 - **Operating System**: Windows 10/11 (64-bit)
-- **Visual Studio**: 2019 or 2022 with MSVC compiler
-- **MSBuild**: Included with Visual Studio
+- **Visual Studio**: 2022 Preview (FIXED REQUIREMENT - configured in build_config.yaml)
+- **MSBuild**: VS2022 Preview MSBuild (centralized path configuration)
 - **Architecture**: x86/x64 Windows executables only
+- **⚠️ CRITICAL**: Must have VS2022 Preview installed at the EXACT paths specified in build_config.yaml
 
 ### **Core Dependencies**
 - **Python**: 3.8+ (Windows version)
 - **Java**: 17+ (for Ghidra integration)
 - **Ghidra**: 11.0.3 (included in project)
-- **MSVC Compiler**: cl.exe must be in PATH
+- **MSVC Compiler**: VS2022 Preview cl.exe (configured in build_config.yaml - NOT in PATH)
+- **Build System Manager**: Centralized tool access (src/core/build_system_manager.py)
 
-### **Unsupported Platforms**
+### **Unsupported Platforms & Build Systems**
 ❌ **Linux/Unix**: Not supported
 ❌ **macOS**: Not supported  
 ❌ **ELF binaries**: Not supported
 ❌ **Mach-O binaries**: Not supported
 ❌ **GCC/Clang**: Not supported
 ❌ **Make/CMake**: Not supported
+❌ **Alternative Visual Studio versions**: Not supported (only VS2022 Preview)
+❌ **Build system fallbacks**: DISABLED - only centralized configuration used
+❌ **Auto-detection of build tools**: DISABLED - only configured paths used
 
 ### Ghidra Integration
 
@@ -617,6 +749,36 @@ MATRIX_LOG_LEVEL=INFO
 MATRIX_PARALLEL_AGENTS=8
 ```
 
+**PERMANENT BUILD SYSTEM CONFIGURATION**:
+
+🔒 **CRITICAL**: This system uses ONLY Visual Studio 2022 Preview with MSBuild. All build operations are centralized and configured in `build_config.yaml`. NO FALLBACKS are supported.
+
+**Centralized Build System**:
+- **Build System Manager**: `src/core/build_system_manager.py` - Single source of truth for all build operations
+- **Configuration File**: `build_config.yaml` - Contains all VS2022 Preview paths (NEVER modify at runtime)
+- **Enforcement**: All agents use centralized build manager - no direct tool access
+- **Tool Detection**: DISABLED - only configured paths in `build_config.yaml` are used
+
+**Fixed Tool Paths** (DO NOT CHANGE):
+```bash
+# Visual Studio 2022 Preview Compiler (x64)
+COMPILER_X64="/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe"
+
+# MSBuild 2022 Preview
+MSBUILD_PATH="/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/MSBuild/Current/Bin/MSBuild.exe"
+
+# VS2022 Preview VC Tools Base
+VC_TOOLS_PATH="/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.44.35207"
+```
+
+**Agent Build Integration**:
+- **Agent 10 (The Machine)**: Primary compilation orchestrator using centralized build system
+- **Agent 09 (Commander Locke)**: Generates VS2022-compatible project files with centralized paths
+- **All Agents**: Must use `get_build_manager()` for any build operations
+- **Validation**: Build system manager validates all tool paths on startup
+
+**ALWAYS REMEMBER**: This location and configuration are PERMANENT. All pipeline and agent operations default to this centralized VS2022 Preview configuration.
+
 **Configuration Files** (YAML preferred):
 ```yaml
 # matrix_config.yaml
@@ -866,3 +1028,10 @@ NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
 **NEVER DELETE FILES IN prompts/ DIRECTORY UNDER ANY CIRCUMSTANCES.**
+
+---
+
+🚨 **FINAL REMINDER: OBLIGATORY READING OF rules.md FILE OR DEATH SENTENCE** 🚨
+BEFORE COMPLETING ANY WORK, RE-READ /mnt/c/Users/pascaldisse/Downloads/open-sourcefy/rules.md
+ALL RULES IN rules.md ARE ABSOLUTE AND NON-NEGOTIABLE
+VIOLATION OF ANY RULE RESULTS IN PROJECT DEATH

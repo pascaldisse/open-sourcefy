@@ -12,7 +12,6 @@ from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 from ..matrix_agents import ValidationAgent, AgentResult, AgentStatus, MatrixCharacter
 
-
 class Agent11_TheOracle(ValidationAgent):
     """Agent 11: The Oracle - Final validation and truth verification"""
     

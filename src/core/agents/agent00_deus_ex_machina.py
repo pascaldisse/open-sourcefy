@@ -37,7 +37,6 @@ from .agent14_the_cleaner import Agent14_TheCleaner
 from .agent15_analyst import Agent15_Analyst
 from .agent16_agent_brown import Agent16_AgentBrown
 
-
 @dataclass
 class PipelineExecutionPlan:
     """Plan for executing the Matrix pipeline"""
@@ -46,14 +45,12 @@ class PipelineExecutionPlan:
     total_agents: int
     estimated_time: float
 
-
 @dataclass
 class MasterAgentResult:
     """Result structure for master agent execution"""
     success: bool
     data: Dict[str, Any]
     error: Optional[str]
-
 
 class DeusExMachinaAgent(MatrixAgent):
     """

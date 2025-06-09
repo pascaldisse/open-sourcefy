@@ -11,7 +11,6 @@ from typing import Dict, Any, List, Set, Tuple, Optional
 from pathlib import Path
 from ..matrix_agents import ReconstructionAgent, AgentResult, AgentStatus, MatrixCharacter
 
-
 class Agent13_AgentJohnson(ReconstructionAgent):
     """Agent 13: Agent Johnson - Security analysis and vulnerability detection"""
     

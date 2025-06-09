@@ -31,7 +31,6 @@ except ImportError:
 # Standard agent framework imports
 from ..matrix_agents import AgentResult, AgentStatus as StandardAgentStatus
 
-
 @dataclass
 class ReconstructionResult:
     """Result of global reconstruction process"""
@@ -45,7 +44,6 @@ class ReconstructionResult:
     error_messages: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     metrics: Dict[str, Any] = field(default_factory=dict)
-
 
 class CommanderLockeAgent(ReconstructionAgent):
     """
@@ -704,7 +702,7 @@ EndGlobal
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <VCProjectVersion>16.0</VCProjectVersion>
+    <VCProjectVersion>17.0</VCProjectVersion>
     <ProjectGuid>{project_guid}</ProjectGuid>
     <RootNamespace>ReconstructedProgram</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>

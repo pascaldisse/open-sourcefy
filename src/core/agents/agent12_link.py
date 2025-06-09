@@ -29,7 +29,6 @@ except ImportError:
     # Fallback for basic execution
     HAS_MATRIX_FRAMEWORK = False
 
-
 @dataclass
 class IntegrationResult:
     """Result of integration and communication bridge process"""
@@ -45,7 +44,6 @@ class IntegrationResult:
     warnings: List[str] = field(default_factory=list)
     metrics: Dict[str, Any] = field(default_factory=dict)
 
-
 @dataclass
 class CommunicationChannel:
     """Communication channel configuration"""
@@ -59,7 +57,6 @@ class CommunicationChannel:
     retry_count: int = 3
     timeout: float = 30.0
     data_format: str = "json"
-
 
 class Agent12_Link(ReconstructionAgent):
     """
@@ -1126,7 +1123,6 @@ class Agent12_Link(ReconstructionAgent):
         })
         
         return base_result
-
 
 # For backward compatibility
 LinkAgent = Agent12_Link

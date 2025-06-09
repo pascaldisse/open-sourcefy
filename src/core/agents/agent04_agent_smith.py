@@ -24,7 +24,6 @@ from ..exceptions import MatrixAgentError, ValidationError, ConfigurationError
 # Centralized AI system imports
 from ..ai_system import ai_available, ai_analyze_code, ai_enhance_code, ai_request_safe
 
-
 # Configuration constants - NO MAGIC NUMBERS
 class AgentSmithConstants:
     """Agent Smith-specific constants loaded from configuration"""
@@ -36,7 +35,6 @@ class AgentSmithConstants:
         self.MAX_RESOURCES_TO_EXTRACT = config_manager.get_value('resources.max_extract', 100)
         self.MIN_STRING_LENGTH = config_manager.get_value('analysis.min_string_length', 4)
         self.MAX_DATA_STRUCTURE_SIZE = config_manager.get_value('analysis.max_data_structure_size', 10240)
-
 
 @dataclass
 class DataStructure:
@@ -54,7 +52,6 @@ class DataStructure:
         if self.name is None:
             self.name = f"{self.type}_{self.address:08x}"
 
-
 @dataclass
 class ExtractedResource:
     """Extracted resource from binary"""
@@ -69,7 +66,6 @@ class ExtractedResource:
         if self.metadata is None:
             self.metadata = {}
 
-
 @dataclass
 class InstrumentationPoint:
     """Point for dynamic analysis instrumentation"""
@@ -83,7 +79,6 @@ class InstrumentationPoint:
         if self.parameters is None:
             self.parameters = []
 
-
 @dataclass
 class AgentSmithValidationResult:
     """Validation result structure for fail-fast pipeline"""
@@ -91,7 +86,6 @@ class AgentSmithValidationResult:
     quality_score: float
     error_messages: List[str]
     validation_details: Dict[str, Any]
-
 
 class AgentSmithAgent(AnalysisAgent):
     """
@@ -204,8 +198,7 @@ class AgentSmithAgent(AnalysisAgent):
         
         if missing_paths:
             raise ConfigurationError(f"Invalid configuration paths: {missing_paths}")
-    
-    
+
     def get_matrix_description(self) -> str:
         """Agent Smith's role in the Matrix"""
         return ("Agent Smith systematically replicates and analyzes every component. "
@@ -357,16 +350,8 @@ class AgentSmithAgent(AnalysisAgent):
             dependency_met = True
         
         if not dependency_met:
-            self.logger.warning("Sentinel dependency not found - proceeding with limited analysis")
-            # Create minimal discovery data to allow analysis to proceed
-            if 'binary_metadata' not in shared_memory:
-                shared_memory['binary_metadata'] = {}
-            if 'discovery' not in shared_memory['binary_metadata']:
-                shared_memory['binary_metadata']['discovery'] = {
-                    'binary_info': {'format_type': 'Unknown', 'architecture': 'x86'},
-                    'format_analysis': {'sections': [], 'imports': []},
-                    'strings': []
-                }
+            self.logger.error("Sentinel dependency not satisfied - cannot proceed with analysis")
+            raise ValidationError("Agent 1 (Sentinel) dependency not satisfied - Agent Smith requires Sentinel's discovery data")
     
     def _initialize_analysis(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize analysis context with Sentinel data"""
@@ -984,8 +969,7 @@ class AgentSmithAgent(AnalysisAgent):
             'dynamic_bridge': results.get('dynamic_analysis_bridge', {}),
             'smith_confidence': results['agent_smith_metadata']['quality_score']
         }
-    
-    
+
     def _calculate_string_table_confidence(self, strings: List[str]) -> float:
         """Calculate confidence for string table analysis"""
         if not strings:

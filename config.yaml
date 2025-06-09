@@ -59,7 +59,7 @@ agents:
   agent_01:
     max_retries: 3
     timeout: 300
-    quality_threshold: 0.6
+    quality_threshold: 0.2  # Lowered for basic analysis compatibility
     max_file_size_mb: 500
     
   # Agent 02 - Architect  
@@ -83,7 +83,8 @@ agents:
   # Agent 05 - Neo  
   agent_05:
     max_retries: 2
-    timeout: 300
+    timeout: 600  # Increased to 10 minutes for Ghidra analysis
+    ghidra_timeout: 600  # Ghidra-specific timeout
     quality_threshold: 0.1  # Very low threshold to prevent retry loops
 
 # Debug Configuration

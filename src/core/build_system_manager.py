@@ -3,9 +3,13 @@ Central Build System Manager for Open-Sourcefy Matrix Pipeline
 
 This module provides the AUTHORITATIVE build system configuration
 for the entire Matrix pipeline. All agents MUST use this module
-for build operations - no fallbacks or alternative paths allowed.
+for build operations - NO FALLBACKS OR ALTERNATIVE PATHS ALLOWED.
 
 PERMANENT CONFIGURATION: Visual Studio 2022 Preview with MSBuild
+
+CRITICAL: NO FALLBACKS, NO ALTERNATIVES, NO DEGRADATION
+STRICT MODE ONLY - FAIL FAST WHEN TOOLS ARE MISSING
+NEVER USE FALLBACK PATHS OR MOCK IMPLEMENTATIONS
 """
 
 import os
@@ -41,7 +45,10 @@ class BuildSystemManager:
     This class provides the single source of truth for all build operations
     in the Matrix pipeline. All agents must use this class for compilation.
     
+    CRITICAL: NO FALLBACKS, NO ALTERNATIVES, NO DEGRADATION
     NO FALLBACKS - Only uses configured Visual Studio 2022 Preview paths.
+    NEVER USE FALLBACK PATHS, MOCK IMPLEMENTATIONS, OR WORKAROUNDS
+    STRICT MODE ONLY - FAIL FAST WHEN TOOLS ARE MISSING
     """
     
     def __init__(self, project_root: Optional[Path] = None):
@@ -56,7 +63,7 @@ class BuildSystemManager:
         # Validate all tools exist
         self._validate_build_tools()
         
-        self.logger.info("✅ Build System Manager initialized with VS2022 Preview")
+        self.logger.info(f"✅ Build System Manager initialized with VS2022 Preview")
     
     def _load_build_config(self) -> Dict:
         """Load central build configuration - REQUIRED"""
@@ -99,7 +106,7 @@ class BuildSystemManager:
         )
     
     def _validate_build_tools(self) -> None:
-        """Validate all build tools exist - NO FALLBACKS"""
+        """Validate build tools - strict mode only"""
         validation_errors = []
         
         # Check compilers
@@ -131,8 +138,9 @@ class BuildSystemManager:
             error_msg = "BUILD SYSTEM VALIDATION FAILED:\n" + "\n".join(validation_errors)
             self.logger.error(error_msg)
             raise RuntimeError(error_msg)
-        
-        self.logger.info("✅ All build tools validated successfully")
+        else:
+            self.logger.info("✅ All build tools validated successfully")
+    
     
     def get_compiler_path(self, architecture: str = "x64") -> str:
         """Get compiler path for specified architecture"""
@@ -196,20 +204,27 @@ class BuildSystemManager:
             else:
                 cmd.extend(self.build_config.debug_flags)
             
-            # Add include directories
+            # Add include directories (convert to Windows paths)
             for include_dir in self.build_config.include_dirs:
-                cmd.append(f"/I\"{include_dir}\"")
+                win_include_path = self._convert_wsl_path_to_windows(Path(include_dir))
+                cmd.append(f"/I\"{win_include_path}\"")
             
-            # Add library directories
-            for lib_dir in self.get_library_dirs(architecture):
-                cmd.append(f"/LIBPATH:\"{lib_dir}\"")
+            # Convert WSL paths to Windows paths for the compiler
+            source_win_path = self._convert_wsl_path_to_windows(source_file)
+            output_win_path = self._convert_wsl_path_to_windows(output_file)
             
             # Add source file and output
-            cmd.append(str(source_file))
-            cmd.append(f"/Fe\"{output_file}\"")
+            cmd.append(source_win_path)
+            cmd.append(f"/Fe{output_win_path}")
+            
+            # Add linker options (library directories)
+            cmd.append("/link")
+            for lib_dir in self.get_library_dirs(architecture):
+                win_lib_path = self._convert_wsl_path_to_windows(Path(lib_dir))
+                cmd.append(f"/LIBPATH:\"{win_lib_path}\"")
             
             self.logger.info(f"Compiling with VS2022: {source_file} -> {output_file}")
-            self.logger.debug(f"Compiler command: {' '.join(cmd)}")
+            self.logger.info(f"Compiler command: {' '.join(cmd)}")
             
             # Execute compilation
             result = subprocess.run(
@@ -224,8 +239,9 @@ class BuildSystemManager:
                 self.logger.info(f"✅ Compilation successful: {output_file}")
                 return True, result.stdout
             else:
-                self.logger.error(f"❌ Compilation failed: {result.stderr}")
-                return False, result.stderr
+                error_output = result.stderr or result.stdout or f"Exit code: {result.returncode}"
+                self.logger.error(f"❌ Compilation failed: {error_output}")
+                return False, error_output
                 
         except Exception as e:
             error_msg = f"Compilation error: {e}"
@@ -235,7 +251,7 @@ class BuildSystemManager:
     def build_with_msbuild(self, project_file: Path, configuration: str = "Release", 
                           platform: str = "x64") -> Tuple[bool, str]:
         """
-        Build project using MSBuild - ALTERNATIVE METHOD
+        Build project using MSBuild - strict mode only
         
         Args:
             project_file: Path to .vcxproj file
@@ -279,6 +295,7 @@ class BuildSystemManager:
             error_msg = f"MSBuild error: {e}"
             self.logger.error(error_msg)
             return False, error_msg
+    
     
     def create_vcxproj(self, project_name: str, source_files: List[Path], 
                       output_dir: Path, architecture: str = "x64") -> Path:
@@ -391,6 +408,23 @@ class BuildSystemManager:
 </Project>'''
         
         return content
+    
+    def _convert_wsl_path_to_windows(self, path: Path) -> str:
+        """Convert WSL path to Windows path for the compiler"""
+        path_str = str(path.absolute())
+        
+        # Convert /mnt/c/ to C:\
+        if path_str.startswith('/mnt/c/'):
+            win_path = 'C:' + path_str[6:].replace('/', '\\')
+            return win_path
+        elif path_str.startswith('/mnt/'):
+            # Handle other drive letters
+            drive_letter = path_str[5]
+            win_path = drive_letter.upper() + ':' + path_str[6:].replace('/', '\\')
+            return win_path
+        else:
+            # Already a Windows path or relative path
+            return path_str.replace('/', '\\')
 
 
 # Global build system manager instance

@@ -508,8 +508,14 @@ public class EnhancedDecompiler extends GhidraScript {
             cmd.extend(["-scriptPath", os.path.dirname(script_path)])
             cmd.extend(["-postScript", os.path.basename(script_path), output_dir])
         
-        # Add standard analysis
+        # Add standard analysis with increased memory and timeout
         cmd.extend(["-analysisTimeoutPerFile", str(timeout)])
+        cmd.extend(["-max-cpu", str(os.cpu_count() or 4)])
+        
+        # Set JVM memory options for larger binaries
+        java_opts = os.environ.get('GHIDRA_MAXMEM', '4G')
+        if 'GHIDRA_MAXMEM' not in os.environ:
+            os.environ['GHIDRA_MAXMEM'] = java_opts
         
         logger.info(f"Running Ghidra analysis: {' '.join(cmd)}")
         

@@ -36,7 +36,6 @@ from ..shared_components import MatrixErrorHandler
 # Centralized AI system imports
 from ..ai_system import ai_available, ai_analyze_code, ai_enhance_code, ai_request_safe
 
-
 @dataclass
 class InstructionPattern:
     """Represents an assembly instruction pattern"""
@@ -47,7 +46,6 @@ class InstructionPattern:
     description: str
     metadata: Dict[str, Any]
 
-
 @dataclass
 class CallingConvention:
     """Analysis of calling conventions used"""
@@ -57,7 +55,6 @@ class CallingConvention:
     confidence: float
     evidence: List[str]
 
-
 @dataclass
 class AssemblyQualityMetrics:
     """Quality metrics for assembly analysis"""
@@ -66,7 +63,6 @@ class AssemblyQualityMetrics:
     calling_convention_confidence: float  # Confidence in calling convention analysis
     control_flow_accuracy: float  # Accuracy of control flow analysis
     overall_analysis_quality: float  # Combined quality score
-
 
 @dataclass
 class TrainmanAnalysisResult:
@@ -80,7 +76,6 @@ class TrainmanAnalysisResult:
     quality_metrics: AssemblyQualityMetrics
     ai_insights: Optional[Dict[str, Any]] = None
     trainman_insights: Optional[Dict[str, Any]] = None
-
 
 class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
     """

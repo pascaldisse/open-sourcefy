@@ -69,10 +69,10 @@ class EntropyAnalyzer:
         
         # Configurable thresholds
         if self.config:
-            self.PACKED_THRESHOLD = self.config.get('entropy.packed_threshold', 5.9)
-            self.ENCRYPTED_THRESHOLD = self.config.get('entropy.encrypted_threshold', 7.5)
-            self.CODE_MIN_ENTROPY = self.config.get('entropy.code_min', 4.5)
-            self.CODE_MAX_ENTROPY = self.config.get('entropy.code_max', 6.5)
+            self.PACKED_THRESHOLD = self.config.get_value('entropy.packed_threshold', 5.9)
+            self.ENCRYPTED_THRESHOLD = self.config.get_value('entropy.encrypted_threshold', 7.5)
+            self.CODE_MIN_ENTROPY = self.config.get_value('entropy.code_min', 4.5)
+            self.CODE_MAX_ENTROPY = self.config.get_value('entropy.code_max', 6.5)
     
     def calculate_shannon_entropy(self, data: bytes) -> float:
         """

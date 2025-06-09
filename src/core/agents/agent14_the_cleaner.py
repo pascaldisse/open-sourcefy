@@ -11,7 +11,6 @@ from typing import Dict, Any, List, Set, Tuple, Optional
 from pathlib import Path
 from ..matrix_agents import ReconstructionAgent, AgentResult, AgentStatus, MatrixCharacter
 
-
 class Agent14_TheCleaner(ReconstructionAgent):
     """Agent 14: The Cleaner - Code cleanup and optimization"""
     

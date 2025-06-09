@@ -48,7 +48,6 @@ try:
 except ImportError:
     HAS_CAPSTONE = False
 
-
 # Configuration constants - NO MAGIC NUMBERS
 class MerovingianConstants:
     """Merovingian-specific constants loaded from configuration"""
@@ -60,7 +59,6 @@ class MerovingianConstants:
         self.MAX_FUNCTIONS_TO_ANALYZE = config_manager.get_value('decompilation.max_functions', 500)
         self.MIN_FUNCTION_SIZE = config_manager.get_value('decompilation.min_function_size', 16)
         self.CONTROL_FLOW_DEPTH_LIMIT = config_manager.get_value('decompilation.max_depth', 50)
-
 
 @dataclass
 class Function:
@@ -81,7 +79,6 @@ class Function:
         if self.name is None:
             self.name = f"sub_{self.address:08x}"
 
-
 @dataclass
 class ControlStructure:
     """Identified control structure (loop, conditional, etc.)"""
@@ -91,7 +88,6 @@ class ControlStructure:
     complexity: str = 'simple'  # simple/medium/complex
     confidence: float = 0.0
 
-
 @dataclass
 class MerovingianValidationResult:
     """Validation result structure for fail-fast pipeline"""
@@ -99,7 +95,6 @@ class MerovingianValidationResult:
     quality_score: float
     error_messages: List[str]
     validation_details: Dict[str, Any]
-
 
 class MerovingianAgent(DecompilerAgent):
     """
@@ -425,7 +420,7 @@ class MerovingianAgent(DecompilerAgent):
             dependency_met = True
         
         if not dependency_met:
-            self.logger.warning("Sentinel dependency not found - proceeding with limited analysis")
+            self.logger.warning("Sentinel dependency not found - cannot proceed - dependency required")
             # Create minimal discovery data to allow analysis to proceed
             if 'binary_metadata' not in shared_memory:
                 shared_memory['binary_metadata'] = {}
@@ -585,8 +580,7 @@ class MerovingianAgent(DecompilerAgent):
             'disassembly_quality': 0.5,  # Lower quality without actual disassembly
             'analysis_method': 'simplified_analysis'
         }
-    
-    
+
     def _detect_functions(self, analysis_context: Dict[str, Any], disassembly_results: Dict[str, Any]) -> Dict[str, Any]:
         """Detect function boundaries using multiple heuristics"""
         functions = []
@@ -670,8 +664,7 @@ class MerovingianAgent(DecompilerAgent):
                 functions.append(func)
         
         return functions
-    
-    
+
     def _find_function_end(self, instructions: List[Dict], start_idx: int) -> int:
         """Find the end of a function from disassembled instructions"""
         size = 0
@@ -804,7 +797,7 @@ class MerovingianAgent(DecompilerAgent):
         weights = [0.15, 0.25, 0.20, 0.15, 0.10, 0.15]  # Sum = 1.0
         
         if len(confidence_factors) != len(weights):
-            # Fallback to simple average if mismatch
+            # Use simple average if length mismatch
             final_confidence = sum(confidence_factors) / len(confidence_factors)
         else:
             final_confidence = sum(factor * weight for factor, weight in zip(confidence_factors, weights))
