@@ -178,7 +178,7 @@ class DeusExMachinaAgent(MatrixAgent):
             3: [1],                   # Merovingian - Depends on Sentinel  
             4: [1],                   # Agent Smith - Depends on Sentinel
             5: [1, 2],               # Neo - Depends on Sentinel and Architect
-            6: [1, 2],               # Twins - Depends on Sentinel and Architect
+            6: [1, 2, 5],            # Twins - Depends on Sentinel, Architect, and Neo
             7: [1, 2],               # Trainman - Depends on Sentinel and Architect
             8: [1, 2],               # Keymaker - Depends on Sentinel and Architect
             9: [5, 6, 7, 8],         # Commander Locke - Depends on Phase B agents

@@ -17,7 +17,7 @@ public class CompleteDecompiler extends GhidraScript {
     
     private DecompInterface decompiler;
     private List<String> analysisResults;
-    private static final int MAX_FUNCTIONS_TO_ANALYZE = 5;  // Test with just 5 functions first
+    private static final int MAX_FUNCTIONS_TO_ANALYZE = Integer.MAX_VALUE;  // No artificial limits - analyze all functions
     
     @Override
     public void run() throws Exception {
@@ -25,18 +25,15 @@ public class CompleteDecompiler extends GhidraScript {
         
         // Initialize decompiler
         decompiler = new DecompInterface();
+        decompiler.openProgram(currentProgram);
         
         // Set enhanced decompiler options
         DecompileOptions options = new DecompileOptions();
         options.setEliminateUnreachable(true);
         options.setSimplifyDoublePrecision(true);
-        // Note: setInferConstPtr and setMaxIntructionsPer not available in this Ghidra version
+        options.setInferConstPtr(true);
+        options.setMaxIntructionsPer(1000);
         decompiler.setOptions(options);
-        
-        // CRITICAL: Initialize decompiler with program AFTER setting options
-        if (!decompiler.openProgram(currentProgram)) {
-            throw new Exception("Failed to initialize decompiler for program");
-        }
         
         println("Matrix Agent 05 (Neo) - Complete Decompilation Starting...");
         
@@ -63,48 +60,32 @@ public class CompleteDecompiler extends GhidraScript {
     private void ensureAutoAnalysisComplete() throws Exception {
         println("Ensuring Ghidra auto-analysis is complete...");
         
-        // Force auto-analysis to run and wait for completion
-        ghidra.app.services.AutoAnalysisManager analysisManager = ghidra.app.services.AutoAnalysisManager.getAnalysisManager(currentProgram);
-        
-        if (analysisManager != null) {
-            println("Found analysis manager - checking analysis status...");
+        // Force Ghidra to run auto-analysis if it hasn't been run
+        ghidra.app.services.AnalysisManager analysisManager = ghidra.app.services.AutoAnalysisManager.getAnalysisManager(currentProgram);
+        if (analysisManager != null && !analysisManager.isAnalyzing()) {
+            println("Starting Ghidra auto-analysis...");
+            analysisManager.scheduleOneTimeAnalysis(currentProgram.getMemory().getAllInitializedAddressSet(), null);
             
-            // If analysis is not running, start it
-            if (!analysisManager.isAnalyzing()) {
-                println("Analysis not running - starting auto-analysis...");
-                analysisManager.startAnalysis(currentProgram, null);
-            }
-            
-            // Wait for analysis to complete with timeout
-            int maxWaitSeconds = 300; // 5 minutes
+            // Wait for analysis to complete
+            int maxWaitSeconds = 60;
             int waitCount = 0;
-            
             while (analysisManager.isAnalyzing() && waitCount < maxWaitSeconds) {
-                if (waitCount % 30 == 0) {
-                    println(String.format("Waiting for auto-analysis to complete... (%d/%d seconds)", waitCount, maxWaitSeconds));
-                }
                 Thread.sleep(1000);
                 waitCount++;
+                if (waitCount % 10 == 0) {
+                    println(String.format("Waiting for auto-analysis... (%d/%d seconds)", waitCount, maxWaitSeconds));
+                }
             }
             
             if (analysisManager.isAnalyzing()) {
-                println("WARNING: Auto-analysis still running after timeout - proceeding anyway");
+                println("WARNING: Auto-analysis still running after timeout");
             } else {
-                println("Auto-analysis completed successfully");
+                println("Auto-analysis completed");
             }
-        } else {
-            println("WARNING: No analysis manager found");
         }
         
         FunctionManager funcMgr = currentProgram.getFunctionManager();
-        int functionCount = funcMgr.getFunctionCount();
-        println(String.format("Final analysis status: Functions found: %d", functionCount));
-        
-        if (functionCount == 0) {
-            println("ERROR: Still no functions detected after auto-analysis");
-            println("This indicates a fundamental issue with binary analysis");
-            throw new Exception("No functions detected - analysis failed");
-        }
+        println(String.format("Auto-analysis check complete. Functions found: %d", funcMgr.getFunctionCount()));
     }
     
     private void analyzeBinaryFormat() {
@@ -125,7 +106,7 @@ public class CompleteDecompiler extends GhidraScript {
             if (format.toLowerCase().contains("pe") || format.toLowerCase().contains("portable")) {
                 // Check for .NET metadata tables or CLR header
                 try {
-                    ghidra.program.model.mem.Memory memory = currentProgram.getMemory();
+                    Memory memory = currentProgram.getMemory();
                     // Look for common .NET signatures
                     if (memory.contains(currentProgram.getAddressFactory().getDefaultAddressSpace().getAddress(0x2000))) {
                         isManaged = true;
@@ -193,49 +174,24 @@ public class CompleteDecompiler extends GhidraScript {
             analysisResults.add(String.format("  Address: %s", func.getEntryPoint()));
             analysisResults.add(String.format("  Size: %d bytes", func.getBody().getNumAddresses()));
             
-            // Skip thunk functions - they can't be decompiled
-            if (func.isThunk()) {
-                analysisResults.add("  Status: Thunk function - skipped");
-                return;
-            }
+            // Decompile function
+            DecompileResults results = decompiler.decompileFunction(func, 5, monitor);
             
-            // Decompile function with very long timeout and more detailed logging
-            println("  Attempting decompilation of " + func.getName() + " at " + func.getEntryPoint());
-            DecompileResults results = decompiler.decompileFunction(func, 60, monitor);
-            
-            if (results == null) {
-                println("  ERROR: decompileFunction returned null for " + func.getName());
-                analysisResults.add("  Status: Decompilation returned null");
-                return;
-            }
-            
-            println("  Checking decompilation results for " + func.getName());
-            
-            if (results.decompileCompleted()) {
-                println("  Decompilation completed successfully for " + func.getName());
+            if (results.isValid()) {
+                ClangTokenGroup tokens = results.getCCodeMarkup();
                 String decompiledCode = results.getDecompiledFunction().getC();
                 
-                if (decompiledCode != null && decompiledCode.trim().length() > 0) {
-                    println("  Got decompiled code: " + decompiledCode.length() + " characters");
-                    analysisResults.add("  Status: Successfully decompiled");
-                    analysisResults.add(String.format("  Code preview: %s", 
-                        getFirstNonEmptyLine(decompiledCode)));
-                    
-                    // Write full function to output file
-                    writeDecompiledFunction(func, decompiledCode);
-                    
-                    // Analyze function characteristics
-                    analyzeCallReferences(func);
-                    analyzeVariables(func);
-                } else {
-                    println("  ERROR: Decompiled code is null or empty for " + func.getName());
-                    analysisResults.add("  Status: Decompilation returned empty code");
-                }
+                analysisResults.add("  Status: Successfully decompiled");
+                analysisResults.add(String.format("  Code preview: %s", 
+                    getFirstNonEmptyLine(decompiledCode)));
+                
+                // Analyze function characteristics
+                analyzeCallReferences(func);
+                analyzeVariables(func);
                 
             } else {
-                String errorMsg = results.getErrorMessage();
-                println("  ERROR: Decompilation did not complete for " + func.getName() + ": " + errorMsg);
-                analysisResults.add(String.format("  Status: Decompilation failed - %s", errorMsg));
+                analysisResults.add(String.format("  Status: Decompilation failed - %s", 
+                    results.getErrorMessage()));
             }
             
         } catch (Exception e) {
@@ -243,51 +199,15 @@ public class CompleteDecompiler extends GhidraScript {
         }
     }
     
-    private void writeDecompiledFunction(Function func, String code) {
-        try {
-            String outputDir = getScriptArgs().length > 0 ? getScriptArgs()[0] : ".";
-            String outputFile = outputDir + "/launcher.exe_decompiled.c";
-            
-            // Create the output file with header if it doesn't exist
-            java.io.File file = new java.io.File(outputFile);
-            boolean isNewFile = !file.exists();
-            
-            java.io.FileWriter writer = new java.io.FileWriter(outputFile, true);
-            
-            if (isNewFile) {
-                writer.write("// Matrix Online Launcher - Decompiled Source Code\n");
-                writer.write("// Generated by Ghidra CompleteDecompiler\n");
-                writer.write("// Analysis completed with " + currentProgram.getFunctionManager().getFunctionCount() + " functions\n\n");
-                writer.write("#include <windows.h>\n");
-                writer.write("#include <stdio.h>\n");
-                writer.write("#include <stdlib.h>\n\n");
-            }
-            
-            writer.write("// ===============================================\n");
-            writer.write("// Function: " + func.getName() + "\n");
-            writer.write("// Address: " + func.getEntryPoint() + "\n");
-            writer.write("// Size: " + func.getBody().getNumAddresses() + " bytes\n");
-            writer.write("// ===============================================\n\n");
-            writer.write(code);
-            writer.write("\n\n");
-            writer.close();
-            
-            println("Wrote function " + func.getName() + " to " + outputFile);
-            
-        } catch (Exception e) {
-            println("Failed to write function " + func.getName() + " to file: " + e.getMessage());
-        }
-    }
-    
     private void analyzeCallReferences(Function func) {
         try {
             // Analyze functions called by this function
             List<String> calledFunctions = new ArrayList<>();
-            Reference[] refs = currentProgram.getReferenceManager()
+            ReferenceIterator refIter = currentProgram.getReferenceManager()
                 .getReferencesFrom(func.getEntryPoint());
             
-            for (Reference ref : refs) {
-                if (calledFunctions.size() >= 5) break;
+            while (refIter.hasNext() && calledFunctions.size() < 5) {
+                Reference ref = refIter.next();
                 if (ref.getReferenceType().isCall()) {
                     Function calledFunc = currentProgram.getFunctionManager()
                         .getFunctionAt(ref.getToAddress());
@@ -329,9 +249,8 @@ public class CompleteDecompiler extends GhidraScript {
         
         // Sample some data types
         List<String> typeNames = new ArrayList<>();
-        java.util.Iterator<DataType> dtIterator = dtMgr.getAllDataTypes();
-        while (dtIterator.hasNext() && typeNames.size() < 10) {
-            DataType dt = dtIterator.next();
+        for (DataType dt : dtMgr.getAllDataTypes()) {
+            if (typeNames.size() >= 10) break;
             if (!dt.getName().startsWith("__")) {
                 typeNames.add(dt.getName());
             }
@@ -347,7 +266,7 @@ public class CompleteDecompiler extends GhidraScript {
         analysisResults.add("\n=== STRING ANALYSIS ===");
         
         try {
-            ghidra.program.model.mem.Memory memory = currentProgram.getMemory();
+            Memory memory = currentProgram.getMemory();
             AddressSetView executableSet = memory.getExecuteSet();
             
             // Count strings in executable sections
