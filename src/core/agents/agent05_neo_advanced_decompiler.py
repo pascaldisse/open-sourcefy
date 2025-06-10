@@ -2511,12 +2511,24 @@ void TestLocalServerConnections(void) {
         
         final_results['control_flow_graph'] = control_flow_graph
         
-        # Extract Ghidra metadata
+        # Extract Ghidra metadata with STRICT validation per rules.md Rule #53
+        functions_found = len(functions)
+        
+        # CRITICAL: According to rules.md Rule #53 (STRICT ERROR HANDLING)
+        # Agent MUST fail hard when 0 functions found from a 5MB binary
+        if functions_found == 0:
+            raise RuntimeError(
+                f"PIPELINE FAILURE - Agent 5 STRICT MODE: Found {functions_found} functions in binary. "
+                f"A 5MB+ binary should contain hundreds or thousands of functions. "
+                f"This violates rules.md Rule #53 (STRICT ERROR HANDLING) - "
+                f"Agent must fail when requirements not met. NO PLACEHOLDER CODE allowed per Rule #44."
+            )
+        
         ghidra_metadata = final_results.get('ghidra_metadata', {
             'analysis_time': final_results.get('analysis_time', 0),
-            'functions_found': len(functions),
+            'functions_found': functions_found,
             'ghidra_version': '11.0.3',
-            'success': True
+            'success': True  # Only set to True if we pass the strict validation above
         })
         
         final_results['ghidra_metadata'] = ghidra_metadata
@@ -2547,34 +2559,28 @@ void TestLocalServerConnections(void) {
         functions = final_results.get('semantic_functions', final_results.get('enhanced_functions', []))
         function_count = len(functions)
         
-        if has_functional_code and function_count == 0:
-            # Static analysis reconstruction produced functional code - this is HIGH QUALITY
-            semantic_quality = 0.8       # High semantic quality for functional code
-            function_accuracy = 0.8      # High score for functional generated code
-            variable_recovery = 0.7      # Good variable structure in generated code
-            control_flow_accuracy = 0.9  # Generated code has proper control flow
-            code_coverage = min(1.0, len(enhanced_code) / 800.0) if enhanced_code else 0.0
-        else:
-            # Traditional Ghidra-based analysis
-            function_accuracy = min(1.0, function_count / 10.0) if function_count > 0 else 0.0
-            
-            # Variable recovery quality
-            variables_found = 0
-            for func in functions:
-                if hasattr(func, 'local_variables'):
-                    variables_found += len(func.local_variables)
-                elif isinstance(func, dict) and 'variables' in func:
-                    variables_found += len(func['variables'])
-            
-            variable_recovery = min(1.0, variables_found / 20.0) if variables_found > 0 else 0.3
-            
-            # Control flow accuracy
-            control_flow_accuracy = 0.7  # Base assumption for Ghidra-based analysis
-            if is_true_decompilation:
-                control_flow_accuracy = 0.9
-            
-            # Code coverage
-            code_coverage = min(1.0, len(enhanced_code) / 1000.0) if enhanced_code else 0.0
+        # STRICT VALIDATION: Per rules.md Rule #44 and #53 - NO PLACEHOLDER CODE
+        # If function_count is 0, the agent should have already failed above
+        # This code should never execute with 0 functions due to strict validation
+        function_accuracy = min(1.0, function_count / 10.0) if function_count > 0 else 0.0
+        
+        # Variable recovery quality
+        variables_found = 0
+        for func in functions:
+            if hasattr(func, 'local_variables'):
+                variables_found += len(func.local_variables)
+            elif isinstance(func, dict) and 'variables' in func:
+                variables_found += len(func['variables'])
+        
+        variable_recovery = min(1.0, variables_found / 20.0) if variables_found > 0 else 0.3
+        
+        # Control flow accuracy
+        control_flow_accuracy = 0.7  # Base assumption for Ghidra-based analysis
+        if is_true_decompilation:
+            control_flow_accuracy = 0.9
+        
+        # Code coverage
+        code_coverage = min(1.0, len(enhanced_code) / 1000.0) if enhanced_code else 0.0
         
         # Overall score calculation
         overall_score = (
