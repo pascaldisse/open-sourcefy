@@ -138,9 +138,9 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
     
     def __init__(self):
         super().__init__(
-            agent_id=8,
+            agent_id=7,
             matrix_character=MatrixCharacter.KEYMAKER,
-            dependencies=[1, 2, 3]  # Depends on Binary Discovery, Arch Analysis, and Merovingian's decompilation
+            dependencies=[1, 2]  # Depends on Binary Discovery and Arch Analysis
         )
         
         # Load Keymaker-specific configuration
@@ -242,7 +242,7 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
             binary_path = context.get('binary_path', '')
             agent1_data = context['agent_results'][1].data  # Binary discovery
             agent2_data = context['agent_results'][2].data  # Architecture analysis
-            agent3_data = context['agent_results'][3].data  # Merovingian's decompilation
+            agent3_data = context['agent_results'][3].data if 3 in context['agent_results'] else {}  # Merovingian's decompilation (optional)
             
             self.logger.info("The Keymaker beginning comprehensive resource reconstruction...")
             
@@ -396,7 +396,7 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
     def _validate_keymaker_prerequisites(self, context: Dict[str, Any]) -> None:
         """Validate that The Keymaker has the necessary data for resource reconstruction"""
         # Check required agent results
-        required_agents = [1, 2, 3]
+        required_agents = [1, 2]
         for agent_id in required_agents:
             agent_result = context['agent_results'].get(agent_id)
             if not agent_result or agent_result.status != AgentStatus.SUCCESS:

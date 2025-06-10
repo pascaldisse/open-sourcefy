@@ -17,7 +17,7 @@ public class CompleteDecompiler extends GhidraScript {
     
     private DecompInterface decompiler;
     private List<String> analysisResults;
-    private static final int MAX_FUNCTIONS_TO_ANALYZE = 25;  // Limit for performance
+    private static final int MAX_FUNCTIONS_TO_ANALYZE = Integer.MAX_VALUE;  // No artificial limits - analyze all functions
     
     @Override
     public void run() throws Exception {
@@ -38,6 +38,9 @@ public class CompleteDecompiler extends GhidraScript {
         println("Matrix Agent 05 (Neo) - Complete Decompilation Starting...");
         
         try {
+            // CRITICAL: Ensure auto-analysis has been performed
+            ensureAutoAnalysisComplete();
+            
             // Check binary format and provide enhanced analysis
             analyzeBinaryFormat();
             
@@ -52,6 +55,37 @@ public class CompleteDecompiler extends GhidraScript {
         }
         
         println("Neo's decompilation analysis complete.");
+    }
+    
+    private void ensureAutoAnalysisComplete() throws Exception {
+        println("Ensuring Ghidra auto-analysis is complete...");
+        
+        // Force Ghidra to run auto-analysis if it hasn't been run
+        ghidra.app.services.AnalysisManager analysisManager = ghidra.app.services.AutoAnalysisManager.getAnalysisManager(currentProgram);
+        if (analysisManager != null && !analysisManager.isAnalyzing()) {
+            println("Starting Ghidra auto-analysis...");
+            analysisManager.scheduleOneTimeAnalysis(currentProgram.getMemory().getAllInitializedAddressSet(), null);
+            
+            // Wait for analysis to complete
+            int maxWaitSeconds = 60;
+            int waitCount = 0;
+            while (analysisManager.isAnalyzing() && waitCount < maxWaitSeconds) {
+                Thread.sleep(1000);
+                waitCount++;
+                if (waitCount % 10 == 0) {
+                    println(String.format("Waiting for auto-analysis... (%d/%d seconds)", waitCount, maxWaitSeconds));
+                }
+            }
+            
+            if (analysisManager.isAnalyzing()) {
+                println("WARNING: Auto-analysis still running after timeout");
+            } else {
+                println("Auto-analysis completed");
+            }
+        }
+        
+        FunctionManager funcMgr = currentProgram.getFunctionManager();
+        println(String.format("Auto-analysis check complete. Functions found: %d", funcMgr.getFunctionCount()));
     }
     
     private void analyzeBinaryFormat() {

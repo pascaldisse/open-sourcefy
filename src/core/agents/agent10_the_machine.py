@@ -17,9 +17,9 @@ class Agent10_TheMachine(ReconstructionAgent):
     
     def __init__(self):
         super().__init__(
-            agent_id=10,
+            agent_id=9,
             matrix_character=MatrixCharacter.MACHINE,
-            dependencies=[5, 9]  # Depends on Neo (agent 5) and Commander Locke (agent 9)
+            dependencies=[8]  # Depends on Commander Locke (agent 8)
         )
 
     def _validate_prerequisites(self, context: Dict[str, Any]) -> None:
@@ -31,19 +31,19 @@ class Agent10_TheMachine(ReconstructionAgent):
         if 'binary_metadata' not in shared_memory:
             shared_memory['binary_metadata'] = {}
         
-        # Check for dependencies more flexibly - Agent 10 depends on Agent 5 (Neo) or Agent 9
+        # Check for dependencies more flexibly - Agent 9 depends on Agent 8 (Commander Locke)
         dependencies_met = False
         agent_results = context.get('agent_results', {})
         
-        # Check for Agent 5 (Neo) results - PRIMARY SOURCE
+        # Check for Agent 8 (Commander Locke) results - PRIMARY SOURCE
+        if 8 in agent_results or 8 in shared_memory['analysis_results']:
+            dependencies_met = True
+            self.logger.info("✅ Found Agent 8 (Commander Locke) dependency - primary reconstruction source available")
+        
+        # Also check for Agent 5 (Neo) for alternative decompilation source
         if 5 in agent_results or 5 in shared_memory['analysis_results']:
             dependencies_met = True
-            self.logger.info("✅ Found Agent 5 (Neo) dependency - primary decompilation source available")
-        
-        # Check for Agent 9 results
-        if 9 in agent_results or 9 in shared_memory['analysis_results']:
-            dependencies_met = True
-            self.logger.info("✅ Found Agent 9 (Commander Locke) dependency")
+            self.logger.info("✅ Found Agent 5 (Neo) dependency - alternative decompilation source available")
         
         # Also check for any source code from previous agents 
         available_sources = any(
@@ -155,8 +155,30 @@ class Agent10_TheMachine(ReconstructionAgent):
             if isinstance(resource_data, dict):
                 sources['resource_files'].update(resource_data.get('resource_files', {}))
         
-        # Gather from Neo Advanced Decompiler (Agent 5) - PRIMARY SOURCE
-        if 5 in all_results and hasattr(all_results[5], 'status') and all_results[5].status == AgentStatus.SUCCESS:
+        # Gather from Commander Locke (Agent 8) - PRIMARY SOURCE
+        if 8 in all_results and hasattr(all_results[8], 'status') and all_results[8].status == AgentStatus.SUCCESS:
+            locke_data = all_results[8].data
+            if isinstance(locke_data, dict):
+                # Check for reconstructed source files from Commander Locke
+                reconstructed_sources = locke_data.get('source_files', {})
+                if reconstructed_sources:
+                    sources['source_files'].update(reconstructed_sources)
+                    self.logger.info(f"✅ Found Commander Locke's reconstructed source files ({len(reconstructed_sources)} files)")
+                
+                # Also check for header files
+                header_files = locke_data.get('header_files', {})
+                if header_files:
+                    sources['header_files'].update(header_files)
+                    self.logger.info(f"✅ Found Commander Locke's header files ({len(header_files)} files)")
+                
+                # Build files
+                build_files = locke_data.get('build_files', {})
+                if build_files:
+                    sources['build_files'].update(build_files)
+                    self.logger.info(f"✅ Found Commander Locke's build files ({len(build_files)} files)")
+        
+        # Fallback: Gather from Neo Advanced Decompiler (Agent 5) if Commander Locke not available
+        if not sources['source_files'] and 5 in all_results and hasattr(all_results[5], 'status') and all_results[5].status == AgentStatus.SUCCESS:
             neo_data = all_results[5].data
             if isinstance(neo_data, dict):
                 # Check for decompiled code from Neo's analysis
@@ -170,9 +192,10 @@ class Agent10_TheMachine(ReconstructionAgent):
                 for func_name, func_data in enhanced_functions.items():
                     if isinstance(func_data, dict) and func_data.get('code'):
                         sources['source_files'][f"{func_name}.c"] = func_data['code']
-        else:
-            # If Agent 5 results not available, try to find existing decompiled source files
-            self.logger.info("Agent 5 results not available - searching for existing decompiled source files...")
+        
+        # If no sources found, try to find existing decompiled source files
+        if not sources['source_files']:
+            self.logger.info("No agent sources available - searching for existing decompiled source files...")
             self._try_load_existing_source_files(sources)
         
         # Gather from Advanced Decompiler (Agent 7)

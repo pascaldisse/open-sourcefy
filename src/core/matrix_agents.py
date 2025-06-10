@@ -327,23 +327,23 @@ class ValidationAgent(MatrixAgent):
         self.completeness_threshold = self.config.get_value('validation.completeness_threshold', 0.7)
 
 
-# Matrix Agent Dependencies - Optimized for parallel execution after Agent 1
+# Matrix Agent Dependencies - Logical execution order with compilation before binary comparison
 MATRIX_DEPENDENCIES = {
     1: [],                    # Sentinel - Entry point, no dependencies
     2: [1],                   # Architect - Depends on Sentinel
     3: [1],                   # Merovingian - Depends on Sentinel  
     4: [1],                   # Agent Smith - Depends on Sentinel
     5: [1, 2],               # Neo - Depends on Sentinel and Architect
-    6: [1, 2],               # Twins - Depends on Sentinel and Architect
-    7: [1, 2],               # Trainman - Depends on Sentinel and Architect
-    8: [1, 2],               # Keymaker - Depends on Sentinel and Architect
-    9: [5, 6, 7, 8],         # Commander Locke - Depends on Phase B agents
-    10: [9],                 # Machine - Depends on Commander Locke
-    11: [10],                # Oracle - Depends on Machine
-    12: [5, 6, 7, 8],        # Link - Depends on Phase B agents (parallel to Locke)
-    13: [5, 6, 7, 8],        # Agent Johnson - Depends on Phase B agents (parallel to Locke)
-    14: [9, 10, 11],         # Cleaner - Depends on early Phase C agents
-    15: [9, 10, 11],         # Analyst - Depends on early Phase C agents
+    6: [1, 2],               # Trainman - Depends on Sentinel and Architect (was Agent 7)
+    7: [1, 2],               # Keymaker - Depends on Sentinel and Architect (was Agent 8)
+    8: [5, 6, 7],            # Commander Locke - Depends on Phase B agents (was Agent 9)
+    9: [8],                  # Machine - Depends on Commander Locke (was Agent 10)
+    10: [9],                 # Twins - Depends on Machine for binary comparison (was Agent 6)
+    11: [10],                # Oracle - Depends on Twins comparison (was Agent 11)
+    12: [5, 6, 7],           # Link - Depends on Phase B agents (was Agent 12)
+    13: [5, 6, 7],           # Agent Johnson - Depends on Phase B agents
+    14: [8, 9, 10],          # Cleaner - Depends on early Phase C agents
+    15: [8, 9, 10],          # Analyst - Depends on early Phase C agents
     16: [14, 15]             # Agent Brown - Final validation
 }
 

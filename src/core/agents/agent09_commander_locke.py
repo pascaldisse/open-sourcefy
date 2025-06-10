@@ -59,9 +59,9 @@ class CommanderLockeAgent(ReconstructionAgent):
     
     def __init__(self):
         super().__init__(
-            agent_id=9,
+            agent_id=8,
             matrix_character=MatrixCharacter.COMMANDER_LOCKE if HAS_MATRIX_FRAMEWORK else "commander_locke",
-            dependencies=[5, 6, 7, 8]  # Depends on Neo, Twins, Trainman, Keymaker
+            dependencies=[5, 6, 7]  # Depends on Neo, Trainman, Keymaker
         )
         
         # Core components (logger inherited from parent class)
@@ -234,17 +234,17 @@ class CommanderLockeAgent(ReconstructionAgent):
                 structures = data.get('data_structures', {})
                 integration_data['data_structures'].update(structures)
                 
-            elif agent_id == 6:  # Twins - Binary diff analysis
-                diff_data = data.get('binary_analysis', {})
-                integration_data['binary_metadata'].update(diff_data)
-                
-            elif agent_id == 7:  # Trainman - Assembly analysis  
+            elif agent_id == 6:  # Trainman - Assembly analysis (reordered from 7)
                 assembly_data = data.get('assembly_analysis', {})
                 integration_data['architecture_info'].update(assembly_data)
                 
-            elif agent_id == 8:  # Keymaker - Resource reconstruction
+            elif agent_id == 7:  # Keymaker - Resource reconstruction (reordered from 8)
                 resources = data.get('reconstructed_resources', {})
                 integration_data['constants'].update(resources)
+                
+            elif agent_id == 10:  # Twins - Binary diff analysis (reordered from 6)
+                diff_data = data.get('binary_analysis', {})
+                integration_data['binary_metadata'].update(diff_data)
                 
                 globals_data = data.get('global_variables', {})
                 integration_data['global_variables'].update(globals_data)

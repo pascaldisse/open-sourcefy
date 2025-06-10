@@ -44,40 +44,40 @@ try:
 except ImportError as e:
     failed_imports.append(f"Agent 5 (Neo): {e}")
 
-# Agent 6: Twins
-try:
-    from .agent06_twins_binary_diff import Agent6_Twins_BinaryDiff
-    MATRIX_AGENTS[6] = Agent6_Twins_BinaryDiff
-except ImportError as e:
-    failed_imports.append(f"Agent 6 (Twins): {e}")
-
-# Agent 7: Trainman
+# Agent 6: Trainman (reordered from Agent 7)
 try:
     from .agent07_trainman_assembly_analysis import Agent7_Trainman_AssemblyAnalysis
-    MATRIX_AGENTS[7] = Agent7_Trainman_AssemblyAnalysis
+    MATRIX_AGENTS[6] = Agent7_Trainman_AssemblyAnalysis
 except ImportError as e:
-    failed_imports.append(f"Agent 7 (Trainman): {e}")
+    failed_imports.append(f"Agent 6 (Trainman): {e}")
 
-# Agent 8: Keymaker
+# Agent 7: Keymaker (reordered from Agent 8)
 try:
     from .agent08_keymaker_resource_reconstruction import Agent8_Keymaker_ResourceReconstruction
-    MATRIX_AGENTS[8] = Agent8_Keymaker_ResourceReconstruction
+    MATRIX_AGENTS[7] = Agent8_Keymaker_ResourceReconstruction
 except ImportError as e:
-    failed_imports.append(f"Agent 8 (Keymaker): {e}")
+    failed_imports.append(f"Agent 7 (Keymaker): {e}")
 
-# Agent 9: Commander Locke  
+# Agent 8: Commander Locke (reordered from Agent 9)
 try:
     from .agent09_commander_locke import CommanderLockeAgent
-    MATRIX_AGENTS[9] = CommanderLockeAgent
+    MATRIX_AGENTS[8] = CommanderLockeAgent
 except ImportError as e:
-    failed_imports.append(f"Agent 9 (Commander Locke): {e}")
+    failed_imports.append(f"Agent 8 (Commander Locke): {e}")
 
-# Agent 10: The Machine
+# Agent 9: The Machine (reordered from Agent 10)
 try:
     from .agent10_the_machine import Agent10_TheMachine
-    MATRIX_AGENTS[10] = Agent10_TheMachine
+    MATRIX_AGENTS[9] = Agent10_TheMachine
 except ImportError as e:
-    failed_imports.append(f"Agent 10 (The Machine): {e}")
+    failed_imports.append(f"Agent 9 (The Machine): {e}")
+
+# Agent 10: Twins (reordered from Agent 6)
+try:
+    from .agent06_twins_binary_diff import Agent6_Twins_BinaryDiff
+    MATRIX_AGENTS[10] = Agent6_Twins_BinaryDiff
+except ImportError as e:
+    failed_imports.append(f"Agent 10 (Twins): {e}")
 
 # Agent 11: The Oracle
 try:
@@ -173,42 +173,42 @@ if 5 in MATRIX_AGENTS:
 
 if 6 in MATRIX_AGENTS:
     AGENT_METADATA[6] = {
-        'name': 'Twins',
-        'character': 'twins',
-        'description': 'Binary differential analysis and comparison',
-        'dependencies': [1, 2, 5]
+        'name': 'Trainman',
+        'character': 'trainman',
+        'description': 'Advanced assembly analysis and transportation',
+        'dependencies': [1, 2]
     }
 
 if 7 in MATRIX_AGENTS:
     AGENT_METADATA[7] = {
-        'name': 'Trainman',
-        'character': 'trainman',
-        'description': 'Advanced assembly analysis and transportation',
-        'dependencies': [1, 2, 5]
+        'name': 'Keymaker',
+        'character': 'keymaker',
+        'description': 'Resource reconstruction and access management',
+        'dependencies': [1, 2]
     }
 
 if 8 in MATRIX_AGENTS:
     AGENT_METADATA[8] = {
-        'name': 'Keymaker',
-        'character': 'keymaker',
-        'description': 'Resource reconstruction and access management',
-        'dependencies': [1, 2, 5, 6, 7]
+        'name': 'CommanderLocke',
+        'character': 'commander_locke',
+        'description': 'Global reconstruction orchestration',
+        'dependencies': [5, 6, 7]
     }
 
 if 9 in MATRIX_AGENTS:
     AGENT_METADATA[9] = {
-        'name': 'CommanderLocke',
-        'character': 'commander_locke',
-        'description': 'Global reconstruction orchestration',
-        'dependencies': [1, 2, 3, 4, 5]
+        'name': 'TheMachine',
+        'character': 'the_machine',
+        'description': 'Compilation orchestration and build systems',
+        'dependencies': [8]
     }
 
 if 10 in MATRIX_AGENTS:
     AGENT_METADATA[10] = {
-        'name': 'TheMachine',
-        'character': 'the_machine',
-        'description': 'Compilation orchestration and build systems',
-        'dependencies': [5, 6, 7, 8]
+        'name': 'Twins',
+        'character': 'twins',
+        'description': 'Binary differential analysis and comparison',
+        'dependencies': [1, 2, 5]
     }
 
 if 11 in MATRIX_AGENTS:
@@ -216,7 +216,7 @@ if 11 in MATRIX_AGENTS:
         'name': 'TheOracle',
         'character': 'the_oracle',
         'description': 'Final validation and truth verification',
-        'dependencies': [9, 10]
+        'dependencies': [10]
     }
 
 if 12 in MATRIX_AGENTS:
@@ -224,7 +224,7 @@ if 12 in MATRIX_AGENTS:
         'name': 'Link',
         'character': 'link',
         'description': 'Cross-reference and linking analysis',
-        'dependencies': [1, 2]
+        'dependencies': [5, 6, 7]
     }
 
 if 13 in MATRIX_AGENTS:
@@ -232,7 +232,7 @@ if 13 in MATRIX_AGENTS:
         'name': 'AgentJohnson',
         'character': 'agent_johnson',
         'description': 'Security analysis and vulnerability detection',
-        'dependencies': [5, 6, 7, 8]
+        'dependencies': [5, 6, 7]
     }
 
 if 14 in MATRIX_AGENTS:
@@ -240,7 +240,7 @@ if 14 in MATRIX_AGENTS:
         'name': 'TheCleaner',
         'character': 'the_cleaner',
         'description': 'Code cleanup and optimization',
-        'dependencies': [9, 10, 11]
+        'dependencies': [8, 9, 10]
     }
 
 if 15 in MATRIX_AGENTS:
@@ -248,7 +248,7 @@ if 15 in MATRIX_AGENTS:
         'name': 'Analyst',
         'character': 'analyst',
         'description': 'Advanced metadata analysis and intelligence synthesis',
-        'dependencies': [9, 10, 11]
+        'dependencies': [8, 9, 10]
     }
 
 if 16 in MATRIX_AGENTS:
@@ -291,8 +291,8 @@ def create_all_agents():
 
 def get_decompile_agents():
     """Get agents used for decompilation pipeline"""
-    # Based on CLAUDE.md: --decompile-only uses agents 1,2,5,7,14
-    decompile_agent_ids = [1, 2, 5, 7, 14]
+    # Based on CLAUDE.md: --decompile-only uses agents 1,2,5,6,14 (6 is now Trainman, was 7)
+    decompile_agent_ids = [1, 2, 5, 6, 14]
     return {aid: MATRIX_AGENTS[aid] for aid in decompile_agent_ids if aid in MATRIX_AGENTS}
 
 
@@ -319,15 +319,15 @@ if 4 in MATRIX_AGENTS:
 if 5 in MATRIX_AGENTS:
     __all__.append('NeoAgent')
 if 6 in MATRIX_AGENTS:
-    __all__.append('Agent6_Twins_BinaryDiff')
-if 7 in MATRIX_AGENTS:
     __all__.append('Agent7_Trainman_AssemblyAnalysis')
-if 8 in MATRIX_AGENTS:
+if 7 in MATRIX_AGENTS:
     __all__.append('Agent8_Keymaker_ResourceReconstruction')
-if 9 in MATRIX_AGENTS:
+if 8 in MATRIX_AGENTS:
     __all__.append('CommanderLockeAgent')
-if 10 in MATRIX_AGENTS:
+if 9 in MATRIX_AGENTS:
     __all__.append('Agent10_TheMachine')
+if 10 in MATRIX_AGENTS:
+    __all__.append('Agent6_Twins_BinaryDiff')
 if 11 in MATRIX_AGENTS:
     __all__.append('Agent11_TheOracle')
 if 12 in MATRIX_AGENTS:

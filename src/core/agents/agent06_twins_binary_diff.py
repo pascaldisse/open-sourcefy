@@ -88,7 +88,7 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
         super().__init__(
             agent_id=6,
             matrix_character=MatrixCharacter.TWINS,
-            dependencies=[1, 2, 3, 10]  # Depends on Binary Discovery, Arch Analysis, Merovingian's decompilation, and The Machine's compilation
+            dependencies=[1, 2, 5]  # Depends on Sentinel, Architect, Neo
         )
         
         # Load Twins-specific configuration
@@ -146,7 +146,7 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
             binary_path = context.get('binary_path', '')
             agent1_data = context['agent_results'][1].data  # Binary discovery
             agent2_data = context['agent_results'][2].data  # Architecture analysis
-            agent3_data = context['agent_results'][3].data  # Merovingian's decompilation
+            agent5_data = context['agent_results'][5].data  # Neo's advanced decompilation
             
             self.logger.info("The Twins beginning dual-state binary analysis...")
             
@@ -169,7 +169,7 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
             # Phase 1: Multi-Level Binary Comparison
             self.logger.info("Phase 1: Multi-level binary comparison")
             comparison_results = self._perform_multilevel_comparison(
-                binary_path, agent1_data, agent2_data, agent3_data
+                binary_path, agent1_data, agent2_data, agent5_data
             )
             comparison_results['size_comparison'] = size_comparison
             
@@ -182,7 +182,7 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
             # Phase 3: Structural Change Analysis
             self.logger.info("Phase 3: Structural change analysis")
             structural_changes = self._analyze_structural_changes(
-                comparison_results, agent3_data
+                comparison_results, agent5_data
             )
             
             # Phase 4: AI-Enhanced Interpretation (if available)
@@ -269,7 +269,7 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
     def _validate_twins_prerequisites(self, context: Dict[str, Any]) -> None:
         """Validate that The Twins have the necessary data for comparison"""
         # Check required agent results
-        required_agents = [1, 2, 3]
+        required_agents = [1, 2, 5]  # Updated to match new dependencies
         for agent_id in required_agents:
             agent_result = context['agent_results'].get(agent_id)
             if not agent_result or agent_result.status != AgentStatus.SUCCESS:
@@ -1646,38 +1646,38 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
         generated_binary_path = None
         generated_size = 0
         
-        # PRIORITIZE Agent 10 results first (most reliable source)
+        # PRIORITIZE Agent 9 (The Machine) results first (most reliable source for compiled binary)
         agent_results = context.get('agent_results', {})
         self.logger.info(f"🔍 DEBUG: Available agent results: {list(agent_results.keys())}")
         
-        if 10 in agent_results:
-            agent10_result = agent_results[10]
-            self.logger.info(f"🔍 DEBUG: Agent 10 status: {agent10_result.status}")
+        if 9 in agent_results:
+            agent9_result = agent_results[9]
+            self.logger.info(f"🔍 DEBUG: Agent 9 status: {agent9_result.status}")
             
-            if hasattr(agent10_result, 'data') and isinstance(agent10_result.data, dict):
-                agent10_data = agent10_result.data
-                self.logger.info(f"🔍 DEBUG: Agent 10 data keys: {list(agent10_data.keys())}")
+            if hasattr(agent9_result, 'data') and isinstance(agent9_result.data, dict):
+                agent9_data = agent9_result.data
+                self.logger.info(f"🔍 DEBUG: Agent 9 data keys: {list(agent9_data.keys())}")
                 
-                compilation_results = agent10_data.get('compilation_results', {})
+                compilation_results = agent9_data.get('compilation_results', {})
                 binary_outputs = compilation_results.get('binary_outputs', {})
                 self.logger.info(f"🔍 DEBUG: Binary outputs: {binary_outputs}")
                 
                 if binary_outputs:
                     # Get first available binary path
                     generated_binary_path = next(iter(binary_outputs.values()))
-                    self.logger.info(f"🔍 DEBUG: Found binary path from Agent 10: {generated_binary_path}")
+                    self.logger.info(f"🔍 DEBUG: Found binary path from Agent 9: {generated_binary_path}")
                     
                     if generated_binary_path and os.path.exists(generated_binary_path):
                         generated_size = os.path.getsize(generated_binary_path)
-                        self.logger.info(f"✅ Found compiled binary from Agent 10: {generated_binary_path} ({generated_size:,} bytes)")
+                        self.logger.info(f"✅ Found compiled binary from Agent 9: {generated_binary_path} ({generated_size:,} bytes)")
                     else:
-                        self.logger.warning(f"⚠️ Binary path from Agent 10 doesn't exist: {generated_binary_path}")
+                        self.logger.warning(f"⚠️ Binary path from Agent 9 doesn't exist: {generated_binary_path}")
                 else:
-                    self.logger.warning("⚠️ Agent 10 has no binary outputs")
+                    self.logger.warning("⚠️ Agent 9 has no binary outputs")
             else:
-                self.logger.warning("⚠️ Agent 10 data is not available or not a dict")
+                self.logger.warning("⚠️ Agent 9 data is not available or not a dict")
         else:
-            self.logger.warning("⚠️ Agent 10 results not available - may not have run")
+            self.logger.warning("⚠️ Agent 9 results not available - may not have run")
         
         # FALLBACK: Search for generated executable in output paths (secondary method)
         if not generated_binary_path:
