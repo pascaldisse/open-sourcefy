@@ -273,7 +273,7 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
         for agent_id in required_agents:
             agent_result = context['agent_results'].get(agent_id)
             if not agent_result or agent_result.status != AgentStatus.SUCCESS:
-                raise ValueError(f"Agent {agent_id} dependency not satisfied")
+                raise ValueError(f"Dependency Agent{agent_id:02d} not satisfied")
         
         # Check binary path
         binary_path = context.get('binary_path')

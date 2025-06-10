@@ -17,7 +17,7 @@ public class CompleteDecompiler extends GhidraScript {
     
     private DecompInterface decompiler;
     private List<String> analysisResults;
-    private static final int MAX_FUNCTIONS_TO_ANALYZE = 25;  // Limit for testing - analyze first 25 functions
+    private static final int MAX_FUNCTIONS_TO_ANALYZE = 5;  // Test with just 5 functions first
     
     @Override
     public void run() throws Exception {
@@ -63,17 +63,47 @@ public class CompleteDecompiler extends GhidraScript {
     private void ensureAutoAnalysisComplete() throws Exception {
         println("Ensuring Ghidra auto-analysis is complete...");
         
-        // Note: Auto-analysis is typically run automatically during import
-        // For headless mode, analysis is usually complete when script starts
-        FunctionManager funcMgr = currentProgram.getFunctionManager();
-        println(String.format("Analysis status check: Functions found: %d", funcMgr.getFunctionCount()));
+        // Force auto-analysis to run and wait for completion
+        ghidra.app.services.AutoAnalysisManager analysisManager = ghidra.app.services.AutoAnalysisManager.getAnalysisManager(currentProgram);
         
-        if (funcMgr.getFunctionCount() == 0) {
-            println("WARNING: No functions detected - this may indicate:");
-            println("  1. The binary is packed/obfuscated");
-            println("  2. The binary is a .NET managed executable");
-            println("  3. Auto-analysis has not completed");
-            println("  4. The binary format is not supported");
+        if (analysisManager != null) {
+            println("Found analysis manager - checking analysis status...");
+            
+            // If analysis is not running, start it
+            if (!analysisManager.isAnalyzing()) {
+                println("Analysis not running - starting auto-analysis...");
+                analysisManager.startAnalysis(currentProgram, null);
+            }
+            
+            // Wait for analysis to complete with timeout
+            int maxWaitSeconds = 300; // 5 minutes
+            int waitCount = 0;
+            
+            while (analysisManager.isAnalyzing() && waitCount < maxWaitSeconds) {
+                if (waitCount % 30 == 0) {
+                    println(String.format("Waiting for auto-analysis to complete... (%d/%d seconds)", waitCount, maxWaitSeconds));
+                }
+                Thread.sleep(1000);
+                waitCount++;
+            }
+            
+            if (analysisManager.isAnalyzing()) {
+                println("WARNING: Auto-analysis still running after timeout - proceeding anyway");
+            } else {
+                println("Auto-analysis completed successfully");
+            }
+        } else {
+            println("WARNING: No analysis manager found");
+        }
+        
+        FunctionManager funcMgr = currentProgram.getFunctionManager();
+        int functionCount = funcMgr.getFunctionCount();
+        println(String.format("Final analysis status: Functions found: %d", functionCount));
+        
+        if (functionCount == 0) {
+            println("ERROR: Still no functions detected after auto-analysis");
+            println("This indicates a fundamental issue with binary analysis");
+            throw new Exception("No functions detected - analysis failed");
         }
     }
     
@@ -169,13 +199,24 @@ public class CompleteDecompiler extends GhidraScript {
                 return;
             }
             
-            // Decompile function with longer timeout
-            DecompileResults results = decompiler.decompileFunction(func, 30, monitor);
+            // Decompile function with very long timeout and more detailed logging
+            println("  Attempting decompilation of " + func.getName() + " at " + func.getEntryPoint());
+            DecompileResults results = decompiler.decompileFunction(func, 60, monitor);
             
-            if (results != null && results.decompileCompleted()) {
+            if (results == null) {
+                println("  ERROR: decompileFunction returned null for " + func.getName());
+                analysisResults.add("  Status: Decompilation returned null");
+                return;
+            }
+            
+            println("  Checking decompilation results for " + func.getName());
+            
+            if (results.decompileCompleted()) {
+                println("  Decompilation completed successfully for " + func.getName());
                 String decompiledCode = results.getDecompiledFunction().getC();
                 
                 if (decompiledCode != null && decompiledCode.trim().length() > 0) {
+                    println("  Got decompiled code: " + decompiledCode.length() + " characters");
                     analysisResults.add("  Status: Successfully decompiled");
                     analysisResults.add(String.format("  Code preview: %s", 
                         getFirstNonEmptyLine(decompiledCode)));
@@ -187,11 +228,13 @@ public class CompleteDecompiler extends GhidraScript {
                     analyzeCallReferences(func);
                     analyzeVariables(func);
                 } else {
+                    println("  ERROR: Decompiled code is null or empty for " + func.getName());
                     analysisResults.add("  Status: Decompilation returned empty code");
                 }
                 
             } else {
-                String errorMsg = (results != null) ? results.getErrorMessage() : "No results returned";
+                String errorMsg = results.getErrorMessage();
+                println("  ERROR: Decompilation did not complete for " + func.getName() + ": " + errorMsg);
                 analysisResults.add(String.format("  Status: Decompilation failed - %s", errorMsg));
             }
             
