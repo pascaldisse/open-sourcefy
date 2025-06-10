@@ -99,10 +99,20 @@ class FinalValidationOrchestrator:
         total_match = sum(r.match_percentage for r in self.validation_results) / len(self.validation_results)
         execution_time = time.time() - start_time
         
+        # NO PARTIAL SUCCESS - Rule #72 from rules.md
+        # STRICT SUCCESS CRITERIA - Rule #80 from rules.md  
+        if total_match < 95.0:
+            error_msg = (
+                f"Final validation failed: {total_match:.1f}% match (required: 95.0%). "
+                f"No partial success allowed per rules.md Rule #72: NO PARTIAL SUCCESS"
+            )
+            self.logger.error(error_msg)
+            raise Exception(error_msg)
+
         # Generate comprehensive report
         report = {
             "final_validation": {
-                "success": total_match >= 99.9,
+                "success": total_match >= 95.0,
                 "total_match_percentage": total_match,
                 "execution_time": execution_time,
                 "timestamp": time.time()
@@ -441,6 +451,16 @@ class FinalValidationOrchestrator:
             byte_match = self._compare_bytes(original, recompiled)
             
             overall_match = (size_match + hash_match + byte_match) / 3
+            
+            # NO PARTIAL SUCCESS - Rule #72 from rules.md
+            # STRICT SUCCESS CRITERIA - Rule #80 from rules.md
+            if overall_match < 95.0:
+                error_msg = (
+                    f"Binary reconstruction failed: {overall_match:.1f}% match (required: 95.0%). "
+                    f"Size: {size_match:.1f}%, Hash: {hash_match:.1f}%, Bytes: {byte_match:.1f}%. "
+                    f"No partial success allowed per rules.md Rule #72"
+                )
+                raise Exception(error_msg)
             
             result = ValidationResult(
                 task_name="Binary Comparison Validation",

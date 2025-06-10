@@ -1688,13 +1688,14 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
         else:
             size_similarity = 0.0
         
-        # Determine if pipeline should fail
-        # CRITICAL FIX: Don't fail pipeline if no generated binary exists yet
-        # This happens when Agent 06 runs before Agent 10 (The Machine)
+        # NO FALLBACKS EVER - Rule #1 from rules.md
+        # FAIL FAST - Rule #25 from rules.md
+        # If no generated binary exists, this means previous agents failed to produce output
         should_fail_pipeline = (
-            self.fail_pipeline_on_size_mismatch and 
-            generated_size > 0 and  # Only fail if there IS a generated binary
-            size_similarity < self.size_similarity_threshold
+            self.fail_pipeline_on_size_mismatch and (
+                generated_size == 0 or  # FAIL FAST: No generated binary means pipeline failure
+                size_similarity < self.size_similarity_threshold
+            )
         )
         
         size_comparison = {
@@ -1710,13 +1711,12 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
         }
         
         if should_fail_pipeline:
-            if size_similarity < 0.01:  # Less than 1%
+            if generated_size == 0:
+                size_comparison['failure_reason'] = f"PIPELINE FAILURE: No generated binary found - previous agents failed to produce compilation output"
+            elif size_similarity < 0.01:  # Less than 1%
                 size_comparison['failure_reason'] = f"Generated binary extremely small ({generated_size:,} bytes vs {original_size:,} bytes) - indicates compilation failure"
             else:
                 size_comparison['failure_reason'] = f"Size similarity {size_similarity:.2%} below threshold {self.size_similarity_threshold:.1%}"
-        elif generated_size == 0:
-            # No generated binary yet - this is expected when Twins runs before Machine
-            size_comparison['failure_reason'] = "No generated binary found yet - Agent 10 (The Machine) has not run compilation"
         
         self.logger.info(f"Size comparison: Original={original_size:,} bytes, Generated={generated_size:,} bytes, Similarity={size_similarity:.2%}")
         

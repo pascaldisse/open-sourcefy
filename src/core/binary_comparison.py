@@ -244,19 +244,10 @@ class BinaryComparisonEngine:
         try:
             return self._generate_comparison_report(original_path, compared_path, comparison_type)
         except Exception as e:
+            # NO FALLBACKS EVER - Rule #1 from rules.md
+            # STRICT ERROR HANDLING - Rule #53 from rules.md
             self.logger.error(f"Failed to generate comparison report: {e}", exc_info=True)
-            # Return error report
-            return ComparisonReport(
-                comparison_id="error",
-                timestamp=time.time(),
-                comparison_type=comparison_type,
-                result=ComparisonResult.ERROR,
-                overall_similarity=0.0,
-                original_binary=original_path,
-                compared_binary=compared_path,
-                original_metrics=BinaryMetrics(),
-                compared_metrics=BinaryMetrics()
-            )
+            raise RuntimeError(f"Binary comparison failed: {e}. No fallback comparison allowed per rules.md Rule #1") from e
     
     def validate_semantic_equivalence(self, original_path: Path, reconstructed_path: Path) -> Dict[str, Any]:
         """
@@ -450,16 +441,18 @@ class BinaryComparisonEngine:
                 self._extract_elf_metrics(binary_path, metrics)
                 metrics.platform = 'ELF'
             else:
-                # For non-PE/ELF files or mock binaries, use basic analysis
-                metrics.section_count = 1
-                metrics.function_count = max(1, metrics.file_size // 1000)  # Rough estimate
-                metrics.platform = 'unknown'
+                # NO FALLBACKS EVER - Rule #1 from rules.md  
+                # NO MOCK IMPLEMENTATIONS - Rule #5 from rules.md
+                # FAIL FAST - Rule #25 from rules.md
+                raise ValueError(f"Unsupported binary format: {binary_path}. Only PE and ELF binaries supported. No fallback analysis allowed per rules.md Rule #1")
             
             return metrics
             
         except Exception as e:
+            # NO FALLBACKS EVER - Rule #1 from rules.md
+            # STRICT ERROR HANDLING - Rule #53 from rules.md  
             self.logger.error(f"Failed to extract metrics from {binary_path}: {e}")
-            return BinaryMetrics()
+            raise RuntimeError(f"Binary metrics extraction failed for {binary_path}: {e}. No fallback metrics allowed per rules.md Rule #1") from e
     
     def _is_pe_binary(self, binary_path: str) -> bool:
         """Check if binary is PE format"""
@@ -533,11 +526,10 @@ class BinaryComparisonEngine:
                 metrics.data_size = metrics.file_size // 2
                 
         except Exception as e:
-            self.logger.debug(f"PE metrics extraction failed: {e}")
-            # Set defaults
-            metrics.section_count = 1
-            metrics.function_count = 1
-            metrics.architecture = 'unknown'
+            # NO FALLBACKS EVER - Rule #1 from rules.md
+            # NO MOCK IMPLEMENTATIONS - Rule #5 from rules.md
+            self.logger.error(f"PE metrics extraction failed: {e}")
+            raise RuntimeError(f"PE analysis failed for {binary_path}: {e}. No fallback metrics allowed per rules.md Rule #1") from e
     
     def _extract_elf_metrics(self, binary_path: str, metrics: BinaryMetrics):
         """Extract ELF-specific metrics"""
@@ -566,10 +558,10 @@ class BinaryComparisonEngine:
                 metrics.data_size = metrics.file_size // 2
                 
         except Exception as e:
-            self.logger.warning(f"ELF analysis failed: {e}")
-            metrics.section_count = 1
-            metrics.function_count = 1
-            metrics.architecture = 'unknown'
+            # NO FALLBACKS EVER - Rule #1 from rules.md
+            # NO MOCK IMPLEMENTATIONS - Rule #5 from rules.md  
+            self.logger.error(f"ELF analysis failed: {e}")
+            raise RuntimeError(f"ELF analysis failed for {binary_path}: {e}. No fallback metrics allowed per rules.md Rule #1") from e
     
     def _calculate_entropy(self, data: bytes) -> float:
         """Calculate Shannon entropy of binary data"""

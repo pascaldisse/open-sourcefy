@@ -38,6 +38,9 @@ public class CompleteDecompiler extends GhidraScript {
         println("Matrix Agent 05 (Neo) - Complete Decompilation Starting...");
         
         try {
+            // Check binary format and provide enhanced analysis
+            analyzeBinaryFormat();
+            
             // Perform comprehensive analysis
             analyzeAllFunctions();
             analyzeDataTypes();
@@ -51,6 +54,46 @@ public class CompleteDecompiler extends GhidraScript {
         println("Neo's decompilation analysis complete.");
     }
     
+    private void analyzeBinaryFormat() {
+        analysisResults.add("=== BINARY FORMAT ANALYSIS ===");
+        
+        try {
+            // Get program information
+            String format = currentProgram.getExecutableFormat();
+            String arch = currentProgram.getLanguage().getProcessor().toString();
+            String compiler = currentProgram.getCompilerSpec().getCompilerSpecID().getIdAsString();
+            
+            analysisResults.add(String.format("Format: %s", format));
+            analysisResults.add(String.format("Architecture: %s", arch));
+            analysisResults.add(String.format("Compiler: %s", compiler));
+            
+            // Check for .NET/managed code characteristics
+            boolean isManaged = false;
+            if (format.toLowerCase().contains("pe") || format.toLowerCase().contains("portable")) {
+                // Check for .NET metadata tables or CLR header
+                try {
+                    Memory memory = currentProgram.getMemory();
+                    // Look for common .NET signatures
+                    if (memory.contains(currentProgram.getAddressFactory().getDefaultAddressSpace().getAddress(0x2000))) {
+                        isManaged = true;
+                        analysisResults.add("DETECTED: .NET/Managed executable");
+                        analysisResults.add("WARNING: .NET binaries may have limited native function analysis");
+                        analysisResults.add("INFO: Ghidra works best with native PE executables");
+                    }
+                } catch (Exception e) {
+                    // Continue analysis
+                }
+            }
+            
+            if (!isManaged) {
+                analysisResults.add("Type: Native executable - full analysis available");
+            }
+            
+        } catch (Exception e) {
+            analysisResults.add(String.format("Binary format analysis error: %s", e.getMessage()));
+        }
+    }
+    
     private void analyzeAllFunctions() throws Exception {
         FunctionManager funcMgr = currentProgram.getFunctionManager();
         int totalFunctions = funcMgr.getFunctionCount();
@@ -58,6 +101,17 @@ public class CompleteDecompiler extends GhidraScript {
         
         analysisResults.add("=== FUNCTION ANALYSIS ===");
         analysisResults.add(String.format("Total functions found: %d", totalFunctions));
+        
+        if (totalFunctions == 0) {
+            analysisResults.add("WARNING: No functions detected by Ghidra");
+            analysisResults.add("REASON: This may occur with:");
+            analysisResults.add("  - .NET/managed executables (MSIL bytecode, not native code)");
+            analysisResults.add("  - Heavily obfuscated binaries");
+            analysisResults.add("  - Packers that Ghidra doesn't recognize");
+            analysisResults.add("  - Incomplete analysis (try longer timeout)");
+            analysisResults.add("SOLUTION: For .NET binaries, use dotPeek, ILSpy, or Reflexil instead of Ghidra");
+            return;  // Exit early if no functions
+        }
         
         int functionCount = 0;
         for (Function func : funcMgr.getFunctions(true)) {
