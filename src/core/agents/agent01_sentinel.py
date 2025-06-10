@@ -689,7 +689,11 @@ Provide:
                 }
             else:
                 error_msg = ai_response.error if ai_response.error else "AI request failed or timeout"
-                self.logger.warning(f"AI analysis failed: {error_msg}")
+                # Make timeout more informative, not a warning since it's expected behavior
+                if "timeout" in error_msg.lower():
+                    self.logger.info(f"AI analysis skipped: {error_msg} (continuing with standard analysis)")
+                else:
+                    self.logger.warning(f"AI analysis failed: {error_msg}")
                 return {
                     'ai_enabled': False, 
                     'ai_error': error_msg,

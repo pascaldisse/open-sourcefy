@@ -284,12 +284,13 @@ class Agent16_AgentBrown(ValidationAgent):
             if result.status == AgentStatus.SUCCESS:
                 pipeline_data['agent_outputs'][agent_id] = result.data
                 
-                # Extract specific data types
-                if 'source_code' in result.data:
-                    pipeline_data['source_code'][agent_id] = result.data['source_code']
-                
-                if 'binary_info' in result.data:
-                    pipeline_data['binary_info'][agent_id] = result.data['binary_info']
+                # Extract specific data types - ensure result.data is a dict
+                if isinstance(result.data, dict):
+                    if 'source_code' in result.data:
+                        pipeline_data['source_code'][agent_id] = result.data['source_code']
+                    
+                    if 'binary_info' in result.data:
+                        pipeline_data['binary_info'][agent_id] = result.data['binary_info']
         
         return pipeline_data
 
