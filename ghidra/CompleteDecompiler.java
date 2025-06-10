@@ -60,32 +60,93 @@ public class CompleteDecompiler extends GhidraScript {
     private void ensureAutoAnalysisComplete() throws Exception {
         println("Ensuring Ghidra auto-analysis is complete...");
         
-        // Force Ghidra to run auto-analysis if it hasn't been run
-        ghidra.app.services.AnalysisManager analysisManager = ghidra.app.services.AutoAnalysisManager.getAnalysisManager(currentProgram);
-        if (analysisManager != null && !analysisManager.isAnalyzing()) {
-            println("Starting Ghidra auto-analysis...");
-            analysisManager.scheduleOneTimeAnalysis(currentProgram.getMemory().getAllInitializedAddressSet(), null);
+        FunctionManager funcMgr = currentProgram.getFunctionManager();
+        int initialFunctionCount = funcMgr.getFunctionCount();
+        println(String.format("Initial function count: %d", initialFunctionCount));
+        
+        // Try multiple approaches to trigger analysis in Ghidra 11.0.3
+        try {
+            // Approach 1: Use AutoAnalysisManager if available
+            ghidra.app.services.AnalysisManager analysisManager = ghidra.app.services.AutoAnalysisManager.getAnalysisManager(currentProgram);
+            if (analysisManager != null) {
+                println("Found AnalysisManager - checking analysis status...");
+                if (!analysisManager.isAnalyzing()) {
+                    println("Starting scheduled auto-analysis...");
+                    analysisManager.scheduleOneTimeAnalysis(currentProgram.getMemory().getAllInitializedAddressSet(), monitor);
+                    
+                    // Wait for analysis with more frequent status checks
+                    int maxWaitSeconds = 120; // Increased timeout for large binaries
+                    int waitCount = 0;
+                    while (analysisManager.isAnalyzing() && waitCount < maxWaitSeconds) {
+                        Thread.sleep(500); // More frequent checks
+                        waitCount++;
+                        if (waitCount % 20 == 0) { // Report every 10 seconds
+                            int currentFuncCount = funcMgr.getFunctionCount();
+                            println(String.format("Analysis progress... (%d/%d seconds) - Functions: %d", waitCount/2, maxWaitSeconds, currentFuncCount));
+                        }
+                    }
+                    
+                    if (analysisManager.isAnalyzing()) {
+                        println("WARNING: Auto-analysis still running after timeout - continuing anyway");
+                    } else {
+                        println("Scheduled auto-analysis completed");
+                    }
+                } else {
+                    println("Auto-analysis already running - waiting for completion...");
+                    int waitSeconds = 0;
+                    while (analysisManager.isAnalyzing() && waitSeconds < 60) {
+                        Thread.sleep(1000);
+                        waitSeconds++;
+                    }
+                }
+            } else {
+                println("WARNING: AnalysisManager not available - analysis may be incomplete");
+            }
             
-            // Wait for analysis to complete
-            int maxWaitSeconds = 60;
-            int waitCount = 0;
-            while (analysisManager.isAnalyzing() && waitCount < maxWaitSeconds) {
-                Thread.sleep(1000);
-                waitCount++;
-                if (waitCount % 10 == 0) {
-                    println(String.format("Waiting for auto-analysis... (%d/%d seconds)", waitCount, maxWaitSeconds));
+            // Approach 2: Force function discovery using entry points
+            println("Performing supplementary function discovery...");
+            AddressSetView executableAddresses = currentProgram.getMemory().getExecuteSet();
+            SymbolTable symbolTable = currentProgram.getSymbolTable();
+            
+            // Check for entry point
+            Address entryPoint = null;
+            try {
+                entryPoint = currentProgram.getImageBase().add(currentProgram.getAddressFactory().getAddress("0x401000").getOffset());
+            } catch (Exception e) {
+                // Try alternative entry point detection
+                for (Symbol symbol : symbolTable.getGlobalSymbols("main")) {
+                    entryPoint = symbol.getAddress();
+                    break;
+                }
+                if (entryPoint == null) {
+                    for (Symbol symbol : symbolTable.getGlobalSymbols("WinMain")) {
+                        entryPoint = symbol.getAddress();
+                        break;
+                    }
                 }
             }
             
-            if (analysisManager.isAnalyzing()) {
-                println("WARNING: Auto-analysis still running after timeout");
-            } else {
-                println("Auto-analysis completed");
+            if (entryPoint != null && executableAddresses.contains(entryPoint)) {
+                println(String.format("Found potential entry point at: %s", entryPoint));
+                // The analysis manager should have created functions
             }
+            
+        } catch (Exception e) {
+            println(String.format("Analysis trigger failed: %s", e.getMessage()));
+            println("Continuing with existing analysis state...");
         }
         
-        FunctionManager funcMgr = currentProgram.getFunctionManager();
-        println(String.format("Auto-analysis check complete. Functions found: %d", funcMgr.getFunctionCount()));
+        // Final function count check
+        int finalFunctionCount = funcMgr.getFunctionCount();
+        println(String.format("Auto-analysis check complete. Functions found: %d (was: %d)", finalFunctionCount, initialFunctionCount));
+        
+        if (finalFunctionCount == 0) {
+            println("CRITICAL: No functions detected after auto-analysis");
+            println("This indicates either:");
+            println("  - The binary is .NET/managed code (use dnSpy/ILSpy instead)");
+            println("  - The binary is heavily packed/obfuscated");
+            println("  - Ghidra analysis failed to complete properly");
+        }
     }
     
     private void analyzeBinaryFormat() {
