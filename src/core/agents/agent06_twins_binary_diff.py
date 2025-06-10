@@ -88,7 +88,7 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
         super().__init__(
             agent_id=6,
             matrix_character=MatrixCharacter.TWINS,
-            dependencies=[1, 2, 3]  # Depends on Binary Discovery, Arch Analysis, and Merovingian's decompilation
+            dependencies=[1, 2, 3, 10]  # Depends on Binary Discovery, Arch Analysis, Merovingian's decompilation, and The Machine's compilation
         )
         
         # Load Twins-specific configuration
@@ -1646,40 +1646,70 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
         generated_binary_path = None
         generated_size = 0
         
-        # Search for generated executable in output paths
-        output_paths = context.get('output_paths', {})
-        if output_paths:
-            compilation_dir = output_paths.get('compilation')
-            if compilation_dir:
-                # Look for exe files in bin/Release directories
-                search_patterns = [
-                    compilation_dir / "bin" / "Release" / "Win32" / "*.exe",
-                    compilation_dir / "bin" / "Release" / "x64" / "*.exe", 
-                    compilation_dir / "bin" / "Release" / "*.exe",
-                    compilation_dir / "Release" / "*.exe",
-                    compilation_dir / "*.exe"
-                ]
-                
-                for pattern in search_patterns:
-                    from glob import glob
-                    matches = glob(str(pattern))
-                    if matches:
-                        generated_binary_path = matches[0]
-                        generated_size = os.path.getsize(generated_binary_path)
-                        break
-        
-        # If no generated binary found, check if Agent 10 has results
+        # PRIORITIZE Agent 10 results first (most reliable source)
         agent_results = context.get('agent_results', {})
-        if not generated_binary_path and 10 in agent_results:
-            agent10_data = agent_results[10].data
-            if isinstance(agent10_data, dict):
+        self.logger.info(f"🔍 DEBUG: Available agent results: {list(agent_results.keys())}")
+        
+        if 10 in agent_results:
+            agent10_result = agent_results[10]
+            self.logger.info(f"🔍 DEBUG: Agent 10 status: {agent10_result.status}")
+            
+            if hasattr(agent10_result, 'data') and isinstance(agent10_result.data, dict):
+                agent10_data = agent10_result.data
+                self.logger.info(f"🔍 DEBUG: Agent 10 data keys: {list(agent10_data.keys())}")
+                
                 compilation_results = agent10_data.get('compilation_results', {})
                 binary_outputs = compilation_results.get('binary_outputs', {})
+                self.logger.info(f"🔍 DEBUG: Binary outputs: {binary_outputs}")
+                
                 if binary_outputs:
                     # Get first available binary path
                     generated_binary_path = next(iter(binary_outputs.values()))
+                    self.logger.info(f"🔍 DEBUG: Found binary path from Agent 10: {generated_binary_path}")
+                    
                     if generated_binary_path and os.path.exists(generated_binary_path):
                         generated_size = os.path.getsize(generated_binary_path)
+                        self.logger.info(f"✅ Found compiled binary from Agent 10: {generated_binary_path} ({generated_size:,} bytes)")
+                    else:
+                        self.logger.warning(f"⚠️ Binary path from Agent 10 doesn't exist: {generated_binary_path}")
+                else:
+                    self.logger.warning("⚠️ Agent 10 has no binary outputs")
+            else:
+                self.logger.warning("⚠️ Agent 10 data is not available or not a dict")
+        else:
+            self.logger.warning("⚠️ Agent 10 results not available - may not have run")
+        
+        # FALLBACK: Search for generated executable in output paths (secondary method)
+        if not generated_binary_path:
+            self.logger.info("🔍 Searching output paths as fallback...")
+            output_paths = context.get('output_paths', {})
+            if output_paths:
+                compilation_dir = output_paths.get('compilation')
+                if compilation_dir:
+                    # Look for exe files in bin/Release directories
+                    search_patterns = [
+                        compilation_dir / "bin" / "Release" / "Win32" / "*.exe",
+                        compilation_dir / "bin" / "Release" / "x64" / "*.exe", 
+                        compilation_dir / "bin" / "Release" / "*.exe",
+                        compilation_dir / "Release" / "*.exe",
+                        compilation_dir / "*.exe"
+                    ]
+                    
+                    for pattern in search_patterns:
+                        from glob import glob
+                        matches = glob(str(pattern))
+                        if matches:
+                            generated_binary_path = matches[0]
+                            generated_size = os.path.getsize(generated_binary_path)
+                            self.logger.info(f"✅ Found binary via output paths: {generated_binary_path} ({generated_size:,} bytes)")
+                            break
+                    
+                    if not generated_binary_path:
+                        self.logger.warning(f"⚠️ No executables found in compilation directory: {compilation_dir}")
+                else:
+                    self.logger.warning("⚠️ No compilation directory in output paths")
+            else:
+                self.logger.warning("⚠️ No output paths available")
         
         # Calculate size similarity
         if generated_size > 0 and original_size > 0:
