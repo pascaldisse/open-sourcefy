@@ -222,10 +222,28 @@ class Agent10_TheMachine(ReconstructionAgent):
                 self.logger.warning("No existing launcher output directories with agent data found")
                 return
             
-            # Sort by name (which includes timestamp) to get most recent
-            launcher_dirs.sort(key=lambda x: x.name, reverse=True)
-            most_recent = launcher_dirs[0]
+            # Sort by source code quality - prioritize directories with substantial source code
+            # Check each directory for source code size to find the best one
+            directory_scores = []
+            for dir_path in launcher_dirs:
+                neo_file = dir_path / "agents" / "agent_05_neo" / "decompiled_code.c"
+                if neo_file.exists():
+                    try:
+                        source_size = neo_file.stat().st_size
+                        # Score based on source size (prioritize substantial source code)
+                        score = source_size
+                        directory_scores.append((score, dir_path))
+                    except Exception:
+                        directory_scores.append((0, dir_path))
+                else:
+                    directory_scores.append((0, dir_path))
+            
+            # Sort by score (source size) descending to get directory with best source
+            directory_scores.sort(key=lambda x: x[0], reverse=True)
+            most_recent = directory_scores[0][1]
+            best_score = directory_scores[0][0]
             self.logger.info(f"Searching for source files in: {most_recent}")
+            self.logger.info(f"Selected directory with source code size: {best_score} bytes")
             
             # Look for Agent 5 decompiled code
             neo_file = most_recent / "agents" / "agent_05_neo" / "decompiled_code.c"
@@ -751,7 +769,7 @@ EndGlobal
     <ConfigurationType>{config_type}</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>{platform_toolset}</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\\Microsoft.Cpp.props" />
@@ -785,24 +803,44 @@ EndGlobal
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|{platform}'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+      <ShowProgress>false</ShowProgress>
+      <NullTerminateStrings>false</NullTerminateStrings>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)\\extracted_resources\\extracted</AdditionalIncludeDirectories>
+      <ResourceOutputFileName>$(IntDir)resources.res</ResourceOutputFileName>
+      <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </ResourceCompile>
     <Link>
       <SubSystem>{subsystem}</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies>{';'.join(analysis['dependencies'])};%(AdditionalDependencies)</AdditionalDependencies>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <OptimizeReferences>false</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>user32.lib;gdi32.lib;comctl32.lib;advapi32.lib;kernel32.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <EntryPointSymbol>WinMainCRTStartup</EntryPointSymbol>
+      <SetChecksum>true</SetChecksum>
+      <LargeAddressAware>false</LargeAddressAware>
+      <BaseAddress>0x400000</BaseAddress>
+      <SectionAlignment>4096</SectionAlignment>
+      <FileAlignment>4096</FileAlignment>
+      <ImageBase>0x400000</ImageBase>
+      <EmbedManifest>false</EmbedManifest>
+      <GenerateManifest>false</GenerateManifest>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\\*.c" />
+    <ClCompile Include="src\\main.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\\*.h" />
@@ -810,7 +848,12 @@ EndGlobal
   <ItemGroup>
     <ResourceCompile Include="resources.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="embedded_bmp_*.bmp" />
+    <None Include="resource_chunk_*.bin" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\\Microsoft.Cpp.targets" />
+  
 </Project>"""
         
         return vcxproj
