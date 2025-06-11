@@ -388,13 +388,15 @@ class MerovingianAgent(DecompilerAgent):
     def _validate_prerequisites(self, context: Dict[str, Any]) -> None:
         """Validate all prerequisites before starting analysis"""
         # Validate required context keys
-        required_keys = ['binary_path', 'shared_memory']
+        required_keys = ['binary_path']
         missing_keys = self.validation_tools.validate_context_keys(context, required_keys)
         
         if missing_keys:
             raise ValidationError(f"Missing required context keys: {missing_keys}")
         
-        # Initialize shared_memory structure if not present
+        # Initialize shared_memory if not present (defensive programming)
+        if 'shared_memory' not in context:
+            context['shared_memory'] = {}
         shared_memory = context['shared_memory']
         if 'analysis_results' not in shared_memory:
             shared_memory['analysis_results'] = {}
