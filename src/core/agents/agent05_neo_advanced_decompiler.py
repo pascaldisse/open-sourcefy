@@ -254,10 +254,10 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
             
             # Return dict from execute_matrix_task - base class will wrap in AgentResult
             return {
-                'decompiled_code': neo_result.decompiled_code,
-                'function_signatures': neo_result.function_signatures,
-                'variable_mappings': neo_result.variable_mappings,
-                'control_flow_graph': neo_result.control_flow_graph,
+                'decompiled_code': analysis_result.decompiled_code,
+                'function_signatures': analysis_result.function_signatures,
+                'variable_mappings': analysis_result.variable_mappings,
+                'control_flow_graph': analysis_result.control_flow_graph,
                 'quality_metrics': {
                     'code_coverage': quality_metrics.code_coverage,
                     'function_accuracy': quality_metrics.function_accuracy,
@@ -266,9 +266,9 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
                     'overall_score': quality_metrics.overall_score,
                     'confidence_level': quality_metrics.confidence_level
                 },
-                'ghidra_metadata': neo_result.ghidra_metadata,
+                'ghidra_metadata': analysis_result.ghidra_metadata,
                 'ai_enhanced': self.ai_enabled,
-                'matrix_insights': neo_result.matrix_annotations,
+                'matrix_insights': analysis_result.matrix_annotations,
                 'neo_metadata': {
                     'analysis_passes': self.retry_count + 1,
                     'ghidra_version': getattr(self.ghidra_analyzer, 'version', '11.0.3') if self.ghidra_analyzer else 'Not Available',
