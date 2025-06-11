@@ -598,6 +598,16 @@ class MerovingianAgent(DecompilerAgent):
         else:
             raise RuntimeError(f"Unsupported analysis method: {disassembly_results['analysis_method']}")
         
+        # STRICT MODE VALIDATION - Rule #53: Always throw errors when requirements not met
+        if len(functions) == 0:
+            raise RuntimeError(
+                f"PIPELINE FAILURE - Agent 3 STRICT MODE: Found {len(functions)} functions in binary. "
+                f"A native PE32 binary should contain functions. This violates rules.md Rule #53 "
+                f"(STRICT ERROR HANDLING) - Agent must fail when requirements not met. "
+                f"Possible causes: .NET managed binary (use dotPeek/ILSpy), heavily obfuscated binary, "
+                f"or analysis failure. NO PLACEHOLDER CODE allowed per Rule #44."
+            )
+        
         # Limit number of functions analyzed
         functions = functions[:self.constants.MAX_FUNCTIONS_TO_ANALYZE]
         

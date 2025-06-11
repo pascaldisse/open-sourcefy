@@ -294,10 +294,18 @@ class DeusExMachinaAgent(MatrixAgent):
                 # Update context with agent results for dependency validation
                 context['agent_results'] = self.agent_results
                 
-                # Check for critical failures
+                # Check for critical failures - STRICT MODE: Fail completely on any agent failure
                 if self._should_abort_pipeline(batch_result):
-                    self.logger.warning("⚠️ Critical failure detected - aborting pipeline")
-                    break
+                    failed_agents = [agent_id for agent_id, result in batch_result.items() 
+                                   if result.status == AgentStatus.FAILED]
+                    error_details = [f"Agent {agent_id}: {result.error_message}" 
+                                   for agent_id, result in batch_result.items() 
+                                   if result.status == AgentStatus.FAILED]
+                    raise MatrixAgentError(
+                        f"PIPELINE FAILURE - Agent(s) {failed_agents} failed. "
+                        f"Rules.md EXECUTION RULE #8 (ALL OR NOTHING) requires complete pipeline failure. "
+                        f"Details: {'; '.join(error_details)}"
+                    )
         
         except Exception as e:
             self.logger.error(f"💥 Orchestration error: {str(e)}", exc_info=True)
@@ -345,15 +353,20 @@ class DeusExMachinaAgent(MatrixAgent):
     
     def _should_abort_pipeline(self, batch_result: Dict[int, AgentResult]) -> bool:
         """Determine if pipeline should abort based on batch results"""
-        # Abort if Agent 1 (Sentinel) fails - it's critical
-        if 1 in batch_result and batch_result[1].status == AgentStatus.FAILED:
-            return True
-        
-        # Abort if more than 50% of agents in a batch fail
+        # STRICT MODE - Rule #8: ALL OR NOTHING - Any agent failure causes complete pipeline failure
+        # Rule #2: NO PARTIAL SUCCESS - Never report partial success when components fail
         failed_count = sum(1 for result in batch_result.values() 
                           if result.status == AgentStatus.FAILED)
         
-        return failed_count > len(batch_result) * 0.5
+        if failed_count > 0:
+            failed_agents = [agent_id for agent_id, result in batch_result.items() 
+                           if result.status == AgentStatus.FAILED]
+            self.logger.error(f"PIPELINE FAILURE - Agent(s) {failed_agents} failed. "
+                            f"Rules.md EXECUTION RULE #8 (ALL OR NOTHING) requires complete pipeline failure. "
+                            f"NO PARTIAL SUCCESS allowed per Rule #2.")
+            return True
+        
+        return False
     
     def _generate_master_report(self, context: Dict[str, Any], 
                               orchestration_results: Dict[str, Any]) -> Dict[str, Any]:
