@@ -280,11 +280,10 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
             
         except Exception as e:
             execution_time = time.time() - self.start_time
-            error_msg = f"Neo's advanced decompilation failed: {str(e)}"
-            self.logger.error(error_msg, exc_info=True)
+            self.logger.error(f"Neo's advanced decompilation failed: {str(e)}")
             
-            # Re-raise exception - base class will handle creating AgentResult
-            raise Exception(error_msg) from e
+            # Re-raise original exception without duplication - base class will handle creating AgentResult
+            raise
 
     def _validate_neo_prerequisites(self, context: Dict[str, Any]) -> None:
         """Validate that Neo has the necessary Matrix data to proceed"""
@@ -498,7 +497,8 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
                 raise RuntimeError(f"Ghidra analysis timed out after {timeout_msg}")
             except Exception as e:
                 self.logger.error(f"Ghidra analysis failed: {e}")
-                raise RuntimeError(f"Ghidra analysis failed: {e}")
+                # Re-raise the original exception to avoid message duplication
+                raise
                 
             finally:
                 # Cleanup temporary directory
@@ -521,7 +521,7 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
             self.logger.error(f"Enhanced Ghidra analysis failed: {e}")
             # Per rules.md Rule #1 (NO FALLBACKS EVER) and Rule #10 (ONE CORRECT WAY)
             # Agent 5 must fail when Ghidra fails - no fallback to Agent 3 allowed
-            raise RuntimeError(f"Neo's Ghidra analysis failed: {e}")
+            raise RuntimeError(f"Neo's enhanced Ghidra analysis failed for packed binary")
 
 
     def _create_neo_ghidra_script(self, arch_info: Dict[str, Any]) -> str:
