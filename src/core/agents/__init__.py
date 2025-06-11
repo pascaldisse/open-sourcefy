@@ -39,7 +39,7 @@ except ImportError as e:
 
 # Agent 5: Neo
 try:
-    from .agent05_neo_advanced_decompiler import Agent5_Neo_AdvancedDecompiler as NeoAgent
+    from .agent05_neo_advanced_decompiler import NeoAgent
     MATRIX_AGENTS[5] = NeoAgent
 except ImportError as e:
     failed_imports.append(f"Agent 5 (Neo): {e}")

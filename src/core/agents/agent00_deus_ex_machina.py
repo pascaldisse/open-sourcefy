@@ -24,7 +24,7 @@ from .agent01_sentinel import SentinelAgent
 from .agent02_architect import ArchitectAgent  
 from .agent03_merovingian import MerovingianAgent
 from .agent04_agent_smith import AgentSmithAgent
-from .agent05_neo_advanced_decompiler import Agent5_Neo_AdvancedDecompiler
+from .agent05_neo_advanced_decompiler import NeoAgent
 from .agent06_twins_binary_diff import Agent6_Twins_BinaryDiff
 from .agent07_trainman_assembly_analysis import Agent7_Trainman_AssemblyAnalysis
 from .agent08_keymaker_resource_reconstruction import Agent8_Keymaker_ResourceReconstruction
@@ -83,7 +83,7 @@ class DeusExMachinaAgent(MatrixAgent):
             2: ArchitectAgent,
             3: MerovingianAgent,
             4: AgentSmithAgent,
-            5: Agent5_Neo_AdvancedDecompiler,
+            5: NeoAgent,
             6: Agent6_Twins_BinaryDiff,
             7: Agent7_Trainman_AssemblyAnalysis,
             8: Agent8_Keymaker_ResourceReconstruction,
