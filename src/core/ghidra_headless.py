@@ -40,7 +40,7 @@ class GhidraHeadless:
     - Advanced memory and data mutability settings
     """
     
-    def __init__(self, ghidra_home: str = None, enable_accuracy_optimizations: bool = True, output_base_dir: str = None, analysis_timeout: int = 30):
+    def __init__(self, ghidra_home: str = None, enable_accuracy_optimizations: bool = True, output_base_dir: str = None, analysis_timeout: int = None):
         """
         Initialize Ghidra headless automation with enhanced process management
         
@@ -384,7 +384,7 @@ public class EnhancedDecompiler extends GhidraScript {
                 if process.poll() is None:
                     logger.warning(f"Force killing Ghidra process {process.pid}")
                     process.kill()
-                    process.wait(timeout=5)
+                    process.wait(timeout=None)  # No hardcoded timeout per rules.md
             else:
                 # Unix: kill process group
                 import signal
@@ -397,7 +397,7 @@ public class EnhancedDecompiler extends GhidraScript {
                     if process.poll() is None:
                         logger.warning(f"Force killing Ghidra process group {process.pid}")
                         os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-                        process.wait(timeout=5)
+                        process.wait(timeout=None)  # No hardcoded timeout per rules.md
                 except ProcessLookupError:
                     # Process already terminated
                     pass
@@ -406,7 +406,7 @@ public class EnhancedDecompiler extends GhidraScript {
             # Last resort - try basic kill
             try:
                 process.kill()
-                process.wait(timeout=2)
+                process.wait(timeout=None)  # No hardcoded timeout per rules.md
             except:
                 pass
 
@@ -447,7 +447,7 @@ public class EnhancedDecompiler extends GhidraScript {
         binary_path: str, 
         output_dir: str, 
         script_name: str = "CompleteDecompiler.java",
-        timeout: int = 300
+        timeout: int = None
     ) -> Tuple[bool, str]:
         """
         Run Ghidra analysis on a binary file
@@ -514,7 +514,7 @@ public class EnhancedDecompiler extends GhidraScript {
         # Handle unlimited timeout case (None or -1)
         if timeout is None or timeout == -1:
             # Use large but reasonable timeout for "unlimited" (30 minutes)
-            analysis_timeout = str(30 * 60)  # 30 minutes in seconds
+            analysis_timeout = str(120 * 60)  # Use large value for unlimited mode (2 hours)
         else:
             analysis_timeout = str(timeout)
         

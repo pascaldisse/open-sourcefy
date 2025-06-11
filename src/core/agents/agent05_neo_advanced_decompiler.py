@@ -484,7 +484,7 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
                 finally:
                     # Signal progress monitoring to stop
                     analysis_complete.set()
-                    progress_thread.join(timeout=1)
+                    progress_thread.join(timeout=None)  # No hardcoded timeout per rules.md
                 
                 self.logger.info("  → Substep 2e: Parsing Ghidra analysis results...")
                 # Parse Ghidra analysis results from output
@@ -1009,126 +1009,50 @@ public class NeoAdvancedAnalysis extends GhidraScript {{
         if current_function:
             functions.append(current_function)
         
-        # If no functions found from parsing, try to extract from analysis patterns
-        # Support multiple patterns for function count detection
-        if not functions and ('functions found' in output.lower() or 'total functions found' in output.lower()):
-            try:
-                # Extract total function count - support multiple patterns
-                import re
-                match = re.search(r'(?:Total functions found|Functions found):?\s*(\d+)', output, re.IGNORECASE)
-                if match:
-                    func_count = int(match.group(1))
-                    self.logger.info(f"Ghidra reported {func_count} functions but detailed analysis failed")
-                    
-                    if func_count == 0:
-                        # Handle .NET/managed executables specifically
-                        if '.NET/Managed executable' in output or 'DETECTED: .NET/Managed executable' in output:
-                            self.logger.info("Creating .NET-aware reconstruction for managed executable")
-                            functions.append({
-                                'name': 'Main',
-                                'address': 0x06000001,  # .NET method token style
-                                'size': 0,  # .NET methods don't have fixed sizes
-                                'decompiled_code': self._generate_dotnet_function_code(),
-                                'confidence_score': 0.4,
-                                'function_type': 'managed'
-                            })
-                        else:
-                            # Still create minimal structure for compatibility
-                            functions.append({
-                                'name': 'unknown_entry_point',
-                                'address': 0x401000,
-                                'size': 0,
-                                'decompiled_code': self._generate_minimal_function_code(),
-                                'confidence_score': 0.3,
-                                'function_type': 'unknown'
-                            })
-                    else:
-                        # Generate representative functions based on analysis
-                        for i in range(min(func_count, 5)):  # Limit to 5 functions
-                            functions.append({
-                                'name': f'function_{i+1}' if i > 0 else 'main',
-                                'address': 0x401000 + (i * 0x100),
-                                'size': 50 + (i * 20),
-                                'decompiled_code': self._generate_function_code(
-                                    f'function_{i+1}' if i > 0 else 'main'
-                                ),
-                                'confidence_score': 0.6
-                            })
-            except:
-                pass
+        # STRICT MODE: Per rules.md #44, #45, #53 - NO PLACEHOLDER/FAKE RESULTS
+        # If no functions found from parsing, we MUST fail hard - no fallbacks allowed
+        if not functions:
+            # Check if Ghidra reported function count
+            import re
+            match = re.search(r'(?:Total functions found|Functions found):?\s*(\d+)', output, re.IGNORECASE)
+            if match:
+                func_count = int(match.group(1))
+                if func_count == 0:
+                    # STRICT ERROR: Native binary should have functions
+                    raise RuntimeError(
+                        f"Ghidra found 0 functions in binary - this violates rules.md Rule #53. "
+                        f"Native PE32 executables should contain functions. Ghidra analysis failed."
+                    )
+                else:
+                    # STRICT ERROR: Functions reported but not extracted
+                    raise RuntimeError(
+                        f"Ghidra reported {func_count} functions but parsing failed to extract them. "
+                        f"This violates rules.md Rule #53 - parsing implementation must work correctly."
+                    )
+            else:
+                # STRICT ERROR: No function information at all
+                raise RuntimeError(
+                    f"Ghidra output contains no function information. "
+                    f"This violates rules.md Rule #53 - analysis must produce valid results."
+                )
         
         analysis_results['functions'] = functions
         return analysis_results
     
     def _generate_function_code(self, func_name: str, code_preview: str = None) -> str:
-        """Generate realistic function code based on name and preview"""
-        if func_name == 'main':
-            return '''int main(int argc, char* argv[]) {
-    // Main program entry point
-    // Analyzed from binary decompilation
+        """Extract real decompiled code from Ghidra analysis - NO PLACEHOLDERS per rules.md"""
+        if not code_preview:
+            raise RuntimeError(
+                f"No decompiled code available for function {func_name}. "
+                f"Per rules.md Rule #44: NO PLACEHOLDER CODE - must have real decompilation."
+            )
+        
+        # Return actual decompiled code from Ghidra, not placeholder
+        return code_preview
     
-    return 0;
-}'''
-        elif 'init' in func_name.lower():
-            return f'''void {func_name}(void) {{
-    // Initialization function
-    // {code_preview if code_preview else "Function initialization code"}
-}}'''
-        elif 'get' in func_name.lower():
-            return f'''int {func_name}(void) {{
-    // Getter function
-    // {code_preview if code_preview else "Returns computed value"}
-    return 0;
-}}'''
-        else:
-            return f'''void {func_name}(void) {{
-    // Function: {func_name}
-    // {code_preview if code_preview else "Function implementation from decompilation"}
-}}'''
-    
-    def _generate_dotnet_function_code(self) -> str:
-        """Generate .NET-aware function code when Ghidra can't analyze managed code"""
-        return '''// .NET/Managed Executable Entry Point
-// Note: This is a .NET application with MSIL bytecode
-// Ghidra analysis is limited for managed code
-// Consider using .NET-specific tools: ILSpy, dotPeek, Reflexil
-
-using System;
-using System.Windows.Forms;
-
-namespace LauncherApplication
-{
-    static class Program
-    {
-        [STAThread]
-        static int Main(string[] args)
-        {
-            // .NET application entry point
-            // Managed code execution begins here
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            
-            // Note: Actual implementation requires .NET decompilation
-            return 0;
-        }
-    }
-}'''
-
-    def _generate_minimal_function_code(self) -> str:
-        """Generate minimal function code when analysis fails"""
-        return '''// Unknown Entry Point
-// Ghidra was unable to identify functions in this binary
-// This may indicate:
-// - Heavily obfuscated code
-// - Packed executable
-// - Non-standard binary format
-// - Incomplete analysis
-
-int unknown_entry_point(void) {
-    // Entry point analysis failed
-    // Manual analysis recommended
-    return 0;
-}'''
+    # REMOVED: _generate_dotnet_function_code() and _generate_minimal_function_code()
+    # These methods violated rules.md Rule #44 (NO PLACEHOLDER CODE) and Rule #45 (NO FAKE RESULTS)
+    # Per rules.md: Agent must fail hard when requirements not met, not generate placeholders
     
     def _create_enhanced_code_output(self, results: Dict[str, Any], insights: Dict[str, Any]) -> str:
         """Return the 100% binary-perfect source code that achieved perfect reconstruction"""
@@ -1559,7 +1483,7 @@ BOOL ConnectToLocalServer(const char* server, int port) {
     }
     
     // Set socket timeout
-    DWORD timeout = 3000; // 3 seconds
+    DWORD timeout = 10000; // Extended timeout for stability
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
     setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout));
     
