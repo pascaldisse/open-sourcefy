@@ -956,7 +956,7 @@ public class NeoAdvancedAnalysis extends GhidraScript {{
             raise RuntimeError("Ghidra analysis failed - pipeline requires successful Ghidra execution")
         
         # Check for .NET/managed executable warnings in output
-        if '.NET/Managed executable' in output or 'No functions detected by Ghidra' in output:
+        if '.NET/Managed executable' in output or 'DETECTED: .NET/Managed executable' in output or 'No functions detected by Ghidra' in output:
             self.logger.warning("Detected .NET/managed executable - Ghidra analysis may be limited")
             self.logger.warning("Consider using .NET-specific decompilers like ILSpy or dotPeek for better results")
         
@@ -1011,18 +1011,18 @@ public class NeoAdvancedAnalysis extends GhidraScript {{
         
         # If no functions found from parsing, try to extract from analysis patterns
         # Support multiple patterns for function count detection
-        if not functions and ('functions found:' in output.lower() or 'total functions found:' in output.lower()):
+        if not functions and ('functions found' in output.lower() or 'total functions found' in output.lower()):
             try:
                 # Extract total function count - support multiple patterns
                 import re
-                match = re.search(r'(?:Total functions found|Functions found): (\d+)', output, re.IGNORECASE)
+                match = re.search(r'(?:Total functions found|Functions found):?\s*(\d+)', output, re.IGNORECASE)
                 if match:
                     func_count = int(match.group(1))
                     self.logger.info(f"Ghidra reported {func_count} functions but detailed analysis failed")
                     
                     if func_count == 0:
                         # Handle .NET/managed executables specifically
-                        if '.NET/Managed executable' in output:
+                        if '.NET/Managed executable' in output or 'DETECTED: .NET/Managed executable' in output:
                             self.logger.info("Creating .NET-aware reconstruction for managed executable")
                             functions.append({
                                 'name': 'Main',
@@ -2515,13 +2515,15 @@ void TestLocalServerConnections(void) {
         functions_found = len(functions)
         
         # CRITICAL: According to rules.md Rule #53 (STRICT ERROR HANDLING)
-        # Agent MUST fail hard when 0 functions found from a 5MB binary
+        # Agent MUST fail hard when 0 functions found from a 5MB native binary
+        # Analysis shows launcher.exe is native PE32 with kernel32/user32 imports
         if functions_found == 0:
             raise RuntimeError(
-                f"PIPELINE FAILURE - Agent 5 STRICT MODE: Found {functions_found} functions in binary. "
-                f"A 5MB+ binary should contain hundreds or thousands of functions. "
+                f"PIPELINE FAILURE - Agent 5 STRICT MODE: Found {functions_found} functions in native binary. "
+                f"A 5MB+ native PE32 binary should contain hundreds or thousands of functions. "
                 f"This violates rules.md Rule #53 (STRICT ERROR HANDLING) - "
-                f"Agent must fail when requirements not met. NO PLACEHOLDER CODE allowed per Rule #44."
+                f"Agent must fail when requirements not met. NO PLACEHOLDER CODE allowed per Rule #44. "
+                f"Ghidra analysis failed on native Windows executable with standard API imports."
             )
         
         ghidra_metadata = final_results.get('ghidra_metadata', {
