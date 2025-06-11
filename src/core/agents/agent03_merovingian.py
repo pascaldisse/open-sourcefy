@@ -167,29 +167,43 @@ class MerovingianAgent(DecompilerAgent):
         }
 
     def _detect_all_functions(self, analysis_context: Dict[str, Any]) -> List[Function]:
-        """Detect functions using multiple methods"""
+        """Detect functions using multiple methods with packer detection"""
         functions = []
         binary_path = analysis_context['binary_path']
         
+        # STEP 1: Packer Detection and Analysis
+        packer_info = self._detect_packer_characteristics(binary_path)
+        analysis_context['packer_info'] = packer_info
+        
+        # If packed, try unpacking first
+        unpacked_binary = None
+        if packer_info['is_likely_packed']:
+            self.logger.info(f"Packed binary detected: {packer_info['packer_type']} (confidence: {packer_info['confidence']:.2f})")
+            print(f"[MEROVINGIAN DEBUG] Packed binary detected: {packer_info['packer_type']}")
+            unpacked_binary = self._attempt_unpacking(binary_path, packer_info)
+            
+        # Use unpacked binary for analysis if available
+        analysis_binary = unpacked_binary if unpacked_binary else binary_path
+        
         # Method 1: PE Import Table Analysis
-        import_functions = self._detect_import_functions(binary_path)
+        import_functions = self._detect_import_functions(analysis_binary)
         functions.extend(import_functions)
         
         # Method 2: Entry Point Detection
-        entry_functions = self._detect_entry_point_function(binary_path)
+        entry_functions = self._detect_entry_point_function(analysis_binary)
         functions.extend(entry_functions)
         
         # Method 3: Binary Pattern Analysis
-        pattern_functions = self._detect_functions_by_patterns(binary_path)
+        pattern_functions = self._detect_functions_by_patterns(analysis_binary)
         functions.extend(pattern_functions)
         
-        # Method 4: .NET Method Analysis (if applicable)
-        if self._is_dotnet_binary(binary_path):
-            dotnet_functions = self._detect_dotnet_methods(binary_path)
+        # Method 4: Enhanced .NET Method Analysis (for packed launchers)
+        if self._is_dotnet_binary(analysis_binary) or packer_info.get('might_be_dotnet', False):
+            dotnet_functions = self._detect_dotnet_methods(analysis_binary)
             functions.extend(dotnet_functions)
         
         # Method 5: Section Analysis
-        section_functions = self._detect_functions_from_sections(binary_path)
+        section_functions = self._detect_functions_from_sections(analysis_binary)
         functions.extend(section_functions)
         
         # Remove duplicates
@@ -555,6 +569,261 @@ class MerovingianAgent(DecompilerAgent):
             'complexity_score': func.complexity_score or 1.0,
             'decompiled_code': f'// Function {func.name} at 0x{func.address:08x}\n{func.signature or "void function()"} {{\n    // Function implementation\n}}'
         }
+
+    def _detect_packer_characteristics(self, binary_path: Path) -> Dict[str, Any]:
+        """Detect packer characteristics using multiple analysis methods"""
+        packer_info = {
+            'is_likely_packed': False,
+            'packer_type': 'unknown',
+            'confidence': 0.0,
+            'entropy': 0.0,
+            'might_be_dotnet': False,
+            'indicators': []
+        }
+        
+        try:
+            # Analysis 1: Entropy Analysis
+            entropy = self._calculate_binary_entropy(binary_path)
+            packer_info['entropy'] = entropy
+            
+            # High entropy indicates packing/compression
+            if entropy > 7.5:
+                packer_info['is_likely_packed'] = True
+                packer_info['confidence'] += 0.4
+                packer_info['indicators'].append('high_entropy')
+            
+            # Analysis 2: UPX Detection
+            upx_detected = self._detect_upx_packer(binary_path)
+            if upx_detected:
+                packer_info['is_likely_packed'] = True
+                packer_info['packer_type'] = 'UPX'
+                packer_info['confidence'] += 0.5
+                packer_info['indicators'].append('upx_signature')
+            
+            # Analysis 3: PE Structure Analysis
+            pe_anomalies = self._detect_pe_anomalies(binary_path)
+            if pe_anomalies['unusual_entry_point']:
+                packer_info['confidence'] += 0.2
+                packer_info['indicators'].append('unusual_entry_point')
+            if pe_anomalies['suspicious_sections']:
+                packer_info['confidence'] += 0.1
+                packer_info['indicators'].append('suspicious_sections')
+            
+            # Analysis 4: .NET Detection for Packed Launchers
+            dotnet_indicators = self._detect_hidden_dotnet(binary_path)
+            if dotnet_indicators:
+                packer_info['might_be_dotnet'] = True
+                packer_info['confidence'] += 0.1
+                packer_info['indicators'].append('hidden_dotnet')
+            
+            # Determine overall packing likelihood
+            if packer_info['confidence'] > 0.3:
+                packer_info['is_likely_packed'] = True
+                
+            # Set packer type based on strongest indicator
+            if 'upx_signature' in packer_info['indicators']:
+                packer_info['packer_type'] = 'UPX'
+            elif entropy > 7.8:
+                packer_info['packer_type'] = 'unknown_high_compression'
+            elif packer_info['might_be_dotnet']:
+                packer_info['packer_type'] = 'dotnet_wrapper'
+            elif pe_anomalies['unusual_entry_point']:
+                packer_info['packer_type'] = 'custom_packer'
+                
+        except Exception as e:
+            self.logger.debug(f"Packer detection failed: {e}")
+            
+        return packer_info
+    
+    def _calculate_binary_entropy(self, binary_path: Path) -> float:
+        """Calculate Shannon entropy of binary data"""
+        try:
+            with open(binary_path, 'rb') as f:
+                # Read first 1MB for entropy calculation
+                data = f.read(1024 * 1024)
+                
+            if not data:
+                return 0.0
+                
+            # Calculate frequency of each byte value
+            byte_counts = [0] * 256
+            for byte in data:
+                byte_counts[byte] += 1
+                
+            # Calculate Shannon entropy
+            import math
+            entropy = 0.0
+            data_len = len(data)
+            
+            for count in byte_counts:
+                if count > 0:
+                    probability = count / data_len
+                    entropy -= probability * math.log2(probability)
+                    
+            return entropy
+            
+        except Exception as e:
+            self.logger.debug(f"Entropy calculation failed: {e}")
+            return 0.0
+    
+    def _detect_upx_packer(self, binary_path: Path) -> bool:
+        """Detect UPX packer signatures"""
+        try:
+            with open(binary_path, 'rb') as f:
+                # Read first 2KB to check for UPX signatures
+                data = f.read(2048)
+                
+            # Common UPX signatures
+            upx_signatures = [
+                b'UPX!',
+                b'UPX0',
+                b'UPX1',
+                b'UPX2',
+                b'$Info: This file is packed with the UPX'
+            ]
+            
+            for signature in upx_signatures:
+                if signature in data:
+                    return True
+                    
+            return False
+            
+        except Exception as e:
+            self.logger.debug(f"UPX detection failed: {e}")
+            return False
+    
+    def _detect_pe_anomalies(self, binary_path: Path) -> Dict[str, bool]:
+        """Detect PE structure anomalies that indicate packing"""
+        anomalies = {
+            'unusual_entry_point': False,
+            'suspicious_sections': False,
+            'import_anomalies': False
+        }
+        
+        try:
+            with open(binary_path, 'rb') as f:
+                # Read DOS header
+                dos_header = f.read(64)
+                if len(dos_header) < 60 or dos_header[:2] != b'MZ':
+                    return anomalies
+                
+                # Get PE header offset
+                pe_offset = struct.unpack('<I', dos_header[60:64])[0]
+                f.seek(pe_offset + 24)  # Skip to optional header
+                
+                # Read optional header to get entry point
+                magic = struct.unpack('<H', f.read(2))[0]
+                if magic in [0x10b, 0x20b]:  # PE32 or PE32+
+                    f.read(4)  # Skip version info
+                    entry_point = struct.unpack('<I', f.read(4))[0]
+                    
+                    # Check for unusual entry point (like 0xd000000a)
+                    if entry_point > 0x80000000 or entry_point < 0x1000:
+                        anomalies['unusual_entry_point'] = True
+                        
+                # Check for suspicious section characteristics
+                # (This would need more detailed PE parsing)
+                anomalies['suspicious_sections'] = True  # Placeholder for now
+                
+        except Exception as e:
+            self.logger.debug(f"PE anomaly detection failed: {e}")
+            
+        return anomalies
+    
+    def _detect_hidden_dotnet(self, binary_path: Path) -> bool:
+        """Detect if binary might be a packed .NET application"""
+        try:
+            with open(binary_path, 'rb') as f:
+                # Read larger portion to look for .NET artifacts
+                data = f.read(min(1024*1024, f.seek(0, 2) or f.tell()))
+                f.seek(0)
+                
+            # Look for .NET-related strings that might indicate a packed .NET app
+            dotnet_indicators = [
+                b'mscorlib',
+                b'System.Windows.Forms',
+                b'System.Drawing',
+                b'.NETFramework',
+                b'mscoree.dll',
+                b'_CorExeMain'
+            ]
+            
+            for indicator in dotnet_indicators:
+                if indicator in data:
+                    return True
+                    
+            return False
+            
+        except Exception as e:
+            self.logger.debug(f"Hidden .NET detection failed: {e}")
+            return False
+    
+    def _attempt_unpacking(self, binary_path: Path, packer_info: Dict[str, Any]) -> Optional[Path]:
+        """Attempt to unpack binary using detected packer type"""
+        if not packer_info['is_likely_packed']:
+            return None
+            
+        packer_type = packer_info['packer_type']
+        
+        try:
+            # UPX Unpacking
+            if packer_type == 'UPX':
+                return self._unpack_upx(binary_path)
+            
+            # For other packers, return None for now
+            self.logger.info(f"No unpacker available for {packer_type}")
+            return None
+            
+        except Exception as e:
+            self.logger.warning(f"Unpacking failed for {packer_type}: {e}")
+            return None
+    
+    def _unpack_upx(self, binary_path: Path) -> Optional[Path]:
+        """Attempt to unpack UPX-packed binary"""
+        try:
+            import subprocess
+            import tempfile
+            
+            # Create temporary file for unpacked binary
+            temp_dir = Path(tempfile.mkdtemp())
+            unpacked_path = temp_dir / f"unpacked_{binary_path.name}"
+            
+            # Try to find UPX executable
+            upx_commands = ['upx', 'upx.exe', '/usr/bin/upx']
+            upx_found = None
+            
+            for upx_cmd in upx_commands:
+                try:
+                    result = subprocess.run([upx_cmd, '--version'], 
+                                          capture_output=True, timeout=5)
+                    if result.returncode == 0:
+                        upx_found = upx_cmd
+                        break
+                except:
+                    continue
+            
+            if not upx_found:
+                self.logger.warning("UPX unpacker not available in system PATH")
+                self.logger.info("To install UPX: sudo apt-get install upx-ucl (Linux) or download from https://upx.github.io/")
+                print(f"[MEROVINGIAN DEBUG] UPX not found - install for better unpacking support")
+                return None
+            
+            # Attempt unpacking
+            result = subprocess.run([
+                upx_found, '-d', str(binary_path), '-o', str(unpacked_path)
+            ], capture_output=True, timeout=30)
+            
+            if result.returncode == 0 and unpacked_path.exists():
+                self.logger.info(f"Successfully unpacked UPX binary: {unpacked_path}")
+                print(f"[MEROVINGIAN DEBUG] UPX unpacking successful!")
+                return unpacked_path
+            else:
+                self.logger.debug(f"UPX unpacking failed: {result.stderr.decode()}")
+                return None
+                
+        except Exception as e:
+            self.logger.debug(f"UPX unpacking error: {e}")
+            return None
 
     def _validate_results(self, results: Dict[str, Any]) -> None:
         """Validate results according to rules.md"""
