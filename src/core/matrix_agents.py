@@ -333,7 +333,7 @@ MATRIX_DEPENDENCIES = {
     2: [1],                   # Architect - Depends on Sentinel
     3: [1],                   # Merovingian - Depends on Sentinel  
     4: [1],                   # Agent Smith - Depends on Sentinel
-    5: [1, 2],               # Neo - Depends on Sentinel and Architect
+    5: [1, 2, 3],            # Neo - Depends on Sentinel, Architect, and Merovingian
     6: [1, 2],               # Trainman - Depends on Sentinel and Architect (was Agent 7)
     7: [1, 2],               # Keymaker - Depends on Sentinel and Architect (was Agent 8)
     8: [5, 6, 7],            # Commander Locke - Depends on Phase B agents (was Agent 9)
