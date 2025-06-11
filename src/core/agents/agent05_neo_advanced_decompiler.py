@@ -1291,10 +1291,12 @@ public class NeoAdvancedAnalysis extends GhidraScript {{
                         f"This violates rules.md Rule #53 - parsing implementation must work correctly."
                     )
             else:
-                # STRICT ERROR: No function information at all
+                # STRICT ERROR: No function information at all (legitimate for packed/encrypted binaries)
                 raise RuntimeError(
-                    f"Ghidra output contains no function information. "
-                    f"This violates rules.md Rule #53 - analysis must produce valid results."
+                    f"Ghidra analysis failed to extract function information from binary. "
+                    f"This is expected for heavily packed/encrypted binaries. "
+                    f"Per rules.md Rule #53 (STRICT ERROR HANDLING), Neo must fail when "
+                    f"required tools cannot meet analysis requirements."
                 )
         
         analysis_results['functions'] = functions
