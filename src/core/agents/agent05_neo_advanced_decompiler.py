@@ -81,8 +81,8 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
     def __init__(self):
         super().__init__(
             agent_id=5,
-            matrix_character=MatrixCharacter.ANALYST,  # Generic decompiler character
-            dependencies=[1, 2]  # Depends on Sentinel and Architect per official Matrix dependency map
+            matrix_character=MatrixCharacter.NEO,  # Neo character for advanced decompilation
+            dependencies=[1, 2, 3]  # Depends on Sentinel, Architect, and Merovingian for function detection
         )
         
         # Load agent-specific configuration from parent config
@@ -172,6 +172,12 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
                 raise RuntimeError("Agent 2 (Architect) dependency not satisfied - Neo requires architecture analysis data")
             agent2_data = agent2_result.data  # Architecture analysis
             
+            # Agent 3 (Merovingian) function detection - required for packed binaries where Ghidra may fail
+            agent3_result = context['agent_results'].get(3)
+            if not agent3_result or agent3_result.status != AgentStatus.SUCCESS:
+                raise RuntimeError("Agent 3 (Merovingian) dependency not satisfied - Neo requires function detection data")
+            agent3_data = agent3_result.data  # Basic decompilation and function detection
+            
             self.logger.info("Neo beginning advanced decompilation - seeing beyond the Matrix...")
             
             # Step 2: Enhanced Ghidra Analysis (REQUIRED)
@@ -180,7 +186,7 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
             
             self.logger.info("Step 2/6: Enhanced Ghidra analysis with custom scripts...")
             ghidra_results = self._perform_enhanced_ghidra_analysis(
-                binary_path, agent1_data, agent2_data, context
+                binary_path, agent1_data, agent2_data, agent3_data, context
             )
             self._log_progress(2, total_phases, "Ghidra analysis completed")
             
@@ -311,6 +317,7 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
         binary_path: str, 
         binary_info: Dict[str, Any], 
         arch_info: Dict[str, Any],
+        merovingian_data: Dict[str, Any],
         context: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Perform enhanced Ghidra analysis with Neo's custom scripts"""
@@ -512,8 +519,10 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
             
         except Exception as e:
             self.logger.error(f"Enhanced Ghidra analysis failed: {e}")
-            # Neo requires Ghidra - no fallbacks
+            # Per rules.md Rule #1 (NO FALLBACKS EVER) and Rule #10 (ONE CORRECT WAY)
+            # Agent 5 must fail when Ghidra fails - no fallback to Agent 3 allowed
             raise RuntimeError(f"Neo's Ghidra analysis failed: {e}")
+
 
     def _create_neo_ghidra_script(self, arch_info: Dict[str, Any]) -> str:
         """Create Neo's custom Ghidra analysis script for enhanced decompilation"""
@@ -1311,6 +1320,12 @@ public class NeoAdvancedAnalysis extends GhidraScript {{
         
         # STRICT VALIDATION per rules.md Rule #53: Analysis must produce valid results
         functions = results.get('functions', results.get('enhanced_functions', results.get('semantic_functions', [])))
+        
+        # Ensure functions is a list, not a string or other type
+        if not isinstance(functions, list):
+            self.logger.error(f"Functions is not a list: type={type(functions)}, value={functions}")
+            functions = []
+        
         if not functions or len(functions) == 0:
             raise RuntimeError(
                 f"STRICT ERROR - rules.md Rule #53: Cannot generate enhanced code output with 0 functions. "
