@@ -1,5 +1,5 @@
-//CompleteDecompiler.java - Advanced Ghidra Script for Matrix Pipeline
-//Enhanced decompilation script for Agent 05 (Neo)
+//CompleteDecompiler.java - Advanced Ghidra Script for Generic Decompilation Pipeline
+//Enhanced decompilation script for advanced binary analysis
 
 import ghidra.app.decompiler.*;
 import ghidra.app.script.GhidraScript;
@@ -35,7 +35,7 @@ public class CompleteDecompiler extends GhidraScript {
         options.setMaxIntructionsPer(1000);
         decompiler.setOptions(options);
         
-        println("Matrix Agent 05 (Neo) - Complete Decompilation Starting...");
+        println("Advanced Decompiler - Complete Binary Analysis Starting...");
         
         try {
             // CRITICAL: Ensure auto-analysis has been performed
@@ -54,7 +54,7 @@ public class CompleteDecompiler extends GhidraScript {
             decompiler.dispose();
         }
         
-        println("Neo's decompilation analysis complete.");
+        println("Advanced decompilation analysis complete.");
     }
     
     private void ensureAutoAnalysisComplete() throws Exception {
@@ -359,9 +359,9 @@ public class CompleteDecompiler extends GhidraScript {
     }
     
     private void generateSummaryReport() {
-        analysisResults.add("\n=== NEO'S MATRIX ANALYSIS SUMMARY ===");
-        analysisResults.add("Binary has been successfully analyzed through the Matrix lens");
-        analysisResults.add("Advanced decompilation techniques applied");
+        analysisResults.add("\n=== ADVANCED DECOMPILATION ANALYSIS SUMMARY ===");
+        analysisResults.add("Binary has been successfully analyzed using advanced techniques");
+        analysisResults.add("Comprehensive decompilation methods applied");
         analysisResults.add("Ready for enhanced reconstruction phase");
         
         // Output all results

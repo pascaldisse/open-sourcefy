@@ -1,16 +1,12 @@
 """
-Agent 5: Neo (Glitch) - Advanced Decompilation and Ghidra Integration
+Agent 5: Advanced Decompilation and Ghidra Integration
 
-In the Matrix, Neo represents the anomaly that can see beyond the code,
-understanding the true nature of digital constructs. As Agent 5, Neo combines
-advanced decompilation capabilities with deep Ghidra integration to reveal
-the hidden source code structure within compiled binaries.
+Advanced decompilation agent that combines sophisticated analysis capabilities 
+with deep Ghidra integration to reveal the hidden source code structure within 
+compiled binaries.
 
-Matrix Context:
-Neo exists as both "The One" and a glitch in the Matrix - capable of seeing
-through the illusion of compiled code to understand the original source intent.
-His unique ability to manipulate the Matrix translates to advanced decompilation
-that goes beyond traditional tools.
+This agent provides comprehensive binary analysis that goes beyond traditional 
+decompilation tools, offering enhanced pattern recognition and code reconstruction.
 
 Production-ready implementation following SOLID principles and clean code standards.
 Includes AI-enhanced analysis, comprehensive error handling, and fail-fast validation.
@@ -54,8 +50,8 @@ class DecompilationQuality:
     confidence_level: float  # Confidence in results
 
 @dataclass
-class NeoAnalysisResult:
-    """Comprehensive analysis result from Neo agent"""
+class AdvancedAnalysisResult:
+    """Comprehensive analysis result from advanced decompiler agent"""
     decompiled_code: str
     function_signatures: List[Dict[str, Any]]
     variable_mappings: Dict[str, str]
@@ -65,20 +61,19 @@ class NeoAnalysisResult:
     ai_insights: Optional[Dict[str, Any]] = None
     matrix_annotations: Optional[Dict[str, Any]] = None
 
-class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
+class Agent5_AdvancedDecompiler(DecompilerAgent):
     """
-    Agent 5: Neo (Glitch) - Advanced Decompilation and Ghidra Integration
+    Agent 5: Advanced Decompilation and Ghidra Integration
     
-    Neo's unique perspective as "The One" allows him to see through the
-    compiled binary matrix to understand the original source code structure.
-    This agent combines Ghidra's powerful decompilation with AI-enhanced
-    analysis to produce high-quality, readable source code.
+    This agent provides sophisticated binary analysis capabilities that go beyond
+    traditional decompilation tools. It combines Ghidra's powerful decompilation 
+    with AI-enhanced analysis to produce high-quality, readable source code.
     
     Features:
     - Advanced Ghidra integration with custom scripts
     - AI-enhanced variable naming and code structure analysis
     - Quality-driven decompilation with iterative improvement
-    - Matrix-themed code annotations and insights
+    - Comprehensive code annotations and insights
     - Fail-fast validation with quality thresholds
     - Multi-pass analysis for improved accuracy
     """
@@ -86,13 +81,13 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
     def __init__(self):
         super().__init__(
             agent_id=5,
-            matrix_character=MatrixCharacter.NEO,
+            matrix_character=MatrixCharacter.ANALYST,  # Generic decompiler character
             dependencies=[1, 2]  # Depends on Sentinel and Architect per official Matrix dependency map
         )
         
-        # Load Neo-specific configuration from parent config
+        # Load agent-specific configuration from parent config
         
-        # Load Neo-specific configuration with unlimited timeouts by default
+        # Load decompiler-specific configuration with unlimited timeouts by default
         self.quality_threshold = self.config.get_value('agents.agent_05.quality_threshold', 0.25)
         self.max_analysis_passes = self.config.get_value('agents.agent_05.max_passes', 1)
         self.timeout_seconds = self.config.get_timeout('agent', -1)  # Use configuration manager for timeout (-1 = unlimited)
@@ -101,7 +96,7 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
         
         # Initialize components
         self.start_time = None
-        self.error_handler = MatrixErrorHandler("Neo", max_retries=3)
+        self.error_handler = MatrixErrorHandler("AdvancedDecompiler", max_retries=3)
         
         # Initialize Ghidra integration (REQUIRED - NO FALLBACKS EVER)
         # CRITICAL: GHIDRA MUST ALWAYS BE USED - NEVER USE FALLBACK
@@ -122,7 +117,7 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
         # Initialize semantic decompilation engine
         self.semantic_decompiler = SemanticDecompiler(self.config)
         
-        # Neo's Matrix abilities - advanced analysis techniques
+        # Advanced decompiler abilities - sophisticated analysis techniques
         self.matrix_techniques = {
             'pattern_recognition': True,
             'semantic_analysis': True,
@@ -142,13 +137,13 @@ class Agent5_Neo_AdvancedDecompiler(DecompilerAgent):
         """Log progress with percentage and timing information"""
         elapsed_time = time.time() - self.start_time if self.start_time else 0
         progress_percent = (current_step / total_steps) * 100
-        self.logger.info(f"[{progress_percent:.1f}%] Neo Step {current_step}/{total_steps}: {message} (elapsed: {elapsed_time:.1f}s)")
+        self.logger.info(f"[{progress_percent:.1f}%] Decompiler Step {current_step}/{total_steps}: {message} (elapsed: {elapsed_time:.1f}s)")
 
     def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Execute Neo's advanced decompilation with Matrix-level insight
+        Execute advanced decompilation with sophisticated analysis
         
-        Neo's approach to decompilation:
+        Advanced decompiler approach:
         1. Understand the binary's true nature (beyond surface structure)
         2. Apply multiple analysis passes to improve accuracy
         3. Use AI to enhance variable names and code readability
@@ -2381,8 +2376,8 @@ void TestLocalServerConnections(void) {
         
         # Generate Matrix annotations
         matrix_annotations = {
-            'neo_vision': "The One has decoded the Matrix simulation",
-            'reality_level': self._assess_reality_level(ai_enhanced_results),
+            'analysis_insight': "Advanced decompilation has analyzed the binary structure",
+            'quality_level': self._assess_quality_level(ai_enhanced_results),
             'matrix_patterns': self._detect_matrix_patterns(ai_enhanced_results),
             'anomalies_detected': self._detect_code_anomalies(ai_enhanced_results),
             'hidden_truths': self._find_hidden_patterns(ai_enhanced_results),
@@ -2531,18 +2526,18 @@ void TestLocalServerConnections(void) {
             confidence_level=confidence_level
         )
     
-    def _assess_reality_level(self, results: Dict[str, Any]) -> str:
-        """Assess the reality level of the decompilation (Matrix theme)"""
+    def _assess_quality_level(self, results: Dict[str, Any]) -> str:
+        """Assess the quality level of the decompilation analysis"""
         quality = results.get('semantic_quality', 0.0)
         
         if quality > 0.8:
-            return "Red Pill - True Reality Revealed"
+            return "High Quality - Complete Analysis Achieved"
         elif quality > 0.6:
-            return "Blue Pill - Comfortable Illusion"
+            return "Good Quality - Comprehensive Analysis"
         elif quality > 0.4:
-            return "Matrix Glitch - Partial Truth"
+            return "Partial Quality - Limited Analysis"
         else:
-            return "Deep in the Matrix - Surface Only"
+            return "Basic Quality - Surface Analysis Only"
     
     def _detect_matrix_patterns(self, results: Dict[str, Any]) -> List[str]:
         """Detect Matrix-themed patterns in the code"""

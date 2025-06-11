@@ -52,7 +52,8 @@
 9. **NO WORKAROUND CODE**: Never write code to work around missing tools
 10. **STRICT ERROR HANDLING**: Always throw errors when requirements not met
 11. **NO HARDCODED TIMEOUTS**: Never use hardcoded timeout values - timeouts may only be used with command flags
-12. **NEVER EDIT SOURCE CODE**: Never modify generated source code - fix compiler/build system instead
+12. **GENERIC DECOMPILER ONLY**: This is a generic decompiler - never reference launcher.exe or Matrix-related content in decompiler code/comments (only allowed in separate docs files)
+13. **NEVER EDIT SOURCE CODE**: Never modify generated source code - fix compiler/build system instead
 
 ## DEPENDENCY RULES
 
