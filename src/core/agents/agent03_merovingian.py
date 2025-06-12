@@ -404,87 +404,28 @@ class MerovingianAgent(DecompilerAgent):
         functions = []
         
         try:
+            # First, find the actual code sections in the PE file
+            code_sections = self._find_code_sections(binary_path)
+            if not code_sections:
+                self.logger.warning("No code sections found in PE file")
+                return functions
+            
             with open(binary_path, 'rb') as f:
-                data = f.read(min(2048*1024, f.seek(0, 2) or f.tell()))  # Read first 2MB for better coverage
-                f.seek(0)
-                
-                # Collect all prologue patterns with priority weighting
-                pattern_groups = [
-                    (self.FUNCTION_PROLOGUES['x86'], 'x86_standard', 0.8),
-                    (self.FUNCTION_PROLOGUES['x64'], 'x64_standard', 0.8),
-                    (self.FUNCTION_PROLOGUES.get('msvc_templates', []), 'msvc_template', 0.6),
-                    (self.FUNCTION_PROLOGUES.get('msvc_helpers', []), 'msvc_helper', 0.5)
-                ]
-                
-                # Search each pattern group with appropriate confidence scoring
-                for patterns, pattern_type, base_confidence in pattern_groups:
-                    for prologue in patterns:
-                        offset = 0
-                        pattern_matches = 0
-                        
-                        while True:
-                            pos = data.find(prologue, offset)
-                            if pos == -1:
-                                break
-                            
-                            # Enhanced confidence calculation based on position and context
-                            confidence = base_confidence
-                            
-                            # Increase confidence for functions in code sections (typical range)
-                            if 0x1000 <= pos <= 0x100000:
-                                confidence += 0.1
-                            
-                            # Increase confidence for aligned functions
-                            if pos % 4 == 0:
-                                confidence += 0.05
-                                
-                            # Decrease confidence for patterns found too frequently (likely data)
-                            if pattern_matches > 20:
-                                confidence = max(0.3, confidence - 0.2)
-                            
-                            # Enhanced function naming based on pattern type
-                            if pattern_type == 'msvc_template':
-                                func_name = f"template_func_{pos:08x}"
-                            elif pattern_type == 'msvc_helper':
-                                func_name = f"helper_func_{pos:08x}"
-                            elif 'x86' in pattern_type:
-                                func_name = f"x86_func_{pos:08x}"
-                            elif 'x64' in pattern_type:
-                                func_name = f"x64_func_{pos:08x}"
-                            else:
-                                func_name = f"function_{pos:08x}"
-                            
-                            # Estimate function size based on pattern type
-                            if pattern_type == 'msvc_helper':
-                                estimated_size = 20  # Helper functions are typically small
-                            elif pattern_type == 'msvc_template':
-                                estimated_size = 80  # Template functions can be larger
-                            else:
-                                estimated_size = 50  # Standard estimate
-                            
-                            functions.append(Function(
-                                name=func_name,
-                                address=pos,
-                                size=estimated_size,
-                                confidence=min(0.95, confidence),  # Cap at 95%
-                                detection_method=f"enhanced_prologue_{pattern_type}",
-                                signature=f"void {func_name}()",
-                                complexity_score=base_confidence  # Use as complexity indicator
-                            ))
-                            
-                            offset = pos + len(prologue)
-                            pattern_matches += 1
-                            
-                            # Dynamic limit based on pattern type
-                            max_functions = 200 if pattern_type in ['x86_standard', 'x64_standard'] else 50
-                            if len(functions) >= max_functions:
-                                break
-                        
-                        if len(functions) >= 300:  # Overall limit increased for better coverage
-                            break
+                # Read code sections instead of just the file beginning
+                for section_name, raw_address, raw_size in code_sections:
+                    self.logger.debug(f"Analyzing {section_name} section at 0x{raw_address:x} (size: {raw_size} bytes)")
                     
-                    if len(functions) >= 300:
-                        break
+                    f.seek(raw_address)
+                    data = f.read(min(raw_size, 2048*1024))  # Read up to 2MB per section
+                    
+                    if not data:
+                        continue
+                    
+                    # Search patterns in this code section
+                    section_functions = self._search_patterns_in_section(
+                        data, section_name, raw_address
+                    )
+                    functions.extend(section_functions)
                 
                 # Log enhanced detection results
                 pattern_counts = {}
@@ -498,6 +439,154 @@ class MerovingianAgent(DecompilerAgent):
                         
         except Exception as e:
             self.logger.debug(f"Enhanced pattern detection failed: {e}")
+        
+        return functions
+
+    def _find_code_sections(self, binary_path: Path) -> list:
+        """Find executable code sections in PE file"""
+        code_sections = []
+        
+        try:
+            with open(binary_path, 'rb') as f:
+                # Read DOS header
+                dos_header = f.read(64)
+                if len(dos_header) < 60 or dos_header[:2] != b'MZ':
+                    return code_sections
+                
+                # Get PE header offset
+                pe_offset = struct.unpack('<I', dos_header[60:64])[0]
+                f.seek(pe_offset)
+                
+                # Read PE signature
+                pe_sig = f.read(4)
+                if pe_sig != b'PE\x00\x00':
+                    return code_sections
+                
+                # Read COFF header with error checking
+                coff_header = f.read(20)
+                if len(coff_header) < 20:
+                    self.logger.debug(f"Insufficient COFF header data: {len(coff_header)} bytes")
+                    return code_sections
+                
+                machine, num_sections, timestamp, ptr_to_sym, num_symbols, opt_header_size, characteristics = struct.unpack('<HHIIIHH', coff_header)
+                
+                self.logger.debug(f"PE analysis: machine=0x{machine:x}, sections={num_sections}, opt_header_size={opt_header_size}")
+                
+                # Sanity check
+                if num_sections > 100 or num_sections == 0:
+                    self.logger.debug(f"Suspicious section count: {num_sections}")
+                    return code_sections
+                
+                # Skip optional header
+                f.seek(f.tell() + opt_header_size)
+                
+                # Read section headers
+                for i in range(num_sections):
+                    # Read section header (40 bytes total)
+                    section_header = f.read(40)
+                    if len(section_header) < 40:
+                        break  # Not enough data for section header
+                    
+                    section_name = section_header[:8].rstrip(b'\x00').decode('ascii', errors='ignore')
+                    virtual_size, virtual_address, raw_size, raw_address = struct.unpack('<IIII', section_header[8:24])
+                    ptr_to_relocs, ptr_to_line_nums, num_relocs, num_line_nums, characteristics = struct.unpack('<IIHHH', section_header[24:40])
+                    
+                    # Check if section is executable (IMAGE_SCN_MEM_EXECUTE = 0x20000000)
+                    # or if it's a known code section name
+                    is_executable = (characteristics & 0x20000000) != 0
+                    is_code_section = section_name.lower() in ['.text', '.code'] or 'text' in section_name.lower()
+                    
+                    if (is_executable or is_code_section) and raw_size > 0:
+                        code_sections.append((section_name, raw_address, raw_size))
+                        
+        except Exception as e:
+            self.logger.debug(f"Error finding code sections: {e}")
+        
+        return code_sections
+
+    def _search_patterns_in_section(self, data: bytes, section_name: str, section_base_addr: int) -> List[Function]:
+        """Search for function patterns in a specific code section"""
+        functions = []
+        
+        # Collect all prologue patterns with priority weighting
+        pattern_groups = [
+            (self.FUNCTION_PROLOGUES['x86'], 'x86_standard', 0.8),
+            (self.FUNCTION_PROLOGUES['x64'], 'x64_standard', 0.8),
+            (self.FUNCTION_PROLOGUES.get('msvc_templates', []), 'msvc_template', 0.6),
+            (self.FUNCTION_PROLOGUES.get('msvc_helpers', []), 'msvc_helper', 0.5)
+        ]
+        
+        # Search each pattern group with appropriate confidence scoring
+        for patterns, pattern_type, base_confidence in pattern_groups:
+            for prologue in patterns:
+                offset = 0
+                pattern_matches = 0
+                
+                while True:
+                    pos = data.find(prologue, offset)
+                    if pos == -1:
+                        break
+                    
+                    # Calculate actual address in binary
+                    actual_address = section_base_addr + pos
+                    
+                    # Enhanced confidence calculation based on position and context
+                    confidence = base_confidence
+                    
+                    # Increase confidence for functions in code sections
+                    confidence += 0.1
+                    
+                    # Increase confidence for aligned functions
+                    if actual_address % 4 == 0:
+                        confidence += 0.05
+                        
+                    # Decrease confidence for patterns found too frequently (likely data)
+                    if pattern_matches > 20:
+                        confidence = max(0.3, confidence - 0.2)
+                    
+                    # Enhanced function naming based on pattern type and section
+                    if pattern_type == 'msvc_template':
+                        func_name = f"{section_name}_template_{actual_address:08x}"
+                    elif pattern_type == 'msvc_helper':
+                        func_name = f"{section_name}_helper_{actual_address:08x}"
+                    elif 'x86' in pattern_type:
+                        func_name = f"{section_name}_x86_{actual_address:08x}"
+                    elif 'x64' in pattern_type:
+                        func_name = f"{section_name}_x64_{actual_address:08x}"
+                    else:
+                        func_name = f"{section_name}_func_{actual_address:08x}"
+                    
+                    # Estimate function size based on pattern type
+                    if pattern_type == 'msvc_helper':
+                        estimated_size = 20  # Helper functions are typically small
+                    elif pattern_type == 'msvc_template':
+                        estimated_size = 80  # Template functions can be larger
+                    else:
+                        estimated_size = 50  # Standard estimate
+                    
+                    functions.append(Function(
+                        name=func_name,
+                        address=actual_address,
+                        size=estimated_size,
+                        confidence=min(0.95, confidence),  # Cap at 95%
+                        detection_method=f"enhanced_prologue_{pattern_type}",
+                        signature=f"void {func_name}()",
+                        complexity_score=base_confidence  # Use as complexity indicator
+                    ))
+                    
+                    offset = pos + len(prologue)
+                    pattern_matches += 1
+                    
+                    # Dynamic limit based on pattern type
+                    max_functions = 200 if pattern_type in ['x86_standard', 'x64_standard'] else 50
+                    if len(functions) >= max_functions:
+                        break
+                
+                if len(functions) >= 300:  # Overall limit increased for better coverage
+                    break
+            
+            if len(functions) >= 300:
+                break
         
         return functions
 
