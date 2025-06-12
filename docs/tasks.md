@@ -1,228 +1,345 @@
-# Matrix Online Binary Reconstruction - Path to 100% Perfection
+# Matrix Pipeline Tasks - Advanced Unpacking Implementation
 
 **Project**: Open-Sourcefy Matrix Pipeline  
-**Target**: launcher.exe (5,267,456 bytes) → 100% Byte-Perfect Reconstruction  
-**Current Status**: 143,872 bytes achieved (2.73% similarity) with perfect MXOEmu source & resources  
-**Last Updated**: June 10, 2025 - Based on MXOEmu 100% Achievement Analysis
+**Target**: launcher.exe (5,267,456 bytes) - Custom Packer Analysis & Real Code Extraction  
+**Current Status**: Placeholder code generation due to custom packer blocking static analysis  
+**Last Updated**: June 12, 2025 - Advanced Unpacking Research Implementation
 
-## 🎯 CRITICAL DISCOVERY - The Missing Elements
+## 🎯 CRITICAL DISCOVERY - The Packer Limitation
 
-Based on analysis of the MXOEmu approach that achieved 100% binary identity, the key insight is that **Agent 10 is correctly using perfect source code and resources**, but we're missing the **massive resource payload** that makes up 97% of the original binary size.
+Research reveals that launcher.exe uses a custom packer that prevents static analysis, blocking access to the real code and limiting decompilation to placeholder implementations.
 
-### 📊 Current Achievement Status
-- ✅ **Perfect Source Code**: 15,400 characters from MXOEmu main.c loaded
-- ✅ **Perfect Resources**: MXOEmu launcher.rc (909 chars) and resource.h (828 chars) loaded  
-- ✅ **Real Compilation**: 143,872 byte PE32 executable compiled with VS2022 MSBuild
-- ✅ **Binary Analysis**: Agent 6 properly detecting and comparing binaries
-- ✅ **7x Size Improvement**: From 20KB minimal to 143KB with perfect MXOEmu integration
+### 📊 Current System Status
+- ✅ **Packer Detection**: Successfully identifies custom packer (confidence: 0.30)
+- ✅ **UPX Integration**: Complete implementation but binary not UPX-packed
+- ✅ **Function Detection**: 1 function detected (unpacker stub only)
+- ✅ **Source Generation**: Placeholder C code generated and saved to disk
+- ✅ **Pipeline Flow**: All 17 agents execute correctly with dependencies fixed
 
-### 🚨 THE RESOURCE SCALE GAP
-**Problem**: Original binary = 5,267,456 bytes, Current = 143,872 bytes  
-**Gap**: 5,123,584 bytes (97.27% missing)  
-**Root Cause**: MXOEmu launcher.rc contains only version info, NOT the massive 22,317 strings + 21 BMPs
+### 🚨 THE FUNDAMENTAL LIMITATION
+**Problem**: Custom packer hides ~99% of executable code  
+**Current**: 1 function detected from 5.3MB binary (unpacker stub only)  
+**Root Cause**: Static analysis cannot penetrate custom packer compression/encryption
 
-## 🏗️ THE PROVEN PATH TO 100% BINARY PERFECTION
+## 🏗️ THE PROVEN PATH TO REAL CODE EXTRACTION
 
-Based on the MXOEmu methodology and our current infrastructure, here's the validated approach:
+Based on external research and advanced unpacking methodologies, here's the phased approach to overcome the packer limitation:
 
-### Phase 1: Resource Payload Integration (CRITICAL - 97% of gap)
-**Status**: 🔥 **READY TO IMPLEMENT** - All infrastructure exists  
-**Impact**: 143KB → 5.0MB+ (from 2.73% to ~95% similarity)  
-**Timeline**: 2-3 hours implementation
+## Phase 1: Automated Packer Identification 🎯 HIGH PRIORITY
 
-#### 🎯 Phase 1 Tasks (Priority 1)
+### Objective
+Implement robust packer detection using Python tools compatible with Linux/WSL to identify the custom packer used in launcher.exe.
 
-1. **Extract Complete Resource Payload from Original Binary**
-   ```bash
-   # Use Agent 8 (Keymaker) to extract ALL resources from original launcher.exe
-   python3 main.py --agents 8 --extract-complete-resources
-   ```
-   **Expected Output**: 22,317 strings + 21 BMPs + version info + icons + dialogs
+### Tasks
+- [ ] **Install and integrate peid library**
+  - Add to requirements.txt: `peid>=1.0.0`
+  - Implement `_run_peid_detection()` in Agent 3
+  - Test against known packed binaries for validation
 
-2. **Generate Massive Resource Script**
-   - Modify Agent 10's `_load_perfect_mxoemu_resources` method
-   - Instead of using minimal MXOEmu launcher.rc, generate complete resources.rc
-   - Include ALL 22,317 strings from Agent 8 extraction
-   - Include ALL 21 BMP files as embedded resources
-   - Add complete version information and dialog resources
+- [ ] **Install and integrate pypackerdetect library**
+  - Add to requirements.txt: `pypackerdetect>=1.0.0`
+  - Implement `_run_pypackerdetect()` in Agent 3
+  - Create comprehensive packer signature database
 
-3. **Update Agent 10 Resource Loading**
-   ```python
-   # In Agent 10: _load_perfect_mxoemu_resources
-   # PRIORITY 1: Load COMPLETE extracted resources from Agent 8
-   # PRIORITY 2: If not available, use MXOEmu minimal resources (current behavior)
-   ```
+- [ ] **Enhance Agent 3 packer detection**
+  - Replace basic custom_packer detection with multi-tool approach
+  - Add confidence scoring based on multiple tool consensus
+  - Implement graceful degradation when tools unavailable
 
-4. **Test Resource Compilation**
-   ```bash
-   # Verify MSBuild can compile massive resource script
-   python3 main.py --agents 10 --update
-   # Expected: 4-5MB binary similar to original size
-   ```
+- [ ] **Create packer signature database**
+  - Research early 2000s game executable packers
+  - Add custom signatures for Matrix Online era binaries
+  - Include obfuscation pattern detection (e.g., "FX`UpxPkwTju")
 
-#### 🔧 Implementation Commands
-```bash
-# Step 1: Extract complete resources
-python3 main.py --agents 8 --extract-all-resources --output-rc
+### Success Criteria
+- ✅ Identify specific packer type for launcher.exe (currently "unknown custom_packer")
+- ✅ Achieve >90% accuracy on test suite of known packed binaries
+- ✅ Seamless integration with existing Agent 3 workflow
+- ✅ No pipeline performance degradation
 
-# Step 2: Update Agent 10 to use complete resources
-# (Edit _load_perfect_mxoemu_resources to prioritize Agent 8 complete extraction)
-
-# Step 3: Test compilation with full resources
-python3 main.py --agents 1,8,10 --update
-
-# Step 4: Verify binary size
-python3 main.py --agents 1,6,10 --update  # Should show ~95% similarity
-```
-
-### Phase 2: PE Structure Precision (5% of gap)
-**Status**: 🔧 **STRUCTURAL REFINEMENT**  
-**Impact**: 95% → 100% (PE header, sections, import tables)  
-**Timeline**: 1-2 days optimization
-
-#### 🎯 Phase 2 Tasks (Priority 2)
-
-1. **Section Layout Matching**
-   - Use Agent 6 (Twins) binary comparison to identify exact section differences
-   - Adjust MSBuild linker settings for identical section layout
-   - Match import table order and structure
-
-2. **Import Table Precision**
-   - Ensure DLL import order matches exactly
-   - Verify function import order within each DLL
-   - Match import hint values and ordinals
-
-3. **PE Header Optimization**
-   - Match timestamp (if not using /BREPRO)
-   - Ensure identical checksum calculation
-   - Verify section characteristics and attributes
-
-### Phase 3: Compiler Flag Perfection (Final 1%)
-**Status**: 🎯 **OPTIMIZATION TUNING**  
-**Impact**: 99% → 100% (instruction-level precision)  
-**Timeline**: 1 day fine-tuning
-
-#### 🎯 Phase 3 Tasks (Priority 3)
-
-1. **Apply Exact MXOEmu Optimization Flags**
-   ```xml
-   <!-- In project.vcxproj - already implemented but verify all flags -->
-   <Optimization>MaxSpeed</Optimization>
-   <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-   <OmitFramePointers>true</OmitFramePointers>
-   <StringPooling>true</StringPooling>
-   <BufferSecurityCheck>false</BufferSecurityCheck>
-   <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-   <RandomizedBaseAddress>false</RandomizedBaseAddress>
-   <DataExecutionPrevention>false</DataExecutionPrevention>
-   <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
-   <BaseAddress>0x400000</BaseAddress>
-   <FixedBaseAddress>true</FixedBaseAddress>
-   ```
-
-2. **Linker Flag Verification**
-   ```xml
-   <AdditionalOptions>/MANIFEST:NO /ALLOWISOLATION /SAFESEH:NO /MERGE:.rdata=.text %(AdditionalOptions)</AdditionalOptions>
-   ```
-
-## 🚀 EXECUTION PLAN - Fast Track to 100%
-
-### Immediate Action (Next 2-3 Hours)
-```bash
-# 1. Extract complete resources from original binary
-python3 main.py --agents 8 --extract-complete-resources --save-to-integration
-
-# 2. Update Agent 10 to prioritize complete resources over MXOEmu minimal
-# Edit: src/core/agents/agent10_the_machine.py
-# In _load_perfect_mxoemu_resources: Check for Agent 8 complete resources FIRST
-
-# 3. Test compilation with complete resources
-python3 main.py --agents 8,10 --update
-
-# 4. Verify massive size increase
-ls -la output/launcher/latest/compilation/bin/Release/Win32/project.exe
-# Expected: ~5MB instead of 143KB
-
-# 5. Run binary comparison
-python3 main.py --agents 1,6,10 --update
-# Expected: Jump from 2.73% to 95%+ similarity
-```
-
-### Same Day Completion (6-8 Hours Total)
-```bash
-# Phase 2: PE structure precision
-python3 main.py --agents 1,2,6,10 --update
-# Analyze Agent 6 output for remaining structural differences
-
-# Phase 3: Final optimization
-# Fine-tune compilation flags based on binary comparison results
-# Run final validation
-python3 main.py --full-pipeline --validate-perfect-match
-```
-
-## 🎯 SUCCESS CRITERIA
-
-### Binary Verification Commands
-```bash
-# Size check
-ls -la launcher.exe
-ls -la output/launcher/latest/compilation/bin/Release/Win32/project.exe
-# Expected: Both exactly 5,267,456 bytes
-
-# Hash verification (ultimate test)
-sha256sum launcher.exe
-sha256sum output/launcher/latest/compilation/bin/Release/Win32/project.exe
-# Expected: Identical SHA256 hashes
-
-# Byte-perfect comparison
-diff launcher.exe output/launcher/latest/compilation/bin/Release/Win32/project.exe
-# Expected: NO OUTPUT (perfect match)
-```
-
-### Agent 6 (Twins) Success Output
-```
-✅ Found compiled binary: project.exe (5,267,456 bytes)
-Size comparison: Original=5,267,456 bytes, Generated=5,267,456 bytes, Similarity=100.00%
-🎯 PERFECT BINARY MATCH ACHIEVED - SHA256 hash identical
-```
-
-## 🔑 KEY INSIGHTS FROM MXOEMU SUCCESS
-
-1. **Perfect Source Code**: ✅ Already achieved (15,400 char main.c)
-2. **Perfect Build System**: ✅ Already achieved (VS2022 MSBuild + optimization flags)
-3. **MISSING: Complete Resource Payload**: 🚨 The 97% gap (22,317 strings + 21 BMPs)
-4. **PE Structure Matching**: 🔧 Fine-tuning needed (import tables, section layout)
-
-## 📋 IMPLEMENTATION CHECKLIST
-
-### Phase 1: Resource Payload (PRIORITY 1) 🔥
-- [ ] Extract complete resources using Agent 8 
-- [ ] Generate massive resources.rc with all 22,317 strings
-- [ ] Include all 21 BMP files as embedded resources  
-- [ ] Update Agent 10 to prioritize complete resources
-- [ ] Test compilation and verify ~5MB binary size
-- [ ] Verify Agent 6 shows 95%+ similarity
-
-### Phase 2: PE Structure (PRIORITY 2) 🔧
-- [ ] Run Agent 6 detailed binary comparison
-- [ ] Analyze section layout differences
-- [ ] Adjust linker settings for exact import table matching
-- [ ] Verify PE header characteristics match
-
-### Phase 3: Final Optimization (PRIORITY 3) 🎯
-- [ ] Apply exact MXOEmu compiler flags
-- [ ] Verify /MERGE:.rdata=.text linker option
-- [ ] Test with /BREPRO for deterministic builds
-- [ ] Final binary comparison and hash verification
-
-## 🏆 EXPECTED TIMELINE TO 100% PERFECTION
-
-- **Phase 1 (Resource Payload)**: 2-3 hours → 95% similarity achieved
-- **Phase 2 (PE Structure)**: 4-6 hours → 99% similarity achieved  
-- **Phase 3 (Final Optimization)**: 2-4 hours → 100% perfection achieved
-- **Total Timeline**: 8-13 hours to complete 100% binary identity
+### Implementation Priority: **IMMEDIATE**
 
 ---
 
-**🎯 FINAL TARGET**: `diff launcher.exe launcher_recompiled.exe` returns **NO DIFFERENCES**  
-**🔑 KEY INSIGHT**: Agent 10 has perfect infrastructure - just needs complete resource payload instead of minimal MXOEmu resources
+## Phase 2: Dynamic Unpacking Integration 🚀 HIGH PRIORITY
+
+### Objective
+Implement automated unpacking using dynamic analysis tools to extract the real code hidden by the custom packer.
+
+### Tasks
+- [ ] **Create Agent 17: The Unpacker**
+  - New agent class extending AnalysisAgent
+  - Dependencies: [3] (requires packer detection first)
+  - Implements multiple unpacking strategies
+
+- [ ] **Integrate unipacker framework**
+  - Research unipacker installation for Linux/WSL
+  - Implement `_try_unipacker()` method
+  - Handle emulation-based unpacking with timeout controls
+
+- [ ] **Add Wine/VM execution environment**
+  - Set up Windows execution environment for dynamic analysis
+  - Implement safe execution with network isolation
+  - Add memory monitoring and dumping capabilities
+
+- [ ] **Implement breakpoint-based unpacking**
+  - Monitor VirtualAlloc, VirtualProtect, CreateProcess calls
+  - Identify unpacking completion markers
+  - Extract unpacked code from memory allocations
+
+### Success Criteria
+- ✅ Successfully unpack launcher.exe to reveal hidden functions
+- ✅ Extract >100 functions from unpacked binary (vs current 1 function)
+- ✅ Generate meaningful source code instead of placeholder
+- ✅ Maintain execution safety in sandboxed environment
+
+### Implementation Priority: **HIGH** (after Phase 1 completion)
+
+---
+
+## Phase 3: Memory Archaeologist Agent 🔍 MEDIUM PRIORITY
+
+### Objective
+Advanced memory analysis for complex packer scenarios where automated unpacking fails.
+
+### Tasks
+- [ ] **Create Agent 18: Memory Archaeologist**
+  - Specialized memory analysis and forensics agent
+  - Dependencies: [17] (runs after unpacking attempts)
+  - Advanced memory reconstruction capabilities
+
+- [ ] **Integrate Volatility framework**
+  - Add volatility3 to requirements.txt
+  - Implement memory dump analysis workflows
+  - Extract code sections, strings, API calls from memory
+
+- [ ] **Process memory dumping system**
+  - Monitor launcher.exe execution in controlled environment
+  - Capture memory state during/after unpacking
+  - Reconstruct executable structure from memory layout
+
+- [ ] **Manual analysis guidance system**
+  - Generate x64dbg/OllyDbg scripts for manual unpacking
+  - Provide step-by-step unpacking instructions
+  - Interactive debugging workflow integration
+
+### Success Criteria
+- ✅ Extract code from memory when static unpacking fails
+- ✅ Identify API usage patterns and function boundaries
+- ✅ Reconstruct executable structure from memory dumps
+- ✅ Provide comprehensive manual unpacking guidance
+
+### Implementation Priority: **MEDIUM** (advanced scenarios)
+
+---
+
+## Phase 4: Fallback Strategies and Community Integration 🌐 MEDIUM PRIORITY
+
+### Objective
+Comprehensive fallback options and community resource integration for edge cases.
+
+### Tasks
+- [ ] **Community resource integration**
+  - Integrate Matrix Online preservation project resources
+  - Search mxoemu.info for unpacked binaries automatically
+  - Create database of known good/unpacked Matrix Online binaries
+
+- [ ] **Alternative analysis targets**
+  - Analyze related executables (matrix.exe, game client files)
+  - Process debug/development builds without packing
+  - Extract configuration files and game assets
+
+- [ ] **Enhanced fallback analysis**
+  - Deep static analysis when dynamic methods fail
+  - Pattern-based code reconstruction
+  - Heuristic-based function boundary detection
+
+- [ ] **Documentation and knowledge base**
+  - Create comprehensive unpacking methodology documentation
+  - Build knowledge base of early 2000s game packer techniques
+  - Provide troubleshooting guides for common scenarios
+
+### Success Criteria
+- ✅ Automated discovery of community resources
+- ✅ Comprehensive fallback procedures documented
+- ✅ Knowledge base for early 2000s game binary analysis
+- ✅ 95% success rate across various packed game executables
+
+### Implementation Priority: **MEDIUM** (comprehensive coverage)
+
+---
+
+## Technical Implementation Notes
+
+### New Agent Architecture
+```
+Agent 17: The Unpacker
+├── Dynamic unpacking using unipacker
+├── Wine/VM-based execution analysis
+├── Memory dumping and monitoring
+└── Breakpoint-based code extraction
+
+Agent 18: Memory Archaeologist  
+├── Volatility framework integration
+├── Memory forensics and reconstruction
+├── Manual analysis guidance generation
+└── Advanced static analysis fallbacks
+
+Enhanced Agent 3: Advanced Packer Detection
+├── peid integration for signature detection
+├── pypackerdetect for comprehensive analysis
+├── Custom signature database for game executables
+└── Multi-tool consensus scoring
+```
+
+### Pipeline Flow Enhancement
+```
+Current Flow:
+Binary → Agent 3 (1 function) → Agent 5 (placeholder code)
+
+Enhanced Flow:
+Binary → Enhanced Agent 3 (packer ID) → Agent 17 (unpacking) → Agent 3 (real functions) → Agent 5 (real code)
+                                      ↓
+                                  Agent 18 (memory analysis) → Reconstructed code
+```
+
+### Tool Dependencies
+| Phase | Tool | Installation | Purpose |
+|-------|------|--------------|---------|
+| 1 | peid | `pip install peid` | Packer signature detection |
+| 1 | pypackerdetect | `pip install pypackerdetect` | Advanced packer analysis |
+| 2 | unipacker | Manual setup | Automated unpacking |
+| 2 | Wine | `apt install wine` | Windows execution |
+| 3 | volatility3 | `pip install volatility3` | Memory analysis |
+| 3 | x64dbg | Windows VM | Manual debugging |
+
+### Risk Mitigation
+- **Execution Safety**: All dynamic analysis in isolated VMs
+- **Performance**: Timeout controls on all unpacking attempts
+- **Compatibility**: Graceful degradation when tools unavailable
+- **Validation**: Multiple verification methods for unpacking results
+
+## 🚀 EXECUTION PLAN - Fast Track to Real Code
+
+### Immediate Action (Next 2-3 Hours) - Phase 1
+```bash
+# 1. Install packer detection tools
+pip install peid pypackerdetect
+
+# 2. Enhance Agent 3 with multi-tool packer detection
+# Edit: src/core/agents/agent03_merovingian.py
+# Add _run_peid_detection() and _run_pypackerdetect() methods
+
+# 3. Test enhanced packer detection
+python3 main.py --agents 3 --debug
+# Expected: Specific packer type instead of "custom_packer"
+
+# 4. Validate against known packed binaries
+# Create test suite with UPX, ASPack, MPRESS packed samples
+```
+
+### Week 1 Completion (Phase 2) - Dynamic Unpacking
+```bash
+# 1. Create Agent 17: The Unpacker
+# New file: src/core/agents/agent17_unpacker.py
+
+# 2. Integrate unipacker framework
+# Research and install unipacker for Linux/WSL
+
+# 3. Test dynamic unpacking
+python3 main.py --agents 3,17 --debug
+# Expected: Extract >100 functions from unpacked binary
+
+# 4. Validate source code generation
+python3 main.py --agents 3,17,5 --debug
+# Expected: Real code instead of placeholder
+```
+
+## 📋 IMPLEMENTATION CHECKLIST
+
+### Phase 1: Automated Packer Identification (PRIORITY 1) 🔥
+- [ ] Install peid library: `pip install peid`
+- [ ] Install pypackerdetect library: `pip install pypackerdetect` 
+- [ ] Enhance Agent 3 with `_run_peid_detection()` method
+- [ ] Enhance Agent 3 with `_run_pypackerdetect()` method
+- [ ] Create custom signature database for early 2000s game packers
+- [ ] Test on launcher.exe and validate specific packer identification
+- [ ] Create test suite with known packed binaries
+- [ ] Ensure graceful degradation when tools unavailable
+
+### Phase 2: Dynamic Unpacking Integration (PRIORITY 2) 🚀
+- [ ] Create Agent 17: The Unpacker (new agent file)
+- [ ] Research and install unipacker framework for Linux/WSL
+- [ ] Implement `_try_unipacker()` method for automated unpacking
+- [ ] Set up Wine/VM execution environment for dynamic analysis
+- [ ] Implement memory monitoring and dumping capabilities
+- [ ] Add breakpoint-based unpacking with VirtualAlloc monitoring
+- [ ] Test on launcher.exe with expectation of >100 functions extracted
+- [ ] Validate meaningful source code generation vs placeholder
+
+### Phase 3: Memory Archaeologist Agent (PRIORITY 3) 🔍
+- [ ] Create Agent 18: Memory Archaeologist (new agent file)
+- [ ] Install volatility3: `pip install volatility3`
+- [ ] Implement memory dump analysis workflows
+- [ ] Add process memory dumping during execution monitoring
+- [ ] Create manual analysis guidance system (x64dbg scripts)
+- [ ] Implement memory-based executable reconstruction
+- [ ] Test advanced scenarios where automated unpacking fails
+
+### Phase 4: Fallback Strategies (PRIORITY 4) 🌐
+- [ ] Integrate Matrix Online preservation project resources
+- [ ] Create automated search for unpacked Matrix Online binaries
+- [ ] Implement alternative analysis for related executables
+- [ ] Build knowledge base for early 2000s game packer techniques
+- [ ] Create comprehensive unpacking methodology documentation
+- [ ] Implement pattern-based code reconstruction fallbacks
+
+## 🎯 SUCCESS CRITERIA
+
+### Phase 1 Success Verification
+```bash
+# Enhanced packer detection
+python3 main.py --agents 3 --debug
+# Expected output: Specific packer type (not "custom_packer")
+
+# Multi-tool consensus
+python3 -c "
+from src.core.agents.agent03_merovingian import MerovingianAgent
+agent = MerovingianAgent()
+result = agent._enhanced_packer_detection('input/launcher.exe')
+print(f'Packer identified: {result}')
+"
+# Expected: Detailed packer analysis with confidence scores
+```
+
+### Phase 2 Success Verification  
+```bash
+# Dynamic unpacking test
+python3 main.py --agents 3,17 --debug
+# Expected: >100 functions detected vs current 1
+
+# Real source code generation
+python3 main.py --agents 3,17,5 --debug
+# Check: output/launcher/latest/compilation/src/main.c
+# Expected: Real decompiled code vs placeholder comments
+```
+
+### Ultimate Success Criteria
+- **Function Detection**: >100 functions extracted (vs current 1)
+- **Code Quality**: >80% real code vs <20% placeholder  
+- **API Coverage**: Identify Windows API usage patterns
+- **Source Compilation**: Generated code compiles to functional executable
+- **Methodology Validation**: Success rate >90% on test suite of packed binaries
+
+## 🏆 EXPECTED TIMELINE TO REAL CODE EXTRACTION
+
+- **Phase 1 (Packer ID)**: 2-3 hours → Specific packer type identified
+- **Phase 2 (Dynamic Unpacking)**: 1-2 weeks → Real functions extracted
+- **Phase 3 (Memory Analysis)**: 1-2 weeks → Advanced unpacking capabilities  
+- **Phase 4 (Fallback Systems)**: 1 week → Comprehensive methodology
+- **Total Timeline**: 3-5 weeks to complete real code extraction system
+
+---
+
+**🎯 ULTIMATE TARGET**: Extract real Matrix Online launcher functionality instead of placeholder code  
+**🔑 KEY INSIGHT**: Packer blocks static analysis - dynamic unpacking is the path to real code
