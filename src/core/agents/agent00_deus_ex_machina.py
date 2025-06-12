@@ -61,8 +61,7 @@ class DeusExMachinaAgent(MatrixAgent):
     def __init__(self):
         super().__init__(
             agent_id=0,
-            matrix_character=MatrixCharacter.ARCHITECT,  # Use Architect as closest character
-            dependencies=[]
+            matrix_character=MatrixCharacter.ARCHITECT  # Use Architect as closest character
         )
         self.agent_name = "Agent00_DeusExMachina"
         self.matrix_character_name = "deus_ex_machina"
@@ -171,25 +170,8 @@ class DeusExMachinaAgent(MatrixAgent):
     
     def _organize_agent_batches(self, selected_agents: List[int]) -> List[List[int]]:
         """Organize agents into batches based on dependencies"""
-        # Matrix dependency structure from matrix_agents.py
-        MATRIX_DEPENDENCIES = {
-            1: [],                    # Sentinel - Entry point
-            2: [1],                   # Architect - Depends on Sentinel
-            3: [1],                   # Merovingian - Depends on Sentinel  
-            4: [1],                   # Agent Smith - Depends on Sentinel
-            5: [1, 2],               # Neo - Depends on Sentinel and Architect
-            6: [1, 2, 5],            # Twins - Depends on Sentinel, Architect, and Neo
-            7: [1, 2],               # Trainman - Depends on Sentinel and Architect
-            8: [1, 2],               # Keymaker - Depends on Sentinel and Architect
-            9: [5, 6, 7, 8],         # Commander Locke - Depends on Phase B agents
-            10: [9],                 # Machine - Depends on Commander Locke
-            11: [10],                # Oracle - Depends on Machine
-            12: [5, 6, 7, 8],        # Link - Depends on Phase B agents
-            13: [5, 6, 7, 8],        # Agent Johnson - Depends on Phase B agents
-            14: [9, 10, 11],         # Cleaner - Depends on early Phase C agents
-            15: [1, 2],              # Analyst - Depends on Sentinel and Architect
-            16: [14, 15]             # Agent Brown - Final validation
-        }
+        # Use centralized dependencies from matrix_agents.py - SINGLE SOURCE OF TRUTH
+        from ..matrix_agents import MATRIX_DEPENDENCIES
         
         batches = []
         remaining_agents = set(selected_agents)

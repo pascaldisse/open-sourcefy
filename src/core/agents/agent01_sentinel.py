@@ -118,8 +118,7 @@ class SentinelAgent(AnalysisAgent):
     def __init__(self):
         super().__init__(
             agent_id=1,
-            matrix_character=MatrixCharacter.SENTINEL,
-            dependencies=[]  # No dependencies - foundation agent
+            matrix_character=MatrixCharacter.SENTINEL
         )
         
         # Load configuration constants

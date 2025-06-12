@@ -17,8 +17,7 @@ class Agent13_AgentJohnson(ReconstructionAgent):
     def __init__(self):
         super().__init__(
             agent_id=13,
-            matrix_character=MatrixCharacter.AGENT_JOHNSON,
-            dependencies=[5, 6, 7, 8]  # Depends on Phase B agents
+            matrix_character=MatrixCharacter.AGENT_JOHNSON
         )
 
     def _validate_prerequisites(self, context: Dict[str, Any]) -> None:

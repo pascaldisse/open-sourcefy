@@ -17,9 +17,8 @@ class Agent10_TheMachine(ReconstructionAgent):
     
     def __init__(self):
         super().__init__(
-            agent_id=9,
-            matrix_character=MatrixCharacter.MACHINE,
-            dependencies=[8]  # Depends on Commander Locke (agent 8)
+            agent_id=10,
+            matrix_character=MatrixCharacter.MACHINE
         )
 
     def _validate_prerequisites(self, context: Dict[str, Any]) -> None:
@@ -31,14 +30,14 @@ class Agent10_TheMachine(ReconstructionAgent):
         if 'binary_metadata' not in shared_memory:
             shared_memory['binary_metadata'] = {}
         
-        # Check for dependencies more flexibly - Agent 9 depends on Agent 8 (Commander Locke)
+        # Check for dependencies more flexibly - Agent 10 depends on Agent 9 (Commander Locke)
         dependencies_met = False
         agent_results = context.get('agent_results', {})
         
-        # Check for Agent 8 (Commander Locke) results - PRIMARY SOURCE
-        if 8 in agent_results or 8 in shared_memory['analysis_results']:
+        # Check for Agent 9 (Commander Locke) results - PRIMARY SOURCE
+        if 9 in agent_results or 9 in shared_memory['analysis_results']:
             dependencies_met = True
-            self.logger.info("✅ Found Agent 8 (Commander Locke) dependency - primary reconstruction source available")
+            self.logger.info("✅ Found Agent 9 (Commander Locke) dependency - primary reconstruction source available")
         
         # Also check for Agent 5 (Neo) for alternative decompilation source
         if 5 in agent_results or 5 in shared_memory['analysis_results']:
@@ -155,9 +154,9 @@ class Agent10_TheMachine(ReconstructionAgent):
             if isinstance(resource_data, dict):
                 sources['resource_files'].update(resource_data.get('resource_files', {}))
         
-        # Gather from Commander Locke (Agent 8) - PRIMARY SOURCE
-        if 8 in all_results and hasattr(all_results[8], 'status') and all_results[8].status == AgentStatus.SUCCESS:
-            locke_data = all_results[8].data
+        # Gather from Commander Locke (Agent 9) - PRIMARY SOURCE
+        if 9 in all_results and hasattr(all_results[9], 'status') and all_results[9].status == AgentStatus.SUCCESS:
+            locke_data = all_results[9].data
             if isinstance(locke_data, dict):
                 # Check for reconstructed source files from Commander Locke
                 reconstructed_sources = locke_data.get('source_files', {})

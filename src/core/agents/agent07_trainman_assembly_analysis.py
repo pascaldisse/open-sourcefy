@@ -97,9 +97,8 @@ class Agent7_Trainman_AssemblyAnalysis(AnalysisAgent):
     
     def __init__(self):
         super().__init__(
-            agent_id=6,
-            matrix_character=MatrixCharacter.TRAINMAN,
-            dependencies=[1, 2]  # Depends on Binary Discovery and Arch Analysis
+            agent_id=7,
+            matrix_character=MatrixCharacter.TRAINMAN
         )
         
         # Load Trainman-specific configuration

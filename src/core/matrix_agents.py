@@ -1,6 +1,7 @@
 """
 Enhanced Matrix Agent Base Classes for Phase 2 Refactor
-Implements the 16-agent Matrix-themed architecture with reduced boilerplate
+Implements the 17-agent Matrix-themed architecture with LangChain integration
+All agents are Matrix agents with centralized dependency management and LangChain support
 """
 
 import abc
@@ -14,6 +15,34 @@ from pathlib import Path
 from .config_manager import get_config_manager
 from .ai_engine_interface import get_ai_engine
 
+# LangChain imports - STRICT MODE: fail fast in production
+try:
+    from langchain.agents import AgentExecutor, ReActDocstoreAgent
+    from langchain.memory import ConversationBufferMemory
+    from langchain.tools import Tool
+    from langchain.schema import AgentAction, AgentFinish
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    # Only allow import errors during testing/dependency checking
+    import os
+    if os.getenv('MATRIX_TESTING') == 'true':
+        LANGCHAIN_AVAILABLE = False
+        # Create stub classes for testing only
+        class AgentExecutor: 
+            def __init__(self, *args, **kwargs): pass
+            @classmethod
+            def from_agent_and_tools(cls, *args, **kwargs): return cls()
+        class ReActDocstoreAgent: 
+            def __init__(self, *args, **kwargs): pass
+            @classmethod
+            def from_llm_and_tools(cls, *args, **kwargs): return cls()
+        class ConversationBufferMemory: 
+            def __init__(self, *args, **kwargs): pass
+        class Tool: 
+            def __init__(self, *args, **kwargs): pass
+    else:
+        raise ImportError("LangChain is required for Matrix agents. Install with: pip install langchain")
+
 
 class AgentStatus(Enum):
     """Agent execution status"""
@@ -26,22 +55,23 @@ class AgentStatus(Enum):
 
 class MatrixCharacter(Enum):
     """Matrix character types for themed agents"""
-    SENTINEL = "sentinel"
-    ARCHITECT = "architect"
-    MEROVINGIAN = "merovingian"
-    AGENT_SMITH = "agent_smith"
-    NEO = "neo"
-    TWINS = "twins"
-    TRAINMAN = "trainman"
-    KEYMAKER = "keymaker"
-    COMMANDER_LOCKE = "commander_locke"
-    MACHINE = "machine"
-    ORACLE = "oracle"
-    LINK = "link"
-    AGENT_JOHNSON = "agent_johnson"
-    CLEANER = "cleaner"
-    ANALYST = "analyst"
-    AGENT_BROWN = "agent_brown"
+    DEUS_EX_MACHINA = "deus_ex_machina"  # Agent 0
+    SENTINEL = "sentinel"                # Agent 1
+    ARCHITECT = "architect"              # Agent 2
+    MEROVINGIAN = "merovingian"          # Agent 3
+    AGENT_SMITH = "agent_smith"          # Agent 4
+    NEO = "neo"                          # Agent 5
+    TWINS = "twins"                      # Agent 6
+    TRAINMAN = "trainman"                # Agent 7
+    KEYMAKER = "keymaker"                # Agent 8
+    COMMANDER_LOCKE = "commander_locke"  # Agent 9
+    MACHINE = "machine"                  # Agent 10
+    ORACLE = "oracle"                    # Agent 11
+    LINK = "link"                        # Agent 12
+    AGENT_JOHNSON = "agent_johnson"      # Agent 13
+    CLEANER = "cleaner"                  # Agent 14
+    ANALYST = "analyst"                  # Agent 15
+    AGENT_BROWN = "agent_brown"          # Agent 16
 
 
 @dataclass
@@ -58,13 +88,15 @@ class AgentResult:
 
 
 class MatrixAgent(abc.ABC):
-    """Enhanced base class for all Matrix agents with reduced boilerplate"""
+    """Enhanced base class for all Matrix agents with LangChain integration and centralized dependencies"""
     
-    def __init__(self, agent_id: int, matrix_character: MatrixCharacter, dependencies: List[int] = None):
+    def __init__(self, agent_id: int, matrix_character: MatrixCharacter):
         self.agent_id = agent_id
         self.matrix_character = matrix_character
         self.agent_name = f"Agent{agent_id:02d}_{matrix_character.value.title()}"
-        self.dependencies = dependencies or []
+        
+        # Centralized dependency management - SINGLE SOURCE OF TRUTH
+        self.dependencies = MATRIX_DEPENDENCIES.get(agent_id, [])
         self.status = AgentStatus.PENDING
         
         # Setup shared components
@@ -72,6 +104,11 @@ class MatrixAgent(abc.ABC):
         self.config = get_config_manager()
         self.ai_engine = get_ai_engine()
         self.output_manager = None  # Set during execution
+        
+        # LangChain integration - ALL AGENTS ARE LANGCHAIN AGENTS
+        self.memory = ConversationBufferMemory()
+        self.langchain_tools = self._setup_langchain_tools()
+        self.langchain_agent = None  # Initialized during execution
         
         # Execution settings
         self.timeout = self.config.get_value(f'agents.agent_{agent_id:02d}.timeout', 300)
@@ -92,6 +129,44 @@ class MatrixAgent(abc.ABC):
             logger.addHandler(handler)
             
         return logger
+
+    def _setup_langchain_tools(self) -> List[Tool]:
+        """Setup LangChain tools for this agent - to be extended by subclasses"""
+        base_tools = [
+            Tool(
+                name="matrix_logger",
+                description="Log Matrix operations and findings",
+                func=lambda msg: self.logger.info(f"Matrix Log: {msg}")
+            ),
+            Tool(
+                name="matrix_status",
+                description="Get current Matrix agent status and progress",
+                func=lambda: f"Agent {self.agent_id} ({self.matrix_character.value}) - Status: {self.status.value}"
+            )
+        ]
+        return base_tools
+
+    def _initialize_langchain_agent(self) -> AgentExecutor:
+        """Initialize LangChain agent executor for this Matrix agent"""
+        if not self.langchain_agent:
+            if LANGCHAIN_AVAILABLE:
+                # Create LangChain agent with Matrix-specific configuration
+                agent = ReActDocstoreAgent.from_llm_and_tools(
+                    llm=self.ai_engine,
+                    tools=self.langchain_tools,
+                    memory=self.memory
+                )
+                self.langchain_agent = AgentExecutor.from_agent_and_tools(
+                    agent=agent,
+                    tools=self.langchain_tools,
+                    memory=self.memory,
+                    verbose=True,
+                    max_iterations=10
+                )
+            else:
+                # Testing mode - create stub agent
+                self.langchain_agent = AgentExecutor()
+        return self.langchain_agent
 
     @abc.abstractmethod
     def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -284,8 +359,8 @@ class MatrixAgent(abc.ABC):
 class AnalysisAgent(MatrixAgent):
     """Base class for analysis-focused agents (Phase B: Agents 1-8)"""
     
-    def __init__(self, agent_id: int, matrix_character: MatrixCharacter, dependencies: List[int] = None):
-        super().__init__(agent_id, matrix_character, dependencies)
+    def __init__(self, agent_id: int, matrix_character: MatrixCharacter):
+        super().__init__(agent_id, matrix_character)
         self.analysis_type = "binary_analysis"
 
     def _get_required_context_keys(self) -> List[str]:
@@ -298,8 +373,8 @@ class AnalysisAgent(MatrixAgent):
 class DecompilerAgent(MatrixAgent):
     """Base class for decompilation-focused agents"""
     
-    def __init__(self, agent_id: int, matrix_character: MatrixCharacter, dependencies: List[int] = None):
-        super().__init__(agent_id, matrix_character, dependencies)
+    def __init__(self, agent_id: int, matrix_character: MatrixCharacter):
+        super().__init__(agent_id, matrix_character)
         self.decompiler_type = "advanced"
         
         # Decompiler-specific settings
@@ -310,16 +385,16 @@ class DecompilerAgent(MatrixAgent):
 class ReconstructionAgent(MatrixAgent):
     """Base class for reconstruction-focused agents (Phase C: Agents 9-16)"""
     
-    def __init__(self, agent_id: int, matrix_character: MatrixCharacter, dependencies: List[int] = None):
-        super().__init__(agent_id, matrix_character, dependencies)
+    def __init__(self, agent_id: int, matrix_character: MatrixCharacter):
+        super().__init__(agent_id, matrix_character)
         self.reconstruction_type = "advanced"
 
 
 class ValidationAgent(MatrixAgent):
     """Base class for validation and testing agents"""
     
-    def __init__(self, agent_id: int, matrix_character: MatrixCharacter, dependencies: List[int] = None):
-        super().__init__(agent_id, matrix_character, dependencies)
+    def __init__(self, agent_id: int, matrix_character: MatrixCharacter):
+        super().__init__(agent_id, matrix_character)
         self.validation_type = "comprehensive"
         
         # Validation-specific settings
@@ -327,8 +402,10 @@ class ValidationAgent(MatrixAgent):
         self.completeness_threshold = self.config.get_value('validation.completeness_threshold', 0.7)
 
 
-# Matrix Agent Dependencies - Corrected to match actual agent assignments
+# Matrix Agent Dependencies - CENTRALIZED SINGLE SOURCE OF TRUTH
+# NO DEPENDENCIES ANYWHERE ELSE - ALL MANAGED HERE
 MATRIX_DEPENDENCIES = {
+    0: [],                    # Deus Ex Machina - Master orchestrator, no dependencies
     1: [],                    # Sentinel - Entry point, no dependencies
     2: [1],                   # Architect - Depends on Sentinel
     3: [1],                   # Merovingian - Depends on Sentinel  
@@ -338,7 +415,7 @@ MATRIX_DEPENDENCIES = {
     7: [1, 2],               # Trainman - Depends on Sentinel and Architect
     8: [1, 2],               # Keymaker - Depends on Sentinel and Architect
     9: [5, 7, 8],            # Commander Locke - Depends on Phase B agents  
-    10: [9],                 # The Machine - Depends on Commander Locke
+    10: [5, 9],              # The Machine - Depends on Neo and Commander Locke (CORRECTED)
     11: [6],                 # Oracle - Depends on Twins comparison
     12: [5, 6, 7],           # Link - Depends on Phase B agents
     13: [5, 6, 7],           # Agent Johnson - Depends on Phase B agents

@@ -125,8 +125,7 @@ class MerovingianAgent(DecompilerAgent):
     def __init__(self):
         super().__init__(
             agent_id=3,
-            matrix_character=MatrixCharacter.MEROVINGIAN,
-            dependencies=[1]  # Depends on Sentinel for binary info
+            matrix_character=MatrixCharacter.MEROVINGIAN
         )
         
         # Initialize components
@@ -556,16 +555,19 @@ class MerovingianAgent(DecompilerAgent):
                         confidence = max(0.3, confidence - 0.2)
                     
                     # Enhanced function naming based on pattern type and section
+                    # Sanitize section name for valid C identifiers (remove leading period)
+                    clean_section_name = section_name.lstrip('.')
+                    
                     if pattern_type == 'msvc_template':
-                        func_name = f"{section_name}_template_{actual_address:08x}"
+                        func_name = f"{clean_section_name}_template_{actual_address:08x}"
                     elif pattern_type == 'msvc_helper':
-                        func_name = f"{section_name}_helper_{actual_address:08x}"
+                        func_name = f"{clean_section_name}_helper_{actual_address:08x}"
                     elif 'x86' in pattern_type:
-                        func_name = f"{section_name}_x86_{actual_address:08x}"
+                        func_name = f"{clean_section_name}_x86_{actual_address:08x}"
                     elif 'x64' in pattern_type:
-                        func_name = f"{section_name}_x64_{actual_address:08x}"
+                        func_name = f"{clean_section_name}_x64_{actual_address:08x}"
                     else:
-                        func_name = f"{section_name}_func_{actual_address:08x}"
+                        func_name = f"{clean_section_name}_func_{actual_address:08x}"
                     
                     # Estimate function size based on pattern type
                     if pattern_type == 'msvc_helper':
@@ -1255,13 +1257,16 @@ class MerovingianAgent(DecompilerAgent):
                                 if len(functions) >= 50:  # Limit functions per section
                                     break
                                     
+                                # Sanitize section name for valid C identifiers (remove leading period)
+                                clean_section_name = section_name.lstrip('.')
+                                
                                 functions.append(Function(
-                                    name=f"{section_name}_func_{offset:04x}",
+                                    name=f"{clean_section_name}_func_{offset:04x}",
                                     address=virtual_address + offset,
                                     size=min(256, section_size - offset),
                                     confidence=0.6,
                                     detection_method="section_analysis",
-                                    signature=f"void {section_name}_func_{offset:04x}()"
+                                    signature=f"void {clean_section_name}_func_{offset:04x}()"
                                 ))
                                 
         except Exception as e:

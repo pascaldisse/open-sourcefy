@@ -18,8 +18,7 @@ class Agent11_TheOracle(ValidationAgent):
     def __init__(self):
         super().__init__(
             agent_id=11,
-            matrix_character=MatrixCharacter.ORACLE,
-            dependencies=[10]  # Depends on The Machine (compilation)
+            matrix_character=MatrixCharacter.ORACLE
         )
 
     def _get_agent_data_safely(self, agent_data: Any, key: str) -> Any:

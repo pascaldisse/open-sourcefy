@@ -138,9 +138,8 @@ class Agent8_Keymaker_ResourceReconstruction(ReconstructionAgent):
     
     def __init__(self):
         super().__init__(
-            agent_id=7,
-            matrix_character=MatrixCharacter.KEYMAKER,
-            dependencies=[1, 2]  # Depends on Binary Discovery and Arch Analysis
+            agent_id=8,
+            matrix_character=MatrixCharacter.KEYMAKER
         )
         
         # Load Keymaker-specific configuration

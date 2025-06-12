@@ -43,8 +43,7 @@ class NeoAgent(DecompilerAgent):
     def __init__(self):
         super().__init__(
             agent_id=5,
-            matrix_character=MatrixCharacter.NEO,
-            dependencies=[1, 2, 3]  # Depends on Sentinel, Architect, Merovingian
+            matrix_character=MatrixCharacter.NEO
         )
         
         # Initialize components

@@ -17,8 +17,7 @@ class Agent14_TheCleaner(ReconstructionAgent):
     def __init__(self):
         super().__init__(
             agent_id=14,
-            matrix_character=MatrixCharacter.CLEANER,
-            dependencies=[9, 10, 11]  # Depends on early Phase C agents
+            matrix_character=MatrixCharacter.CLEANER
         )
 
     def _validate_prerequisites(self, context: Dict[str, Any]) -> None:

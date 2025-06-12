@@ -80,8 +80,7 @@ class Agent16_AgentBrown(ValidationAgent):
     def __init__(self):
         super().__init__(
             agent_id=16,
-            matrix_character=MatrixCharacter.AGENT_BROWN,
-            dependencies=[14, 15]  # Final validation
+            matrix_character=MatrixCharacter.AGENT_BROWN
         )
         
         # Initialize configuration

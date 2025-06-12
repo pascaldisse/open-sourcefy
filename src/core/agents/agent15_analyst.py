@@ -68,8 +68,7 @@ class Agent15_Analyst(ReconstructionAgent):
     def __init__(self):
         super().__init__(
             agent_id=15,
-            matrix_character=MatrixCharacter.ANALYST,
-            dependencies=[1, 2]  # Minimum dependencies: Sentinel and Architect
+            matrix_character=MatrixCharacter.ANALYST
         )
         
         # Initialize configuration

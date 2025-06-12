@@ -73,8 +73,7 @@ class Agent12_Link(ReconstructionAgent):
     def __init__(self):
         super().__init__(
             agent_id=12,
-            matrix_character=MatrixCharacter.LINK,
-            dependencies=[5, 6, 7, 8]  # Based on MATRIX_DEPENDENCIES
+            matrix_character=MatrixCharacter.LINK
         )
         
         # Core components

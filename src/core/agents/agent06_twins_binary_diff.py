@@ -87,8 +87,7 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
     def __init__(self):
         super().__init__(
             agent_id=6,
-            matrix_character=MatrixCharacter.TWINS,
-            dependencies=[1, 2, 5]  # Depends on Sentinel, Architect, Neo
+            matrix_character=MatrixCharacter.TWINS
         )
         
         # Load Twins-specific configuration

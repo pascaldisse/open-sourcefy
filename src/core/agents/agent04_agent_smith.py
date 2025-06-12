@@ -154,8 +154,7 @@ class AgentSmithAgent(AnalysisAgent):
     def __init__(self):
         super().__init__(
             agent_id=4,
-            matrix_character=MatrixCharacter.AGENT_SMITH,
-            dependencies=[1]  # Depends on Sentinel
+            matrix_character=MatrixCharacter.AGENT_SMITH
         )
         
         # Load configuration constants
