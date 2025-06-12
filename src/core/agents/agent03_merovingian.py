@@ -489,7 +489,15 @@ class MerovingianAgent(DecompilerAgent):
                     
                     section_name = section_header[:8].rstrip(b'\x00').decode('ascii', errors='ignore')
                     virtual_size, virtual_address, raw_size, raw_address = struct.unpack('<IIII', section_header[8:24])
-                    ptr_to_relocs, ptr_to_line_nums, num_relocs, num_line_nums, characteristics = struct.unpack('<IIHHH', section_header[24:40])
+                    
+                    # Check if we have enough data for the remaining fields (16 bytes needed for IIHHI: 4+4+2+2+4)
+                    remaining_data = section_header[24:]
+                    if len(remaining_data) >= 16:
+                        ptr_to_relocs, ptr_to_line_nums, num_relocs, num_line_nums, characteristics = struct.unpack('<IIHHI', remaining_data[:16])
+                    else:
+                        self.logger.debug(f"Incomplete section characteristics for section {i}: {section_name}, remaining: {len(remaining_data)} bytes")
+                        ptr_to_relocs = ptr_to_line_nums = num_relocs = num_line_nums = 0
+                        characteristics = 0  # Default to no characteristics
                     
                     # Check if section is executable (IMAGE_SCN_MEM_EXECUTE = 0x20000000)
                     # or if it's a known code section name
@@ -498,6 +506,9 @@ class MerovingianAgent(DecompilerAgent):
                     
                     if (is_executable or is_code_section) and raw_size > 0:
                         code_sections.append((section_name, raw_address, raw_size))
+                        self.logger.debug(f"Found code section: {section_name} at 0x{raw_address:x}, size: {raw_size} bytes")
+                    else:
+                        self.logger.debug(f"Skipped section: {section_name} (executable: {is_executable}, code_name: {is_code_section}, size: {raw_size})")
                         
         except Exception as e:
             self.logger.debug(f"Error finding code sections: {e}")
@@ -599,99 +610,150 @@ class MerovingianAgent(DecompilerAgent):
             import capstone
             
             with open(binary_path, 'rb') as f:
-                # Read code sections for analysis (first 4MB)
-                data = f.read(min(4096*1024, f.seek(0, 2) or f.tell()))
-                f.seek(0)
+                # Get file size first
+                f.seek(0, 2)  # Seek to end
+                file_size = f.tell()
+                f.seek(0)  # Seek back to beginning
+                
+                # Read code sections for analysis (first 4MB or full file if smaller)
+                read_size = min(4096*1024, file_size)
+                data = f.read(read_size)
+                self.logger.debug(f"Read {len(data)} bytes from {file_size} byte binary for control flow analysis")
+            
+            if not data:
+                self.logger.warning("No data read from binary for control flow analysis")
+                return functions
             
             # Initialize Capstone disassembler for x86
-            md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
-            md.detail = True  # Enable detailed instruction analysis
+            try:
+                md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
+                md.detail = True  # Enable detailed instruction analysis
+            except Exception as e:
+                self.logger.error(f"Failed to initialize Capstone disassembler: {e}")
+                return functions
             
             # Track function boundaries through control flow
             function_starts = set()
             call_targets = set()
             jump_targets = set()
             
-            # Disassemble and analyze instructions
-            instructions = list(md.disasm(data, 0x1000))  # Start at typical base address
+            # Disassemble and analyze instructions with enhanced error handling
+            try:
+                instructions = list(md.disasm(data, 0x1000))  # Start at typical base address
+                if not instructions:
+                    self.logger.warning("Capstone disassembly produced no instructions")
+                    return functions
+            except Exception as e:
+                self.logger.error(f"Capstone disassembly failed: {e}")
+                return functions
             
             for i, insn in enumerate(instructions):
-                # Detect function entry points through control flow
+                try:
+                    # Detect function entry points through control flow
+                    
+                    # 1. Direct call targets are function starts
+                    if insn.mnemonic in ['call']:
+                        try:
+                            for operand in insn.operands:
+                                if operand.type == capstone.x86.X86_OP_IMM:
+                                    target = operand.value.imm
+                                    call_targets.add(target)
+                                    function_starts.add(target)
+                        except (AttributeError, ValueError) as e:
+                            self.logger.debug(f"Error processing call operand at {insn.address:x}: {e}")
+                            continue
                 
-                # 1. Direct call targets are function starts
-                if insn.mnemonic in ['call']:
-                    for operand in insn.operands:
-                        if operand.type == capstone.x86.X86_OP_IMM:
-                            target = operand.value.imm
-                            call_targets.add(target)
-                            function_starts.add(target)
+                    # 2. Jump targets that follow function patterns
+                    if insn.mnemonic in ['jmp', 'je', 'jne', 'jz', 'jnz', 'jg', 'jl', 'jge', 'jle']:
+                        try:
+                            for operand in insn.operands:
+                                if operand.type == capstone.x86.X86_OP_IMM:
+                                    target = operand.value.imm
+                                    jump_targets.add(target)
+                        except (AttributeError, ValueError) as e:
+                            self.logger.debug(f"Error processing jump operand at {insn.address:x}: {e}")
+                            continue
+                    
+                    # 3. Return instructions indicate function ends
+                    if insn.mnemonic in ['ret', 'retn']:
+                        try:
+                            # Next instruction after return is likely function start
+                            if i + 1 < len(instructions):
+                                next_addr = instructions[i + 1].address
+                                function_starts.add(next_addr)
+                        except (IndexError, AttributeError) as e:
+                            self.logger.debug(f"Error processing return instruction at {insn.address:x}: {e}")
+                            continue
                 
-                # 2. Jump targets that follow function patterns
-                if insn.mnemonic in ['jmp', 'je', 'jne', 'jz', 'jnz', 'jg', 'jl', 'jge', 'jle']:
-                    for operand in insn.operands:
-                        if operand.type == capstone.x86.X86_OP_IMM:
-                            target = operand.value.imm
-                            jump_targets.add(target)
-                
-                # 3. Return instructions indicate function ends
-                if insn.mnemonic in ['ret', 'retn']:
-                    # Next instruction after return is likely function start
-                    if i + 1 < len(instructions):
-                        next_addr = instructions[i + 1].address
-                        function_starts.add(next_addr)
-                
-                # 4. Visual C++ v7.x specific patterns
-                if insn.mnemonic == 'push' and i + 1 < len(instructions):
-                    next_insn = instructions[i + 1]
-                    # push ebp; mov ebp, esp pattern
-                    if (insn.op_str == 'ebp' and 
-                        next_insn.mnemonic == 'mov' and 
-                        'ebp' in next_insn.op_str and 'esp' in next_insn.op_str):
+                    # 4. Visual C++ v7.x specific patterns
+                    if insn.mnemonic == 'push' and i + 1 < len(instructions):
+                        try:
+                            next_insn = instructions[i + 1]
+                            # push ebp; mov ebp, esp pattern
+                            if (insn.op_str == 'ebp' and 
+                                next_insn.mnemonic == 'mov' and 
+                                'ebp' in next_insn.op_str and 'esp' in next_insn.op_str):
+                                function_starts.add(insn.address)
+                        except (IndexError, AttributeError) as e:
+                            self.logger.debug(f"Error processing push pattern at {insn.address:x}: {e}")
+                            continue
+                    
+                    # 5. Exception handling function entries (Visual C++ v7.x SEH)
+                    if insn.mnemonic == 'mov' and 'fs:' in insn.op_str:
+                        function_starts.add(insn.address)
+                    
+                    # 6. Hot patch prologues (mov edi, edi)
+                    if (insn.mnemonic == 'mov' and 
+                        insn.op_str == 'edi, edi'):
                         function_starts.add(insn.address)
                 
-                # 5. Exception handling function entries (Visual C++ v7.x SEH)
-                if insn.mnemonic == 'mov' and 'fs:' in insn.op_str:
-                    function_starts.add(insn.address)
-                
-                # 6. Hot patch prologues (mov edi, edi)
-                if (insn.mnemonic == 'mov' and 
-                    insn.op_str == 'edi, edi'):
-                    function_starts.add(insn.address)
+                except (AttributeError, ValueError) as e:
+                    self.logger.debug(f"Error processing instruction at index {i}: {e}")
+                    continue
             
-            # Filter and validate function starts
+            # Filter and validate function starts with enhanced error handling
             validated_functions = []
             
             for func_addr in function_starts:
-                if func_addr < 0x1000 or func_addr > len(data) + 0x1000:
-                    continue  # Skip invalid addresses
+                try:
+                    if func_addr < 0x1000 or func_addr > len(data) + 0x1000:
+                        continue  # Skip invalid addresses
+                    
+                    # Calculate confidence based on multiple factors
+                    confidence = 0.6  # Base confidence
+                    
+                    # Increase confidence for call targets
+                    if func_addr in call_targets:
+                        confidence += 0.3
+                    
+                    # Increase confidence for aligned addresses
+                    if func_addr % 4 == 0:
+                        confidence += 0.1
+                    
+                    # Analyze function characteristics with error handling
+                    try:
+                        func_size = self._estimate_function_size(instructions, func_addr)
+                        complexity = self._analyze_function_complexity(instructions, func_addr, func_size)
+                        func_type = self._classify_function_type(instructions, func_addr)
+                    except Exception as e:
+                        self.logger.debug(f"Error analyzing function at {func_addr:x}: {e}")
+                        func_size = 50  # Default size
+                        complexity = 1.0  # Default complexity
+                        func_type = 'unknown'
                 
-                # Calculate confidence based on multiple factors
-                confidence = 0.6  # Base confidence
+                    validated_functions.append(Function(
+                        name=f"cf_func_{func_addr:08x}",
+                        address=func_addr,
+                        size=func_size,
+                        confidence=min(0.95, confidence),
+                        detection_method="control_flow_analysis",
+                        signature=f"void cf_func_{func_addr:08x}()",
+                        complexity_score=complexity
+                    ))
                 
-                # Increase confidence for call targets
-                if func_addr in call_targets:
-                    confidence += 0.3
-                
-                # Increase confidence for aligned addresses
-                if func_addr % 4 == 0:
-                    confidence += 0.1
-                
-                # Analyze function characteristics
-                func_size = self._estimate_function_size(instructions, func_addr)
-                complexity = self._analyze_function_complexity(instructions, func_addr, func_size)
-                
-                # Determine function type based on patterns
-                func_type = self._classify_function_type(instructions, func_addr)
-                
-                validated_functions.append(Function(
-                    name=f"cf_func_{func_addr:08x}",
-                    address=func_addr,
-                    size=func_size,
-                    confidence=min(0.95, confidence),
-                    detection_method="control_flow_analysis",
-                    signature=f"void cf_func_{func_addr:08x}()",
-                    complexity_score=complexity
-                ))
+                except Exception as e:
+                    self.logger.debug(f"Error creating function object for {func_addr:x}: {e}")
+                    continue
             
             # Sort by address and limit results
             validated_functions.sort(key=lambda f: f.address)
@@ -804,16 +866,37 @@ class MerovingianAgent(DecompilerAgent):
             import capstone
             
             with open(binary_path, 'rb') as f:
-                # Read more data for comprehensive pattern analysis
-                data = f.read(min(8192*1024, f.seek(0, 2) or f.tell()))  # Read first 8MB
-                f.seek(0)
+                # Get file size first
+                f.seek(0, 2)  # Seek to end
+                file_size = f.tell()
+                f.seek(0)  # Seek back to beginning
+                
+                # Read more data for comprehensive pattern analysis (first 8MB or full file)
+                read_size = min(8192*1024, file_size)
+                data = f.read(read_size)
+                self.logger.debug(f"Read {len(data)} bytes from {file_size} byte binary for MSVC analysis")
             
-            # Initialize Capstone disassembler
-            md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
-            md.detail = True
+            if not data:
+                self.logger.warning("No data read from binary for MSVC pattern analysis")
+                return functions
             
-            # Disassemble instructions
-            instructions = list(md.disasm(data, 0x1000))
+            # Initialize Capstone disassembler with error handling
+            try:
+                md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
+                md.detail = True
+            except Exception as e:
+                self.logger.error(f"Failed to initialize Capstone for MSVC analysis: {e}")
+                return functions
+            
+            # Disassemble instructions with error handling
+            try:
+                instructions = list(md.disasm(data, 0x1000))
+                if not instructions:
+                    self.logger.warning("Capstone disassembly produced no instructions for MSVC analysis")
+                    return functions
+            except Exception as e:
+                self.logger.error(f"Capstone disassembly failed for MSVC analysis: {e}")
+                return functions
             
             # Visual C++ v7.x optimization pattern detection
             msvc_patterns = {
@@ -828,11 +911,16 @@ class MerovingianAgent(DecompilerAgent):
             }
             
             for i, insn in enumerate(instructions):
-                # 1. Frame pointer omission patterns (O2 optimization)
-                if (insn.mnemonic == 'sub' and 'esp' in insn.op_str and 
-                    i + 1 < len(instructions) and 
-                    instructions[i + 1].mnemonic != 'push'):
-                    msvc_patterns['frame_pointer_omission'].append(insn.address)
+                try:
+                    # 1. Frame pointer omission patterns (O2 optimization)
+                    if (insn.mnemonic == 'sub' and 'esp' in insn.op_str and 
+                        i + 1 < len(instructions) and 
+                        instructions[i + 1].mnemonic != 'push'):
+                        msvc_patterns['frame_pointer_omission'].append(insn.address)
+                
+                except (AttributeError, IndexError, ValueError) as e:
+                    self.logger.debug(f"Error processing MSVC pattern at instruction {i}: {e}")
+                    continue
                 
                 # 2. Leaf function optimization (no function calls)
                 if (insn.mnemonic in ['mov', 'xor', 'add', 'sub'] and 
@@ -1147,7 +1235,15 @@ class MerovingianAgent(DecompilerAgent):
                 for i in range(num_sections):
                     section_name = f.read(8).rstrip(b'\x00').decode('ascii', errors='ignore')
                     virtual_size, virtual_address, raw_size, raw_address = struct.unpack('<IIII', f.read(16))
-                    ptr_to_relocs, ptr_to_line_nums, num_relocs, num_line_nums, characteristics = struct.unpack('<IIHHH', f.read(12))
+                    
+                    # Read remaining section data with error handling (16 bytes: 4+4+2+2+4 for IIHHI)
+                    remaining_data = f.read(16)
+                    if len(remaining_data) >= 16:
+                        ptr_to_relocs, ptr_to_line_nums, num_relocs, num_line_nums, characteristics = struct.unpack('<IIHHI', remaining_data)
+                    else:
+                        self.logger.debug(f"Incomplete section data for {section_name}: {len(remaining_data)} bytes")
+                        ptr_to_relocs = ptr_to_line_nums = num_relocs = num_line_nums = 0
+                        characteristics = 0
                     
                     # Check if section is executable
                     if characteristics & 0x20000000:  # IMAGE_SCN_MEM_EXECUTE
@@ -1174,22 +1270,142 @@ class MerovingianAgent(DecompilerAgent):
         return functions
 
     def _deduplicate_functions(self, functions: List[Function]) -> List[Function]:
-        """Remove duplicate functions based on address"""
-        seen_addresses = set()
-        unique_functions = []
+        """Enhanced deduplication with intelligent overlap detection for multiple analysis methods"""
+        if not functions:
+            return functions
         
-        # Sort by confidence (highest first)
-        functions.sort(key=lambda f: f.confidence, reverse=True)
-        
+        # Group functions by detection method for intelligent deduplication
+        method_groups = {}
         for func in functions:
-            # Consider functions at similar addresses as duplicates
-            is_duplicate = any(abs(func.address - addr) < 10 for addr in seen_addresses)
+            method = func.detection_method
+            if method not in method_groups:
+                method_groups[method] = []
+            method_groups[method].append(func)
+        
+        # Sort each group by confidence and address for consistent ordering
+        for method in method_groups:
+            method_groups[method].sort(key=lambda f: (-f.confidence, f.address))
+        
+        # Advanced deduplication using spatial and confidence-based clustering
+        unique_functions = []
+        processed_regions = []  # List of (start_addr, end_addr, best_function)
+        
+        # Process all functions sorted by confidence (highest first)
+        all_functions = sorted(functions, key=lambda f: (-f.confidence, f.address))
+        
+        for func in all_functions:
+            func_start = func.address
+            func_end = func.address + func.size
             
-            if not is_duplicate:
-                seen_addresses.add(func.address)
+            # Check for overlaps with existing processed regions
+            overlapping_regions = []
+            for i, (region_start, region_end, existing_func) in enumerate(processed_regions):
+                # Calculate overlap
+                overlap_start = max(func_start, region_start)
+                overlap_end = min(func_end, region_end)
+                overlap_size = max(0, overlap_end - overlap_start)
+                
+                # Determine overlap threshold based on function sizes
+                func_threshold = func.size * 0.3  # 30% of current function
+                existing_threshold = existing_func.size * 0.3  # 30% of existing function
+                
+                if overlap_size > min(func_threshold, existing_threshold):
+                    overlapping_regions.append((i, existing_func, overlap_size))
+            
+            # Decide whether to keep this function
+            should_keep = True
+            
+            if overlapping_regions:
+                # Find the best overlapping function for comparison
+                best_overlap = max(overlapping_regions, key=lambda x: x[1].confidence)
+                _, best_existing, overlap_size = best_overlap
+                
+                # Advanced conflict resolution
+                if self._should_replace_function(func, best_existing, overlap_size):
+                    # Replace the existing function
+                    regions_to_remove = [idx for idx, _, _ in overlapping_regions]
+                    functions_to_remove = [processed_regions[idx][2] for idx in regions_to_remove]
+                    
+                    for idx in sorted(regions_to_remove, reverse=True):
+                        processed_regions.pop(idx)
+                    
+                    # Remove from unique_functions
+                    for func_to_remove in functions_to_remove:
+                        unique_functions = [f for f in unique_functions if f != func_to_remove]
+                else:
+                    # Keep existing function, discard current one
+                    should_keep = False
+            
+            if should_keep:
                 unique_functions.append(func)
+                processed_regions.append((func_start, func_end, func))
+        
+        # Final sort by address for consistent output
+        unique_functions.sort(key=lambda f: f.address)
+        
+        # Log deduplication statistics
+        original_count = len(functions)
+        final_count = len(unique_functions)
+        self.logger.debug(f"Deduplication: {original_count} -> {final_count} functions ({original_count - final_count} duplicates removed)")
+        
+        # Log method distribution
+        method_counts = {}
+        for func in unique_functions:
+            method = func.detection_method
+            method_counts[method] = method_counts.get(method, 0) + 1
+        
+        for method, count in method_counts.items():
+            self.logger.debug(f"  Final {method}: {count} functions")
         
         return unique_functions
+    
+    def _should_replace_function(self, new_func: Function, existing_func: Function, overlap_size: int) -> bool:
+        """Determine if new function should replace existing function based on quality metrics"""
+        
+        # Primary criterion: confidence score
+        confidence_diff = new_func.confidence - existing_func.confidence
+        if abs(confidence_diff) > 0.1:  # Significant confidence difference
+            return confidence_diff > 0
+        
+        # Secondary criterion: detection method priority
+        method_priority = {
+            'entry_point': 10,
+            'control_flow_analysis': 9,
+            'enhanced_prologue_x86_standard': 8,
+            'enhanced_prologue_x64_standard': 8,
+            'dotnet_pinvoke_native': 7,
+            'dotnet_reflection_enhanced': 6,
+            'msvc_optimization_frame_pointer_omission': 7,
+            'msvc_optimization_hot_patch_points': 8,
+            'msvc_optimization_exception_handling': 7,
+            'enhanced_prologue_msvc_template': 5,
+            'enhanced_prologue_msvc_helper': 4,
+            'import_table': 3,
+            'section_analysis': 2
+        }
+        
+        new_priority = method_priority.get(new_func.detection_method, 1)
+        existing_priority = method_priority.get(existing_func.detection_method, 1)
+        
+        if new_priority != existing_priority:
+            return new_priority > existing_priority
+        
+        # Tertiary criterion: function size and complexity
+        new_quality = new_func.size * (new_func.complexity_score or 1.0)
+        existing_quality = existing_func.size * (existing_func.complexity_score or 1.0)
+        
+        if abs(new_quality - existing_quality) > 10:  # Significant quality difference
+            return new_quality > existing_quality
+        
+        # Quaternary criterion: address alignment (prefer aligned functions)
+        new_aligned = new_func.address % 4 == 0
+        existing_aligned = existing_func.address % 4 == 0
+        
+        if new_aligned != existing_aligned:
+            return new_aligned
+        
+        # Final criterion: prefer the one with lower address (earlier in binary)
+        return new_func.address < existing_func.address
 
     def _analyze_functions(self, functions: List[Function], analysis_context: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze detected functions"""
