@@ -1646,38 +1646,38 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
         generated_binary_path = None
         generated_size = 0
         
-        # PRIORITIZE Agent 9 (The Machine) results first (most reliable source for compiled binary)
+        # PRIORITIZE Agent 10 (The Machine) results first (most reliable source for compiled binary)
         agent_results = context.get('agent_results', {})
         self.logger.info(f"🔍 DEBUG: Available agent results: {list(agent_results.keys())}")
         
-        if 9 in agent_results:
-            agent9_result = agent_results[9]
-            self.logger.info(f"🔍 DEBUG: Agent 9 status: {agent9_result.status}")
+        if 10 in agent_results:
+            agent10_result = agent_results[10]
+            self.logger.info(f"🔍 DEBUG: Agent 10 status: {agent10_result.status}")
             
-            if hasattr(agent9_result, 'data') and isinstance(agent9_result.data, dict):
-                agent9_data = agent9_result.data
-                self.logger.info(f"🔍 DEBUG: Agent 9 data keys: {list(agent9_data.keys())}")
+            if hasattr(agent10_result, 'data') and isinstance(agent10_result.data, dict):
+                agent10_data = agent10_result.data
+                self.logger.info(f"🔍 DEBUG: Agent 10 data keys: {list(agent10_data.keys())}")
                 
-                compilation_results = agent9_data.get('compilation_results', {})
+                compilation_results = agent10_data.get('compilation_results', {})
                 binary_outputs = compilation_results.get('binary_outputs', {})
                 self.logger.info(f"🔍 DEBUG: Binary outputs: {binary_outputs}")
                 
                 if binary_outputs:
                     # Get first available binary path
                     generated_binary_path = next(iter(binary_outputs.values()))
-                    self.logger.info(f"🔍 DEBUG: Found binary path from Agent 9: {generated_binary_path}")
+                    self.logger.info(f"🔍 DEBUG: Found binary path from Agent 10: {generated_binary_path}")
                     
                     if generated_binary_path and os.path.exists(generated_binary_path):
                         generated_size = os.path.getsize(generated_binary_path)
-                        self.logger.info(f"✅ Found compiled binary from Agent 9: {generated_binary_path} ({generated_size:,} bytes)")
+                        self.logger.info(f"✅ Found compiled binary from Agent 10: {generated_binary_path} ({generated_size:,} bytes)")
                     else:
-                        self.logger.warning(f"⚠️ Binary path from Agent 9 doesn't exist: {generated_binary_path}")
+                        self.logger.warning(f"⚠️ Binary path from Agent 10 doesn't exist: {generated_binary_path}")
                 else:
-                    self.logger.warning("⚠️ Agent 9 has no binary outputs")
+                    self.logger.warning("⚠️ Agent 10 has no binary outputs")
             else:
-                self.logger.warning("⚠️ Agent 9 data is not available or not a dict")
+                self.logger.warning("⚠️ Agent 10 data is not available or not a dict")
         else:
-            self.logger.warning("⚠️ Agent 9 results not available - may not have run")
+            self.logger.warning("⚠️ Agent 10 results not available - may not have run")
         
         # FALLBACK: Search for generated executable in output paths (secondary method)
         if not generated_binary_path:

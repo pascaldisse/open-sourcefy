@@ -59,9 +59,9 @@ class CommanderLockeAgent(ReconstructionAgent):
     
     def __init__(self):
         super().__init__(
-            agent_id=8,
+            agent_id=9,
             matrix_character=MatrixCharacter.COMMANDER_LOCKE if HAS_MATRIX_FRAMEWORK else "commander_locke",
-            dependencies=[5, 6, 7]  # Depends on Neo, Trainman, Keymaker
+            dependencies=[5, 7, 8]  # Depends on Neo, Trainman, Keymaker
         )
         
         # Core components (logger inherited from parent class)
