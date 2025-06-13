@@ -188,8 +188,24 @@ class MatrixPipelineOrchestrator:
                 # Execute agents independently
                 agent_results = await self._execute_parallel_agents()
             
-            # Step 3: Generate final results
-            result = self._generate_pipeline_result(agent_results)
+            # Step 3: Execute final validation first (required for accurate success determination)
+            final_validation_success = True
+            validation_report = None
+            
+            if (self.config.enable_final_validation and 
+                self._has_compilation_output(output_dir) and
+                len([r for r in agent_results.values() if r.status.value == 'success']) == len(agent_results)):
+                
+                try:
+                    final_validation_success, validation_report = await self._execute_final_validation_with_status(
+                        self.global_context.get('binary_path', ''), output_dir)
+                except Exception as e:
+                    self.logger.error(f"Final validation failed: {e}")
+                    final_validation_success = False
+                    validation_report = None
+            
+            # Step 4: Generate final results (including final validation status)
+            result = self._generate_pipeline_result(agent_results, final_validation_success, validation_report)
             
             if self.config.save_reports:
                 await self._save_execution_report(result, output_dir)
@@ -458,8 +474,8 @@ class MatrixPipelineOrchestrator:
             execution_time=0.0
         )
     
-    def _generate_pipeline_result(self, agent_results: Dict[int, Any]) -> MatrixPipelineResult:
-        """Generate final pipeline result"""
+    def _generate_pipeline_result(self, agent_results: Dict[int, Any], final_validation_success: bool = True, validation_report: dict = None) -> MatrixPipelineResult:
+        """Generate final pipeline result including final validation status"""
         from .matrix_agents import AgentStatus
         
         successful_count = sum(1 for result in agent_results.values() 
@@ -473,11 +489,21 @@ class MatrixPipelineOrchestrator:
                 error_msg = result.error_message or f"Agent {agent_id} failed"
                 error_messages.append(f"Agent {agent_id}: {error_msg}")
         
+        # Add final validation failure as error if applicable
+        if not final_validation_success and validation_report:
+            match_pct = validation_report.get('final_validation', {}).get('total_match_percentage', 0)
+            validation_error = f"Final validation failed: {match_pct:.1f}% match (required: 95.0%). No partial success allowed per rules.md Rule #72: NO PARTIAL SUCCESS"
+            error_messages.append(validation_error)
+        
         # Calculate performance metrics
         execution_time = time.time() - self.execution_start_time
         
-        return MatrixPipelineResult(
-            success=failed_count == 0,
+        # CRITICAL FIX: Pipeline success requires BOTH agent success AND final validation success
+        # This enforces rules.md Rule #74 (NO PARTIAL SUCCESS) and Rule #80 (ALL OR NOTHING)
+        overall_success = (failed_count == 0) and final_validation_success
+        
+        result = MatrixPipelineResult(
+            success=overall_success,
             execution_time=execution_time,
             total_agents=len(agent_results),
             successful_agents=successful_count,
@@ -491,6 +517,14 @@ class MatrixPipelineOrchestrator:
                 'average_agent_time': sum(r.execution_time for r in agent_results.values()) / len(agent_results) if agent_results else 0
             }
         )
+        
+        # Add validation info to result
+        if validation_report:
+            result.validation_report = validation_report
+            result.final_validation_success = final_validation_success
+            result.binary_match_percentage = validation_report.get('final_validation', {}).get('total_match_percentage', 0)
+        
+        return result
     
     async def _save_execution_report(self, result: MatrixPipelineResult, output_dir: str):
         """Save pipeline execution report"""
@@ -527,11 +561,8 @@ class MatrixPipelineOrchestrator:
             result.report_path = str(report_path)
             self.logger.info(f"📊 Pipeline report saved: {report_path}")
             
-            # Execute final validation automatically after successful pipeline completion
-            if (result.success and 
-                self.config.enable_final_validation and 
-                self._has_compilation_output(output_dir)):
-                await self._execute_final_validation(self.global_context.get('binary_path', ''), output_dir, result)
+            # Final validation was already executed before pipeline result generation
+            # No need to run it again here
             
         except Exception as e:
             self.logger.error(f"Failed to save pipeline report: {e}")
@@ -559,6 +590,59 @@ class MatrixPipelineOrchestrator:
             
         except Exception:
             return False
+    
+    async def _execute_final_validation_with_status(self, binary_path: str, output_dir: str) -> Tuple[bool, dict]:
+        """Execute final validation and return success status and report"""
+        try:
+            self.logger.info("🏆 Starting Final Validation for Perfect Binary Recompilation")
+            
+            # Find original and recompiled binaries
+            original_binary = Path(binary_path)
+            
+            # Find recompiled binary
+            output_path = Path(output_dir)
+            compilation_dir = output_path / "compilation"
+            
+            recompiled_binary = None
+            bin_dirs = [
+                compilation_dir / "bin" / "Release" / "Win32",
+                compilation_dir / "bin" / "Debug" / "Win32",
+                compilation_dir
+            ]
+            
+            for bin_dir in bin_dirs:
+                if bin_dir.exists():
+                    exe_files = list(bin_dir.glob("*.exe"))
+                    if exe_files:
+                        recompiled_binary = exe_files[0]
+                        break
+            
+            if not recompiled_binary or not recompiled_binary.exists():
+                self.logger.warning("No recompiled binary found for final validation")
+                return False, None
+            
+            # Execute final validation
+            validator = FinalValidationOrchestrator(self.config_manager)
+            validation_report = await validator.execute_final_validation(
+                original_binary, 
+                recompiled_binary,
+                output_path / "reports"
+            )
+            
+            success = validation_report['final_validation']['success']
+            match_pct = validation_report['final_validation']['total_match_percentage']
+            
+            # Log final status
+            if success:
+                self.logger.info(f"🎯 Final Validation: SUCCESS - {match_pct:.2f}% binary match achieved")
+            else:
+                self.logger.error(f"❌ Final Validation: FAILED - {match_pct:.2f}% binary match (required: 95.0%)")
+            
+            return success, validation_report
+            
+        except Exception as e:
+            self.logger.error(f"Final validation failed: {e}")
+            return False, None
     
     async def _execute_final_validation(self, binary_path: str, output_dir: str, result):
         """Execute final validation for perfect binary recompilation"""
