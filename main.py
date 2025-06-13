@@ -1001,7 +1001,7 @@ Usage Examples:
                 print(f"  {i}. {error}")
             if len(final_state.error_messages) > 5:
                 print(f"  ... and {len(final_state.error_messages) - 5} more errors")
-        else:
+        elif not final_state.success:
             print("\n⚠️ No error messages available despite pipeline failure")
             
             # Try to extract error from agent results if available
@@ -1012,18 +1012,36 @@ Usage Examples:
                         print(f"  Agent {agent_id} error: {result.error_message}")
                     elif hasattr(result, 'status') and str(result.status) != 'SUCCESS':
                         print(f"  Agent {agent_id} status: {result.status}")
+        else:
+            print("\n✅ Pipeline completed successfully with no errors!")
+            
+            # Show agent success summary for successful runs
+            if hasattr(final_state, 'agent_results') and final_state.agent_results:
+                print("Checking agent results for success confirmation...")
+                success_count = 0
+                for agent_id, result in final_state.agent_results.items():
+                    if hasattr(result, 'status') and str(result.status) == 'AgentStatus.SUCCESS':
+                        success_count += 1
+                        print(f"  Agent {agent_id} status: {result.status}")
+                print(f"\n🎯 All {success_count} agents completed successfully!")
         
-        # CRITICAL: Show primary failure cause at the end for easy visibility
+        # CRITICAL: Show primary result at the end for easy visibility
+        print("\n" + "=" * 60)
         if not final_state.success:
-            print("\n" + "=" * 60)
             print("PIPELINE FAILURE - PRIMARY CAUSE:")
             print("=" * 60)
             if final_state.error_messages:
                 print(f"❌ {final_state.error_messages[0]}")
             else:
                 print("❌ Pipeline failed but no specific error message was captured")
-                print("   This indicates a logic error in error handling")
+        else:
+            print("PIPELINE SUCCESS - MISSION ACCOMPLISHED:")
             print("=" * 60)
+            print("🎉 Matrix pipeline executed successfully!")
+            print("✅ All agents completed their missions")
+            print("🔧 Binary decompilation and reconstruction complete")
+            if hasattr(final_state, 'agent_results') and final_state.agent_results:
+                print(f"📊 {len(final_state.agent_results)} agents executed successfully")
         
         if verbose and final_state.agent_results:
             print("\nAgent Results:")

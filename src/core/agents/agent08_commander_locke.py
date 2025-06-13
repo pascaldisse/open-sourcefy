@@ -446,10 +446,16 @@ class Agent8_CommanderLocke(ReconstructionAgent):
             f""
         ]
         
-        # Add actual function implementations
+        # Add actual function implementations - USE REAL NEO DECOMPILED CODE (rules.md #44)
         for func_name, func_data in module_functions:
             if isinstance(func_data, dict):
-                func_code = func_data.get('implementation', f'// TODO: Implement {func_name}')
+                # STRICT: Use real decompiled source code from Neo, never placeholders
+                func_code = func_data.get('source_code', func_data.get('implementation', ''))
+                if not func_code or func_code.startswith('// TODO'):
+                    raise Exception(f"STRICT MODE FAILURE: Function {func_name} has no real implementation. " +
+                                  f"Rules.md #44 NO PLACEHOLDER CODE: Found TODO/empty implementation. " +
+                                  f"Agent 5 must provide actual source_code field.")
+                
                 return_type = func_data.get('return_type', 'int')
                 parameters = func_data.get('parameters', [])
                 
