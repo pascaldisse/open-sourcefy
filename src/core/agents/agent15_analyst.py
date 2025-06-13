@@ -264,9 +264,19 @@ class Agent15_Analyst(ReconstructionAgent):
             if result.status == AgentStatus.SUCCESS:
                 synthesis['agent_outputs'][agent_id] = result.data
                 synthesis['data_quality'][agent_id] = self._assess_agent_data_quality(result)
+                # Handle metadata safely - it might be dict or object
+                execution_time = 0
+                if hasattr(result, 'metadata'):
+                    if isinstance(result.metadata, dict):
+                        execution_time = result.metadata.get('execution_time', 0)
+                    elif hasattr(result.metadata, 'execution_time'):
+                        execution_time = getattr(result.metadata, 'execution_time', 0)
+                elif hasattr(result, 'execution_time'):
+                    execution_time = result.execution_time
+                
                 synthesis['execution_timeline'].append({
                     'agent_id': agent_id,
-                    'execution_time': result.metadata.get('execution_time', 0),
+                    'execution_time': execution_time,
                     'status': result.status.value
                 })
         
@@ -471,10 +481,20 @@ class Agent15_Analyst(ReconstructionAgent):
 
     def _assess_agent_data_quality(self, result: AgentResult) -> Dict[str, Any]:
         """Assess quality of individual agent data"""
+        # Handle metadata safely - it might be dict or object
+        execution_time = 0
+        if hasattr(result, 'metadata') and result.metadata:
+            if isinstance(result.metadata, dict):
+                execution_time = result.metadata.get('execution_time', 0)
+            elif hasattr(result.metadata, 'execution_time'):
+                execution_time = getattr(result.metadata, 'execution_time', 0)
+        elif hasattr(result, 'execution_time'):
+            execution_time = result.execution_time
+            
         return {
             'data_size': len(str(result.data)),
-            'has_metadata': bool(result.metadata),
-            'execution_time': result.metadata.get('execution_time', 0),
+            'has_metadata': bool(getattr(result, 'metadata', None)),
+            'execution_time': execution_time,
             'status': result.status.value
         }
 

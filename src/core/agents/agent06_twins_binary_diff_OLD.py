@@ -267,8 +267,8 @@ class Agent6_Twins_BinaryDiff(AnalysisAgent):
 
     def _validate_twins_prerequisites(self, context: Dict[str, Any]) -> None:
         """Validate that The Twins have the necessary data for comparison"""
-        # Check required agent results
-        required_agents = [1, 2, 5]  # Updated to match new dependencies
+        # Check required agent results - Only need basic analysis agents, Agent 10 is optional
+        required_agents = [1, 2, 5]  # Agent 10 (The Machine) is not required for basic comparison
         for agent_id in required_agents:
             agent_result = context['agent_results'].get(agent_id)
             if not agent_result or agent_result.status != AgentStatus.SUCCESS:

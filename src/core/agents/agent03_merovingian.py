@@ -23,7 +23,7 @@ from ..exceptions import MatrixAgentError, ValidationError
 
 @dataclass
 class Function:
-    """Function detection result"""
+    """Function detection result with assembly instructions"""
     name: str
     address: int
     size: int
@@ -31,6 +31,8 @@ class Function:
     detection_method: str
     signature: Optional[str] = None
     complexity_score: Optional[float] = None
+    assembly_instructions: Optional[List[Dict[str, Any]]] = None  # Real assembly instructions
+    binary_data: Optional[bytes] = None  # Raw binary data of function
 
 class MerovingianAgent(DecompilerAgent):
     """
@@ -164,6 +166,10 @@ class MerovingianAgent(DecompilerAgent):
             
             # Step 3: Detect functions using multiple methods
             functions = self._detect_all_functions(analysis_context)
+            
+            # Step 3.5: Extract actual assembly instructions for detected functions
+            self.logger.info("Extracting real assembly instructions from detected functions...")
+            functions = self._extract_assembly_instructions(functions, analysis_context)
             
             # Step 4: Analyze detected functions
             function_analysis = self._analyze_functions(functions, analysis_context)
@@ -1412,6 +1418,184 @@ class MerovingianAgent(DecompilerAgent):
         # Final criterion: prefer the one with lower address (earlier in binary)
         return new_func.address < existing_func.address
 
+    def _extract_assembly_instructions(self, functions: List[Function], analysis_context: Dict[str, Any]) -> List[Function]:
+        """Extract actual assembly instructions for each detected function"""
+        try:
+            import capstone
+        except ImportError:
+            self.logger.warning("Capstone not available - cannot extract assembly instructions")
+            return functions
+        
+        binary_path = analysis_context['binary_path']
+        enhanced_functions = []
+        
+        try:
+            with open(binary_path, 'rb') as f:
+                # Read the entire binary for disassembly
+                binary_data = f.read()
+                
+            # Initialize Capstone disassembler
+            architecture = analysis_context.get('architecture', 'x86')
+            if architecture == 'x64':
+                md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+            else:
+                md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
+            
+            md.detail = True  # Enable detailed instruction analysis
+            
+            self.logger.info(f"Extracting assembly instructions for {len(functions)} functions...")
+            
+            for func in functions:
+                try:
+                    # Calculate file offset from virtual address using PE header info
+                    # Get actual base address from PE header
+                    base_address = self._get_image_base(binary_path)
+                    
+                    # Convert virtual address to file offset using section information
+                    file_offset = self._virtual_address_to_file_offset(func.address, binary_path)
+                    
+                    # Ensure we don't read beyond binary bounds
+                    if file_offset < 0 or file_offset >= len(binary_data):
+                        enhanced_functions.append(func)
+                        continue
+                    
+                    # Extract function bytes
+                    end_offset = min(file_offset + func.size, len(binary_data))
+                    function_bytes = binary_data[file_offset:end_offset]
+                    
+                    if len(function_bytes) < 4:  # Skip tiny functions
+                        enhanced_functions.append(func)
+                        continue
+                    
+                    # Disassemble function
+                    instructions = []
+                    for insn in md.disasm(function_bytes, func.address):
+                        instruction_data = {
+                            'address': insn.address,
+                            'mnemonic': insn.mnemonic,
+                            'op_str': insn.op_str,
+                            'bytes': insn.bytes.hex(),
+                            'size': insn.size
+                        }
+                        
+                        # Extract operand details if available
+                        if hasattr(insn, 'operands') and insn.operands:
+                            operands = []
+                            for op in insn.operands:
+                                operand_info = {
+                                    'type': op.type,
+                                }
+                                if hasattr(op, 'value'):
+                                    operand_info['value'] = op.value
+                                if hasattr(op, 'reg'):
+                                    operand_info['reg'] = op.reg
+                                if hasattr(op, 'mem'):
+                                    operand_info['mem'] = {
+                                        'base': getattr(op.mem, 'base', 0),
+                                        'index': getattr(op.mem, 'index', 0),
+                                        'disp': getattr(op.mem, 'disp', 0)
+                                    }
+                                operands.append(operand_info)
+                            instruction_data['operands'] = operands
+                        
+                        instructions.append(instruction_data)
+                    
+                    # Create enhanced function with assembly instructions
+                    enhanced_func = Function(
+                        name=func.name,
+                        address=func.address,
+                        size=func.size,
+                        confidence=func.confidence,
+                        detection_method=func.detection_method,
+                        signature=func.signature,
+                        complexity_score=func.complexity_score,
+                        assembly_instructions=instructions,
+                        binary_data=function_bytes
+                    )
+                    
+                    enhanced_functions.append(enhanced_func)
+                    
+                except Exception as e:
+                    self.logger.debug(f"Failed to extract assembly for function {func.name} at {func.address:x}: {e}")
+                    enhanced_functions.append(func)  # Keep original function if extraction fails
+            
+            self.logger.info(f"Successfully extracted assembly for {sum(1 for f in enhanced_functions if f.assembly_instructions)} functions")
+            return enhanced_functions
+            
+        except Exception as e:
+            self.logger.error(f"Assembly extraction failed: {e}")
+            return functions  # Return original functions if extraction fails
+    
+    def _get_image_base(self, binary_path: Path) -> int:
+        """Get the image base address from PE header"""
+        try:
+            with open(binary_path, 'rb') as f:
+                # Read DOS header
+                dos_header = f.read(64)
+                if len(dos_header) < 60 or dos_header[:2] != b'MZ':
+                    return 0x400000  # Default base address
+                
+                # Get PE header offset
+                pe_offset = struct.unpack('<I', dos_header[60:64])[0]
+                f.seek(pe_offset)
+                
+                # Read PE signature
+                pe_sig = f.read(4)
+                if pe_sig != b'PE\x00\x00':
+                    return 0x400000
+                
+                # Read COFF header
+                f.read(20)  # Skip COFF header
+                
+                # Read optional header
+                opt_header = f.read(28)  # Read first part of optional header
+                if len(opt_header) >= 28:
+                    image_base = struct.unpack('<I', opt_header[28-4:28])[0]
+                    return image_base
+                    
+        except Exception as e:
+            self.logger.debug(f"Failed to get image base: {e}")
+            
+        return 0x400000  # Default fallback
+    
+    def _virtual_address_to_file_offset(self, virtual_address: int, binary_path: Path) -> int:
+        """Convert virtual address to file offset using section headers"""
+        try:
+            with open(binary_path, 'rb') as f:
+                # Navigate to section headers
+                dos_header = f.read(64)
+                pe_offset = struct.unpack('<I', dos_header[60:64])[0]
+                f.seek(pe_offset + 4)  # Skip PE signature
+                
+                # Read COFF header
+                machine, num_sections, timestamp, ptr_to_sym, num_symbols, opt_header_size, characteristics = struct.unpack('<HHIIIHH', f.read(20))
+                
+                # Skip optional header
+                f.seek(f.tell() + opt_header_size)
+                
+                # Read section headers
+                for i in range(num_sections):
+                    section_header = f.read(40)
+                    if len(section_header) < 40:
+                        break
+                        
+                    name = section_header[:8].rstrip(b'\x00')
+                    virtual_size, virtual_address_section, raw_size, raw_address = struct.unpack('<IIII', section_header[8:24])
+                    
+                    # Check if virtual address falls within this section
+                    if (virtual_address >= virtual_address_section and 
+                        virtual_address < virtual_address_section + virtual_size):
+                        # Calculate file offset
+                        offset_in_section = virtual_address - virtual_address_section
+                        file_offset = raw_address + offset_in_section
+                        return file_offset
+                        
+        except Exception as e:
+            self.logger.debug(f"Failed to convert virtual address {virtual_address:x} to file offset: {e}")
+            
+        # Fallback: simple calculation assuming .text section starts at 0x1000 virtual, 0x400 file
+        return virtual_address - 0x1000 + 0x400
+
     def _analyze_functions(self, functions: List[Function], analysis_context: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze detected functions"""
         if not functions:
@@ -1447,7 +1631,7 @@ class MerovingianAgent(DecompilerAgent):
 
     def _function_to_dict(self, func: Function) -> Dict[str, Any]:
         """Convert Function dataclass to dictionary"""
-        return {
+        result = {
             'name': func.name,
             'address': func.address,
             'size': func.size,
@@ -1457,6 +1641,18 @@ class MerovingianAgent(DecompilerAgent):
             'complexity_score': func.complexity_score or 1.0,
             'decompiled_code': f'// Function {func.name} at 0x{func.address:08x}\n{func.signature or "void function()"} {{\n    // Function implementation\n}}'
         }
+        
+        # Include assembly instructions if available
+        if func.assembly_instructions:
+            result['assembly_instructions'] = func.assembly_instructions
+            result['instruction_count'] = len(func.assembly_instructions)
+            
+        # Include binary data if available  
+        if func.binary_data:
+            result['binary_data_size'] = len(func.binary_data)
+            # Don't include the raw binary data in the dict to avoid bloat
+            
+        return result
 
     def _detect_packer_characteristics(self, binary_path: Path) -> Dict[str, Any]:
         """Detect packer characteristics using multiple analysis methods"""

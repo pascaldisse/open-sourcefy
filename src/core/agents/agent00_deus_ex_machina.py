@@ -25,11 +25,11 @@ from .agent02_architect import ArchitectAgent
 from .agent03_merovingian import MerovingianAgent
 from .agent04_agent_smith import AgentSmithAgent
 from .agent05_neo_advanced_decompiler import NeoAgent
-from .agent06_twins_binary_diff import Agent6_Twins_BinaryDiff
-from .agent07_trainman_assembly_analysis import Agent7_Trainman_AssemblyAnalysis
-from .agent08_keymaker_resource_reconstruction import Agent8_Keymaker_ResourceReconstruction
-from .agent09_commander_locke import CommanderLockeAgent
-from .agent10_the_machine import Agent10_TheMachine
+from .agent06_trainman_assembly_analysis import Agent6_Trainman_AssemblyAnalysis
+from .agent07_keymaker_resource_reconstruction import Agent7_Keymaker_ResourceReconstruction
+from .agent08_commander_locke import Agent8_CommanderLocke
+from .agent09_the_machine import Agent9_TheMachine
+from .agent10_twins_binary_diff import Agent10_Twins_BinaryDiff
 from .agent11_the_oracle import Agent11_TheOracle
 from .agent12_link import Agent12_Link
 from .agent13_agent_johnson import Agent13_AgentJohnson
@@ -83,11 +83,11 @@ class DeusExMachinaAgent(MatrixAgent):
             3: MerovingianAgent,
             4: AgentSmithAgent,
             5: NeoAgent,
-            6: Agent6_Twins_BinaryDiff,
-            7: Agent7_Trainman_AssemblyAnalysis,
-            8: Agent8_Keymaker_ResourceReconstruction,
-            9: CommanderLockeAgent,
-            10: Agent10_TheMachine,
+            6: Agent6_Trainman_AssemblyAnalysis,
+            7: Agent7_Keymaker_ResourceReconstruction,
+            8: Agent8_CommanderLocke,
+            9: Agent9_TheMachine,
+            10: Agent10_Twins_BinaryDiff,
             11: Agent11_TheOracle,
             12: Agent12_Link,
             13: Agent13_AgentJohnson,

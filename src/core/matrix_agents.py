@@ -404,24 +404,25 @@ class ValidationAgent(MatrixAgent):
 
 # Matrix Agent Dependencies - CENTRALIZED SINGLE SOURCE OF TRUTH
 # NO DEPENDENCIES ANYWHERE ELSE - ALL MANAGED HERE
+# RENUMBERED: Agents numbered according to execution order
 MATRIX_DEPENDENCIES = {
     0: [],                    # Deus Ex Machina - Master orchestrator, no dependencies
     1: [],                    # Sentinel - Entry point, no dependencies
     2: [1],                   # Architect - Depends on Sentinel
     3: [1],                   # Merovingian - Depends on Sentinel  
     4: [1],                   # Agent Smith - Depends on Sentinel
-    5: [1, 2, 3],            # Neo - Depends on Sentinel, Architect, and Merovingian
-    6: [10],                 # Twins - Depends on The Machine for compiled binary comparison
-    7: [1, 2],               # Trainman - Depends on Sentinel and Architect
-    8: [1, 2],               # Keymaker - Depends on Sentinel and Architect
-    9: [1, 5, 7, 8],         # Commander Locke - Depends on Sentinel (import data) + Phase B agents  
-    10: [5, 9],              # The Machine - Depends on Neo and Commander Locke (CORRECTED)
-    11: [6],                 # Oracle - Depends on Twins comparison
-    12: [5, 6, 7],           # Link - Depends on Phase B agents
-    13: [5, 6, 7],           # Agent Johnson - Depends on Phase B agents
-    14: [8, 9, 10],          # Cleaner - Depends on early Phase C agents
-    15: [8, 9, 10],          # Analyst - Depends on early Phase C agents
-    16: [14, 15]             # Agent Brown - Final validation
+    5: [1, 2, 3],             # Neo - Depends on Sentinel, Architect, and Merovingian
+    6: [1, 2],                # Trainman - Depends on Sentinel and Architect (formerly 7)
+    7: [1, 2],                # Keymaker - Depends on Sentinel and Architect (formerly 8)
+    8: [1, 5, 6, 7],          # Commander Locke - Depends on Sentinel (import data) + Phase B agents (formerly 9)
+    9: [5, 8],                # The Machine - Compilation depends on Neo and Commander Locke (formerly 10)
+    10: [9],                  # Twins - Binary comparison AFTER compilation completes (formerly 6)
+    11: [10],                 # Oracle - Depends on Twins comparison
+    12: [5, 6, 7],            # Link - Depends on Phase B agents (formerly 12)
+    13: [5, 6, 7],            # Agent Johnson - Depends on Phase B agents (formerly 13)
+    14: [7, 8, 9],            # Cleaner - Depends on early Phase C agents
+    15: [7, 8, 9],            # Analyst - Depends on early Phase C agents
+    16: [14, 15]              # Agent Brown - Final validation
 }
 
 
