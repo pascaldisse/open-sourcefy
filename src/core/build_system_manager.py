@@ -51,10 +51,11 @@ class BuildSystemManager:
     STRICT MODE ONLY - FAIL FAST WHEN TOOLS ARE MISSING
     """
     
-    def __init__(self, project_root: Optional[Path] = None):
+    def __init__(self, project_root: Optional[Path] = None, toolchain: str = 'vs2022'):
         self.logger = logging.getLogger(__name__)
         self.project_root = project_root or Path(__file__).parent.parent.parent
         self.build_config_path = self.project_root / "build_config.yaml"
+        self.toolchain = toolchain
         
         # Load and validate configuration
         self.config = self._load_build_config()
@@ -63,7 +64,10 @@ class BuildSystemManager:
         # Validate all tools exist
         self._validate_build_tools()
         
-        self.logger.info(f"✅ Build System Manager initialized with VS2022 Preview")
+        if toolchain == 'vs2003':
+            self.logger.info(f"✅ Build System Manager initialized with VS2003 for MFC 7.1 compatibility")
+        else:
+            self.logger.info(f"✅ Build System Manager initialized with VS2022 Preview")
     
     def _load_build_config(self) -> Dict:
         """Load central build configuration - REQUIRED"""
@@ -90,20 +94,39 @@ class BuildSystemManager:
         msbuild_config = build_system['msbuild']
         compilation_config = self.config['compilation']
         
-        return BuildConfiguration(
-            compiler_x64=vs_config['compiler']['x64'],
-            compiler_x86=vs_config['compiler']['x86'],
-            linker_x64=vs_config['linker']['x64'],
-            linker_x86=vs_config['linker']['x86'],
-            msbuild_path=msbuild_config['vs2022_path'],
-            include_dirs=vs_config['includes'],
-            library_dirs_x64=vs_config['libraries']['x64'],
-            library_dirs_x86=vs_config['libraries']['x86'],
-            default_flags=compilation_config['default_flags'],
-            release_flags=compilation_config['release_flags'],
-            debug_flags=compilation_config['debug_flags'],
-            linker_flags=compilation_config['linker_flags']
-        )
+        if self.toolchain == 'vs2003':
+            # Use VS2003 configuration 
+            vs2003_config = build_system['visual_studio_2003']
+            return BuildConfiguration(
+                compiler_x64=vs2003_config['compiler']['x86'],  # VS2003 only has x86
+                compiler_x86=vs2003_config['compiler']['x86'],
+                linker_x64=vs2003_config['linker']['x86'],     # VS2003 only has x86
+                linker_x86=vs2003_config['linker']['x86'],
+                msbuild_path=msbuild_config['vs2003_path'],
+                include_dirs=vs2003_config['includes'],
+                library_dirs_x64=vs2003_config['libraries']['x86'],  # VS2003 only has x86
+                library_dirs_x86=vs2003_config['libraries']['x86'],
+                default_flags=compilation_config['vs2003_flags'],
+                release_flags=compilation_config['release_flags'],
+                debug_flags=compilation_config['debug_flags'],
+                linker_flags=compilation_config['linker_flags']
+            )
+        else:
+            # Use VS2022 configuration (default)
+            return BuildConfiguration(
+                compiler_x64=vs_config['compiler']['x64'],
+                compiler_x86=vs_config['compiler']['x86'],
+                linker_x64=vs_config['linker']['x64'],
+                linker_x86=vs_config['linker']['x86'],
+                msbuild_path=msbuild_config['vs2022_path'],
+                include_dirs=vs_config['includes'],
+                library_dirs_x64=vs_config['libraries']['x64'],
+                library_dirs_x86=vs_config['libraries']['x86'],
+                default_flags=compilation_config['default_flags'],
+                release_flags=compilation_config['release_flags'],
+                debug_flags=compilation_config['debug_flags'],
+                linker_flags=compilation_config['linker_flags']
+            )
     
     def _validate_build_tools(self) -> None:
         """Validate build tools - strict mode only"""
@@ -540,11 +563,11 @@ class BuildSystemManager:
 _build_manager = None
 
 
-def get_build_manager() -> BuildSystemManager:
-    """Get the global build system manager instance"""
+def get_build_manager(toolchain: str = 'vs2022') -> BuildSystemManager:
+    """Get the global build system manager instance with toolchain support"""
     global _build_manager
-    if _build_manager is None:
-        _build_manager = BuildSystemManager()
+    if _build_manager is None or getattr(_build_manager, 'toolchain', None) != toolchain:
+        _build_manager = BuildSystemManager(toolchain=toolchain)
     return _build_manager
 
 

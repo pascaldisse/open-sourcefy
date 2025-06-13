@@ -191,6 +191,7 @@ class MatrixPipelineOrchestrator:
             # Step 3: Execute final validation first (required for accurate success determination)
             final_validation_success = True
             validation_report = None
+            final_validation_error = None
             
             if (self.config.enable_final_validation and 
                 self._has_compilation_output(output_dir) and
@@ -203,9 +204,10 @@ class MatrixPipelineOrchestrator:
                     self.logger.error(f"Final validation failed: {e}")
                     final_validation_success = False
                     validation_report = None
+                    final_validation_error = str(e)
             
             # Step 4: Generate final results (including final validation status)
-            result = self._generate_pipeline_result(agent_results, final_validation_success, validation_report)
+            result = self._generate_pipeline_result(agent_results, final_validation_success, validation_report, final_validation_error)
             
             if self.config.save_reports:
                 await self._save_execution_report(result, output_dir)
@@ -474,7 +476,7 @@ class MatrixPipelineOrchestrator:
             execution_time=0.0
         )
     
-    def _generate_pipeline_result(self, agent_results: Dict[int, Any], final_validation_success: bool = True, validation_report: dict = None) -> MatrixPipelineResult:
+    def _generate_pipeline_result(self, agent_results: Dict[int, Any], final_validation_success: bool = True, validation_report: dict = None, final_validation_error: str = None) -> MatrixPipelineResult:
         """Generate final pipeline result including final validation status"""
         from .matrix_agents import AgentStatus
         
@@ -490,10 +492,18 @@ class MatrixPipelineOrchestrator:
                 error_messages.append(f"Agent {agent_id}: {error_msg}")
         
         # Add final validation failure as error if applicable
-        if not final_validation_success and validation_report:
-            match_pct = validation_report.get('final_validation', {}).get('total_match_percentage', 0)
-            validation_error = f"Final validation failed: {match_pct:.1f}% match (required: 95.0%). No partial success allowed per rules.md Rule #72: NO PARTIAL SUCCESS"
-            error_messages.append(validation_error)
+        if not final_validation_success:
+            if validation_report:
+                # Failed with validation report (percentage mismatch)
+                match_pct = validation_report.get('final_validation', {}).get('total_match_percentage', 0)
+                validation_error = f"Final validation failed: {match_pct:.1f}% match (required: 95.0%). No partial success allowed per rules.md Rule #74: NO PARTIAL SUCCESS"
+                error_messages.append(validation_error)
+            elif final_validation_error:
+                # Failed with exception
+                error_messages.append(f"Final validation failed with error: {final_validation_error}. No partial success allowed per rules.md Rule #74: NO PARTIAL SUCCESS")
+            else:
+                # Failed for unknown reason
+                error_messages.append("Final validation failed for unknown reason. No partial success allowed per rules.md Rule #74: NO PARTIAL SUCCESS")
         
         # Calculate performance metrics
         execution_time = time.time() - self.execution_start_time

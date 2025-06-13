@@ -972,12 +972,28 @@ Usage Examples:
         
         print(f"Execution Time: {execution_time:.2f} seconds")
         print(f"Total Agents: {final_state.total_agents}")
-        print(f"Successful: {final_state.successful_agents}")
-        print(f"Failed: {final_state.failed_agents}")
-        if final_state.total_agents > 0:
-            success_rate = final_state.successful_agents / final_state.total_agents
-            print(f"Success Rate: {success_rate:.1%}")
-        print(f"Status: {'SUCCESS' if final_state.success else 'FAILED'}")
+        
+        # CRITICAL FIX: Enforce rules.md Rule #74 (NO PARTIAL SUCCESS)
+        # If overall pipeline failed, ALL success metrics must reflect failure
+        if final_state.success:
+            # Pipeline succeeded - show actual agent metrics
+            print(f"Successful: {final_state.successful_agents}")
+            print(f"Failed: {final_state.failed_agents}")
+            if final_state.total_agents > 0:
+                success_rate = final_state.successful_agents / final_state.total_agents
+                print(f"Success Rate: {success_rate:.1%}")
+            print(f"Status: SUCCESS")
+        else:
+            # Pipeline failed - ALL OR NOTHING per Rule #80
+            print(f"Successful: 0")
+            print(f"Failed: {final_state.total_agents}")
+            print(f"Success Rate: 0.0%")
+            print(f"Status: FAILED")
+        
+        # DEBUG: Check what error information is available
+        print(f"\nDEBUG - Error info available:")
+        print(f"  final_state.error_messages: {len(final_state.error_messages) if final_state.error_messages else 0}")
+        print(f"  final_state.success: {final_state.success}")
         
         if final_state.error_messages:
             print(f"\nErrors ({len(final_state.error_messages)}):")
@@ -985,6 +1001,29 @@ Usage Examples:
                 print(f"  {i}. {error}")
             if len(final_state.error_messages) > 5:
                 print(f"  ... and {len(final_state.error_messages) - 5} more errors")
+        else:
+            print("\n⚠️ No error messages available despite pipeline failure")
+            
+            # Try to extract error from agent results if available
+            if hasattr(final_state, 'agent_results') and final_state.agent_results:
+                print("Checking agent results for error information...")
+                for agent_id, result in final_state.agent_results.items():
+                    if hasattr(result, 'error_message') and result.error_message:
+                        print(f"  Agent {agent_id} error: {result.error_message}")
+                    elif hasattr(result, 'status') and str(result.status) != 'SUCCESS':
+                        print(f"  Agent {agent_id} status: {result.status}")
+        
+        # CRITICAL: Show primary failure cause at the end for easy visibility
+        if not final_state.success:
+            print("\n" + "=" * 60)
+            print("PIPELINE FAILURE - PRIMARY CAUSE:")
+            print("=" * 60)
+            if final_state.error_messages:
+                print(f"❌ {final_state.error_messages[0]}")
+            else:
+                print("❌ Pipeline failed but no specific error message was captured")
+                print("   This indicates a logic error in error handling")
+            print("=" * 60)
         
         if verbose and final_state.agent_results:
             print("\nAgent Results:")

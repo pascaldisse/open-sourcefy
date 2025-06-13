@@ -943,12 +943,22 @@ class Agent10_TheMachine(ReconstructionAgent):
                 elif isinstance(arch_info, str):
                     analysis['architecture'] = arch_info
         
-        # Set compiler requirements for Windows only
-        analysis['compiler_requirements'] = ['msvc']
-        if analysis['architecture'] == 'x64':
-            analysis['compilation_flags'].extend(['/MACHINE:X64'])
-        else:
+        # Detect MFC 7.1 requirements and determine toolchain
+        analysis['toolchain'] = self._detect_required_toolchain(analysis['dependencies'], context)
+        
+        # Set compiler requirements based on toolchain
+        if analysis['toolchain'] == 'vs2003':
+            analysis['compiler_requirements'] = ['msvc_vs2003']
+            # VS2003 only supports x86
+            analysis['architecture'] = 'x86'
             analysis['compilation_flags'].extend(['/MACHINE:X86'])
+            self.logger.info("🔧 MFC 7.1 detected - switching to VS2003 toolchain for authentic reconstruction")
+        else:
+            analysis['compiler_requirements'] = ['msvc']
+            if analysis['architecture'] == 'x64':
+                analysis['compilation_flags'].extend(['/MACHINE:X64'])
+            else:
+                analysis['compilation_flags'].extend(['/MACHINE:X86'])
         
         # Determine build complexity
         num_files = len(source_files) + len(header_files)
@@ -958,37 +968,87 @@ class Agent10_TheMachine(ReconstructionAgent):
             analysis['build_complexity'] = 'moderate'
         
         return analysis
+    
+    def _detect_required_toolchain(self, dependencies: List[str], context: Dict[str, Any]) -> str:
+        """Detect whether VS2003 or VS2022 toolchain is required based on dependencies"""
+        
+        # Check if MFC 7.1 is in the dependencies (indicates need for VS2003)
+        mfc71_indicators = ['mfc71.lib', 'mfc71u.lib', 'msvcr71.lib']
+        has_mfc71 = any(lib in dependencies for lib in mfc71_indicators)
+        
+        if has_mfc71:
+            self.logger.info(f"📋 MFC 7.1 dependencies detected: {[lib for lib in mfc71_indicators if lib in dependencies]}")
+            return 'vs2003'
+        
+        # Also check Agent 9 data for import analysis
+        agent_results = context.get('agent_results', {})
+        if 9 in agent_results:
+            commander_data = agent_results[9]
+            if hasattr(commander_data, 'data') and isinstance(commander_data.data, dict):
+                # Check for MFC71.DLL in imports
+                build_files = commander_data.data.get('build_files', {})
+                for file_content in build_files.values():
+                    if isinstance(file_content, str) and 'MFC71' in file_content:
+                        self.logger.info("📋 MFC71.DLL detected in Agent 9 import analysis")
+                        return 'vs2003'
+        
+        # Default to modern toolchain
+        self.logger.info("📋 Using modern VS2022 toolchain")
+        return 'vs2022'
 
     def _generate_build_system(self, analysis: Dict[str, Any], sources: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate VS2022 MSBuild system configuration - CENTRALIZED ONLY"""
+        """Generate MSBuild system configuration with dual toolchain support - CENTRALIZED ONLY"""
+        
+        # Determine build system based on toolchain
+        toolchain = analysis.get('toolchain', 'vs2022')
+        if toolchain == 'vs2003':
+            primary_system = 'msbuild_vs2003'
+            detected_systems = ['msbuild_vs2003']
+            vs_version = '2003'
+            self.logger.info("🔧 Generating VS2003 MSBuild configuration for MFC 7.1 compatibility")
+        else:
+            primary_system = 'msbuild_vs2022'
+            detected_systems = ['msbuild']
+            vs_version = '2022_preview'
+            self.logger.info("🔧 Generating VS2022 MSBuild configuration (centralized system)")
+        
         build_system = {
-            'detected_systems': ['msbuild'],  # Only MSBuild supported
-            'primary_system': 'msbuild_vs2022',
+            'detected_systems': detected_systems,
+            'primary_system': primary_system,
+            'toolchain': toolchain,
             'build_files': {},
-            'source_files': sources.get('source_files', {}),  # Add source files
-            'resource_files': sources.get('resource_files', {}),  # Add resource files
-            'header_files': sources.get('header_files', {}),  # Add header files
+            'source_files': sources.get('source_files', {}),
+            'resource_files': sources.get('resource_files', {}),
+            'header_files': sources.get('header_files', {}),
             'build_configurations': {},
             'compilation_commands': {},
             'linking_commands': {},
             'build_scripts': {},
             'automated_build': {},
             'centralized_config': True,
-            'vs_version': '2022_preview'
+            'vs_version': vs_version
         }
         
-        self.logger.info("🔧 Generating VS2022 MSBuild configuration (centralized system)")
         self.logger.info(f"🔍 DEBUG: Build system resource files: {list(build_system['resource_files'].keys())}")
         self.logger.info(f"🔍 DEBUG: Build system header files: {list(build_system['header_files'].keys())}")
         
-        # Generate VS2022 project files using centralized build system
-        vcxproj_content = self._generate_vcxproj_file(analysis)
-        build_system['build_files']['project.vcxproj'] = vcxproj_content
-        build_system['detected_systems'] = ['msbuild']  # Only system available
-        
-        # Generate VS2022 solution file
-        sln_content = self._generate_solution_file(analysis)
-        build_system['build_files']['project.sln'] = sln_content
+        # Generate project files based on toolchain
+        if toolchain == 'vs2003':
+            # Generate VS2003-compatible project files
+            vcxproj_content = self._generate_vs2003_project_file(analysis)
+            build_system['build_files']['project.vcproj'] = vcxproj_content  # VS2003 uses .vcproj
+            
+            # Generate VS2003 solution file
+            sln_content = self._generate_vs2003_solution_file(analysis)
+            build_system['build_files']['project.sln'] = sln_content
+        else:
+            # Generate VS2022 project files using centralized build system
+            vcxproj_content = self._generate_vcxproj_file(analysis)
+            build_system['build_files']['project.vcxproj'] = vcxproj_content
+            
+            # Generate VS2022 solution file
+            sln_content = self._generate_solution_file(analysis)
+            build_system['build_files']['project.sln'] = sln_content
         
         # Generate build configurations
         build_system['build_configurations'] = {
@@ -1082,8 +1142,9 @@ EndGlobal
         elif analysis['project_type'] == 'windows_gui':
             subsystem = 'Windows'
         
-        # Get include and library directories from centralized build system
-        build_manager = self._get_build_manager()
+        # Get include and library directories from centralized build system with correct toolchain
+        toolchain = analysis.get('toolchain', 'vs2022')
+        build_manager = self._get_build_manager(toolchain)
         include_dirs = ";".join(build_manager.get_include_dirs())
         library_dirs = ";".join(build_manager.get_library_dirs(analysis['architecture']))
         
@@ -1221,12 +1282,159 @@ EndGlobal
         
         return vcxproj
 
+    def _generate_vs2003_project_file(self, analysis: Dict[str, Any]) -> str:
+        """Generate VS2003 Visual Studio project file (.vcproj) for MFC 7.1 compatibility"""
+        import uuid
+        project_guid = "{" + str(uuid.uuid4()).upper() + "}"
+        
+        # VS2003 only supports Win32 (x86)
+        platform = 'Win32'
+        
+        # Generate library dependencies string
+        lib_deps = ';'.join(analysis.get('dependencies', ['kernel32.lib', 'user32.lib']))
+        
+        # Check if MFC is needed
+        uses_mfc = any('mfc71' in lib.lower() for lib in analysis.get('dependencies', []))
+        mfc_setting = '2' if uses_mfc else '0'  # 2 = Dynamic MFC, 0 = No MFC
+        
+        vcproj = f'''<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="7.10"
+	Name="ReconstructedProgram"
+	ProjectGUID="{project_guid}"
+	Keyword="Win32Proj">
+	<Platforms>
+		<Platform
+			Name="Win32"/>
+	</Platforms>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="bin\\Debug"
+			IntermediateDirectory="obj\\Debug"
+			ConfigurationType="1"
+			UseOfMFC="{mfc_setting}"
+			CharacterSet="2">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				PreprocessorDefinitions="DEBUG;_DEBUG;_CONSOLE"
+				MinimalRebuild="TRUE"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+				Detect64BitPortabilityProblems="TRUE"
+				DebugInformationFormat="4"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="{lib_deps}"
+				OutputFile="bin\\Debug\\ReconstructedProgram.exe"
+				LinkIncremental="2"
+				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile="bin\\Debug\\ReconstructedProgram.pdb"
+				SubSystem="1"
+				TargetMachine="1"/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="bin\\Release"
+			IntermediateDirectory="obj\\Release"
+			ConfigurationType="1"
+			UseOfMFC="{mfc_setting}"
+			CharacterSet="2">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				InlineFunctionExpansion="1"
+				PreprocessorDefinitions="NDEBUG;_CONSOLE"
+				RuntimeLibrary="2"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+				Detect64BitPortabilityProblems="TRUE"
+				DebugInformationFormat="3"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="{lib_deps}"
+				OutputFile="bin\\Release\\ReconstructedProgram.exe"
+				LinkIncremental="1"
+				GenerateDebugInformation="TRUE"
+				SubSystem="1"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+				TargetMachine="1"/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+		<Filter
+			Name="Source Files"
+			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx"
+			UniqueIdentifier="{{4FC737F1-C7A5-4376-A066-2A32D752A2FF}}">
+			<File
+				RelativePath=".\\main.c">
+			</File>
+		</Filter>
+		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl;inc;xsd"
+			UniqueIdentifier="{{93995380-89BD-4b04-88EB-625FBE52EBFB}}">
+			<File
+				RelativePath=".\\main.h">
+			</File>
+		</Filter>
+		<Filter
+			Name="Resource Files"
+			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
+			UniqueIdentifier="{{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}}">
+		</Filter>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>'''
+        
+        return vcproj
+
+    def _generate_vs2003_solution_file(self, analysis: Dict[str, Any]) -> str:
+        """Generate VS2003 Visual Studio solution file for MFC 7.1 compatibility"""
+        project_guid = "{12345678-1234-5678-9ABC-123456789012}"
+        solution_guid = "{87654321-4321-8765-CBA9-210987654321}"
+        
+        # VS2003 only supports Win32
+        platform = 'Win32'
+        
+        return f'''Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}}") = "ReconstructedProgram", "project.vcproj", "{project_guid}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		Release = Release
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{project_guid}.Debug.ActiveCfg = Debug|{platform}
+		{project_guid}.Debug.Build.0 = Debug|{platform}
+		{project_guid}.Release.ActiveCfg = Release|{platform}
+		{project_guid}.Release.Build.0 = Release|{platform}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal
+'''
+
     def _generate_msvc_commands(self, analysis: Dict[str, Any]) -> Dict[str, List[str]]:
         """Generate MSVC compilation commands using centralized build system"""
         commands = {}
         
-        # Get compiler path from centralized build manager
-        build_manager = self._get_build_manager()
+        # Get compiler path from centralized build manager with correct toolchain
+        toolchain = analysis.get('toolchain', 'vs2022')
+        build_manager = self._get_build_manager(toolchain)
         compiler_path = build_manager.get_compiler_path(analysis['architecture'])
         
         # Use centralized configuration
@@ -1252,8 +1460,9 @@ EndGlobal
         """Generate MSVC linking commands using centralized build system"""
         commands = {}
         
-        # Get linker and library paths from centralized build manager
-        build_manager = self._get_build_manager()
+        # Get linker and library paths from centralized build manager with correct toolchain
+        toolchain = analysis.get('toolchain', 'vs2022')
+        build_manager = self._get_build_manager(toolchain)
         
         # Base libraries
         libs = analysis['dependencies']
@@ -1273,8 +1482,9 @@ EndGlobal
         """Generate Windows build scripts using centralized MSBuild paths"""
         scripts = {}
         
-        # Get MSBuild path from centralized build manager
-        build_manager = self._get_build_manager()
+        # Get MSBuild path from centralized build manager with correct toolchain
+        toolchain = analysis.get('toolchain', 'vs2022')
+        build_manager = self._get_build_manager(toolchain)
         msbuild_path = build_manager.get_msbuild_path().replace('/mnt/c/', 'C:\\')
         
         # Windows batch script using centralized MSBuild path
@@ -1741,8 +1951,9 @@ END
                 result['error'] = f"Failed to write project file: {e}"
                 return result
             
-            # Use centralized build system manager
-            build_manager = self._get_build_manager()
+            # Use centralized build system manager with correct toolchain
+            toolchain = build_config.get('toolchain', 'vs2022')
+            build_manager = self._get_build_manager(toolchain)
             
             # Use the platform from analysis
             platform = "x64" if build_config.get('architecture') == 'x64' else "Win32"
@@ -1874,17 +2085,17 @@ END
 #endif
 """
 
-    def _get_build_manager(self):
-        """Get centralized build system manager - REQUIRED"""
+    def _get_build_manager(self, toolchain: str = 'vs2022'):
+        """Get centralized build system manager with toolchain support - REQUIRED"""
         try:
             from ..build_system_manager import get_build_manager
-            return get_build_manager()
+            return get_build_manager(toolchain=toolchain)
         except Exception as e:
             raise RuntimeError(f"Failed to initialize build system manager: {e}")
     
-    def _get_msbuild_path(self) -> str:
+    def _get_msbuild_path(self, toolchain: str = 'vs2022') -> str:
         """Get MSBuild path from centralized configuration - NO FALLBACKS"""
-        return self._get_build_manager().get_msbuild_path()
+        return self._get_build_manager(toolchain).get_msbuild_path()
 
     def _optimize_build_process(self, compilation_results: Dict[str, Any], build_system: Dict[str, Any]) -> Dict[str, Any]:
         """Optimize the build process - VS2022 MSBuild only"""

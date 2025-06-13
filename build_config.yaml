@@ -18,19 +18,19 @@ build_system:
     base_path: "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview"
     vc_tools_path: "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.44.35207"
     
-    # COMPILER PATHS
+    # COMPILER PATHS (VS2022)
     compiler:
       x64: "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe"
       x86: "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x86/cl.exe"
       arm64: "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.44.35207/bin/Hostx64/arm64/cl.exe"
     
-    # LINKER PATHS
+    # LINKER PATHS (VS2022)
     linker:
       x64: "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/link.exe"
       x86: "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x86/link.exe"
       arm64: "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.44.35207/bin/Hostx64/arm64/link.exe"
     
-    # INCLUDE DIRECTORIES
+    # INCLUDE DIRECTORIES (VS2022)
     includes:
       - "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.44.35207/include"
       - "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.44.35207/atlmfc/include"
@@ -38,7 +38,7 @@ build_system:
       - "/mnt/c/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/um"
       - "/mnt/c/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/shared"
     
-    # LIBRARY DIRECTORIES
+    # LIBRARY DIRECTORIES (VS2022)
     libraries:
       x64:
         - "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.44.35207/lib/x64"
@@ -49,10 +49,42 @@ build_system:
         - "/mnt/c/Program Files (x86)/Windows Kits/10/Lib/10.0.26100.0/ucrt/x86"
         - "/mnt/c/Program Files (x86)/Windows Kits/10/Lib/10.0.26100.0/um/x86"
   
+  # VISUAL STUDIO 2003 PATHS FOR MFC 7.1 COMPATIBILITY (LEGACY BINARY RECONSTRUCTION)
+  visual_studio_2003:
+    version: "2003"
+    base_path: "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003"
+    vc7_tools_path: "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7"
+    framework_path: "/mnt/c/WINDOWS/Microsoft.NET/Framework/v1.1.4322"
+    
+    # COMPILER PATHS (VS2003)
+    compiler:
+      x86: "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/bin/cl.exe"
+      # Note: VS2003 only supports x86, no x64 target
+    
+    # LINKER PATHS (VS2003)
+    linker:
+      x86: "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/bin/link.exe"
+    
+    # INCLUDE DIRECTORIES (VS2003)
+    includes:
+      - "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/include"
+      - "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/atlmfc/include"
+      - "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/PlatformSDK/Include"
+    
+    # LIBRARY DIRECTORIES (VS2003)
+    libraries:
+      x86:
+        - "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/lib"
+        - "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/atlmfc/lib"
+        - "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/PlatformSDK/Lib"
+  
   # MSBUILD CONFIGURATION
   msbuild:
     # VS2022 MSBuild (PREFERRED)
     vs2022_path: "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/MSBuild/Current/Bin/MSBuild.exe"
+    
+    # VS2003 MSBuild (FOR MFC 7.1 COMPATIBILITY)
+    vs2003_path: "/mnt/c/WINDOWS/Microsoft.NET/Framework/v1.1.4322/MSBuild.exe"
     
     # LEGACY MSBuild (NEVER USE - NO FALLBACKS EVER)
     legacy_path: "/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319/MSBuild.exe"
@@ -94,13 +126,21 @@ project_structure:
 
 # COMPILATION SETTINGS
 compilation:
-  # DEFAULT COMPILER FLAGS
+  # DEFAULT COMPILER FLAGS (VS2022)
   default_flags:
     - "/nologo"      # Suppress startup banner
     - "/W3"          # Warning level 3
     - "/EHsc"        # Exception handling
     - "/MD"          # Multithreaded DLL runtime
     - "/std:c++17"   # C++17 standard
+    
+  # VS2003 COMPILER FLAGS (FOR MFC 7.1 COMPATIBILITY)
+  vs2003_flags:
+    - "/nologo"      # Suppress startup banner
+    - "/W3"          # Warning level 3
+    - "/GX"          # Exception handling (VS2003 syntax)
+    - "/MD"          # Multithreaded DLL runtime
+    - "/Zc:wchar_t-" # VS2003 wchar_t compatibility
     
   # RELEASE FLAGS  
   release_flags:

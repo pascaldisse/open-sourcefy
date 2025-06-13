@@ -1,0 +1,152 @@
+Defaulting to user installation because normal site-packages is not writeable
+Collecting langchain
+  Downloading langchain-0.3.25-py3-none-any.whl.metadata (7.8 kB)
+Collecting langchain-core
+  Downloading langchain_core-0.3.65-py3-none-any.whl.metadata (5.8 kB)
+Collecting langchain-community
+  Downloading langchain_community-0.3.25-py3-none-any.whl.metadata (2.9 kB)
+Collecting langchain-text-splitters<1.0.0,>=0.3.8 (from langchain)
+  Downloading langchain_text_splitters-0.3.8-py3-none-any.whl.metadata (1.9 kB)
+Collecting langsmith<0.4,>=0.1.17 (from langchain)
+  Downloading langsmith-0.3.45-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic<3.0.0,>=2.7.4 (from langchain)
+  Downloading pydantic-2.11.5-py3-none-any.whl.metadata (67 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 67.2/67.2 kB 6.1 MB/s eta 0:00:00
+Collecting SQLAlchemy<3,>=1.4 (from langchain)
+  Downloading sqlalchemy-2.0.41-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (9.6 kB)
+Requirement already satisfied: requests<3,>=2 in /usr/lib/python3/dist-packages (from langchain) (2.31.0)
+Requirement already satisfied: PyYAML>=5.3 in /usr/lib/python3/dist-packages (from langchain) (6.0.1)
+Collecting tenacity!=8.4.0,<10.0.0,>=8.1.0 (from langchain-core)
+  Downloading tenacity-9.1.2-py3-none-any.whl.metadata (1.2 kB)
+Collecting jsonpatch<2.0,>=1.33 (from langchain-core)
+  Downloading jsonpatch-1.33-py2.py3-none-any.whl.metadata (3.0 kB)
+Collecting packaging<25,>=23.2 (from langchain-core)
+  Downloading packaging-24.2-py3-none-any.whl.metadata (3.2 kB)
+Requirement already satisfied: typing-extensions>=4.7 in /usr/lib/python3/dist-packages (from langchain-core) (4.10.0)
+Collecting aiohttp<4.0.0,>=3.8.3 (from langchain-community)
+  Downloading aiohttp-3.12.12-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (7.6 kB)
+Collecting dataclasses-json<0.7,>=0.5.7 (from langchain-community)
+  Downloading dataclasses_json-0.6.7-py3-none-any.whl.metadata (25 kB)
+Collecting pydantic-settings<3.0.0,>=2.4.0 (from langchain-community)
+  Downloading pydantic_settings-2.9.1-py3-none-any.whl.metadata (3.8 kB)
+Collecting httpx-sse<1.0.0,>=0.4.0 (from langchain-community)
+  Downloading httpx_sse-0.4.0-py3-none-any.whl.metadata (9.0 kB)
+Requirement already satisfied: numpy>=1.26.2 in /home/pascal/.local/lib/python3.12/site-packages (from langchain-community) (2.3.0)
+Collecting aiohappyeyeballs>=2.5.0 (from aiohttp<4.0.0,>=3.8.3->langchain-community)
+  Downloading aiohappyeyeballs-2.6.1-py3-none-any.whl.metadata (5.9 kB)
+Collecting aiosignal>=1.1.2 (from aiohttp<4.0.0,>=3.8.3->langchain-community)
+  Downloading aiosignal-1.3.2-py2.py3-none-any.whl.metadata (3.8 kB)
+Requirement already satisfied: attrs>=17.3.0 in /usr/lib/python3/dist-packages (from aiohttp<4.0.0,>=3.8.3->langchain-community) (23.2.0)
+Collecting frozenlist>=1.1.1 (from aiohttp<4.0.0,>=3.8.3->langchain-community)
+  Downloading frozenlist-1.7.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (18 kB)
+Collecting multidict<7.0,>=4.5 (from aiohttp<4.0.0,>=3.8.3->langchain-community)
+  Downloading multidict-6.4.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (5.3 kB)
+Collecting propcache>=0.2.0 (from aiohttp<4.0.0,>=3.8.3->langchain-community)
+  Downloading propcache-0.3.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (12 kB)
+Collecting yarl<2.0,>=1.17.0 (from aiohttp<4.0.0,>=3.8.3->langchain-community)
+  Downloading yarl-1.20.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (73 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 73.9/73.9 kB 5.4 MB/s eta 0:00:00
+Collecting marshmallow<4.0.0,>=3.18.0 (from dataclasses-json<0.7,>=0.5.7->langchain-community)
+  Downloading marshmallow-3.26.1-py3-none-any.whl.metadata (7.3 kB)
+Collecting typing-inspect<1,>=0.4.0 (from dataclasses-json<0.7,>=0.5.7->langchain-community)
+  Downloading typing_inspect-0.9.0-py3-none-any.whl.metadata (1.5 kB)
+Requirement already satisfied: jsonpointer>=1.9 in /usr/lib/python3/dist-packages (from jsonpatch<2.0,>=1.33->langchain-core) (2.0)
+Collecting httpx<1,>=0.23.0 (from langsmith<0.4,>=0.1.17->langchain)
+  Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting orjson<4.0.0,>=3.9.14 (from langsmith<0.4,>=0.1.17->langchain)
+  Downloading orjson-3.10.18-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (41 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 41.9/41.9 kB 4.9 MB/s eta 0:00:00
+Collecting requests-toolbelt<2.0.0,>=1.0.0 (from langsmith<0.4,>=0.1.17->langchain)
+  Downloading requests_toolbelt-1.0.0-py2.py3-none-any.whl.metadata (14 kB)
+Collecting zstandard<0.24.0,>=0.23.0 (from langsmith<0.4,>=0.1.17->langchain)
+  Downloading zstandard-0.23.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (3.0 kB)
+Collecting annotated-types>=0.6.0 (from pydantic<3.0.0,>=2.7.4->langchain)
+  Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.33.2 (from pydantic<3.0.0,>=2.7.4->langchain)
+  Downloading pydantic_core-2.33.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (6.8 kB)
+Collecting typing-extensions>=4.7 (from langchain-core)
+  Downloading typing_extensions-4.14.0-py3-none-any.whl.metadata (3.0 kB)
+Collecting typing-inspection>=0.4.0 (from pydantic<3.0.0,>=2.7.4->langchain)
+  Downloading typing_inspection-0.4.1-py3-none-any.whl.metadata (2.6 kB)
+Collecting python-dotenv>=0.21.0 (from pydantic-settings<3.0.0,>=2.4.0->langchain-community)
+  Downloading python_dotenv-1.1.0-py3-none-any.whl.metadata (24 kB)
+Collecting greenlet>=1 (from SQLAlchemy<3,>=1.4->langchain)
+  Downloading greenlet-3.2.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl.metadata (4.1 kB)
+Collecting anyio (from httpx<1,>=0.23.0->langsmith<0.4,>=0.1.17->langchain)
+  Downloading anyio-4.9.0-py3-none-any.whl.metadata (4.7 kB)
+Requirement already satisfied: certifi in /usr/lib/python3/dist-packages (from httpx<1,>=0.23.0->langsmith<0.4,>=0.1.17->langchain) (2023.11.17)
+Collecting httpcore==1.* (from httpx<1,>=0.23.0->langsmith<0.4,>=0.1.17->langchain)
+  Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Requirement already satisfied: idna in /usr/lib/python3/dist-packages (from httpx<1,>=0.23.0->langsmith<0.4,>=0.1.17->langchain) (3.6)
+Collecting h11>=0.16 (from httpcore==1.*->httpx<1,>=0.23.0->langsmith<0.4,>=0.1.17->langchain)
+  Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting mypy-extensions>=0.3.0 (from typing-inspect<1,>=0.4.0->dataclasses-json<0.7,>=0.5.7->langchain-community)
+  Downloading mypy_extensions-1.1.0-py3-none-any.whl.metadata (1.1 kB)
+Collecting sniffio>=1.1 (from anyio->httpx<1,>=0.23.0->langsmith<0.4,>=0.1.17->langchain)
+  Downloading sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+Downloading langchain-0.3.25-py3-none-any.whl (1.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 7.3 MB/s eta 0:00:00
+Downloading langchain_core-0.3.65-py3-none-any.whl (438 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 438.1/438.1 kB 12.2 MB/s eta 0:00:00
+Downloading langchain_community-0.3.25-py3-none-any.whl (2.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.5/2.5 MB 7.0 MB/s eta 0:00:00
+Downloading aiohttp-3.12.12-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (1.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 7.3 MB/s eta 0:00:00
+Downloading dataclasses_json-0.6.7-py3-none-any.whl (28 kB)
+Downloading httpx_sse-0.4.0-py3-none-any.whl (7.8 kB)
+Downloading jsonpatch-1.33-py2.py3-none-any.whl (12 kB)
+Downloading langchain_text_splitters-0.3.8-py3-none-any.whl (32 kB)
+Downloading langsmith-0.3.45-py3-none-any.whl (363 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 363.0/363.0 kB 2.4 MB/s eta 0:00:00
+Downloading packaging-24.2-py3-none-any.whl (65 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 65.5/65.5 kB 7.0 MB/s eta 0:00:00
+Downloading pydantic-2.11.5-py3-none-any.whl (444 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 444.2/444.2 kB 23.1 MB/s eta 0:00:00
+Downloading pydantic_core-2.33.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (1.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.9/1.9 MB 6.5 MB/s eta 0:00:00
+Downloading pydantic_settings-2.9.1-py3-none-any.whl (44 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 44.4/44.4 kB 2.3 MB/s eta 0:00:00
+Downloading sqlalchemy-2.0.41-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (3.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.3/3.3 MB 7.2 MB/s eta 0:00:00
+Downloading tenacity-9.1.2-py3-none-any.whl (28 kB)
+Downloading typing_extensions-4.14.0-py3-none-any.whl (43 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 43.8/43.8 kB 3.3 MB/s eta 0:00:00
+Downloading aiohappyeyeballs-2.6.1-py3-none-any.whl (15 kB)
+Downloading aiosignal-1.3.2-py2.py3-none-any.whl (7.6 kB)
+Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Downloading frozenlist-1.7.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (243 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 243.1/243.1 kB 22.6 MB/s eta 0:00:00
+Downloading greenlet-3.2.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl (638 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 638.8/638.8 kB 6.8 MB/s eta 0:00:00
+Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 73.5/73.5 kB 7.3 MB/s eta 0:00:00
+Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 78.8/78.8 kB 9.9 MB/s eta 0:00:00
+Downloading marshmallow-3.26.1-py3-none-any.whl (50 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 50.9/50.9 kB 5.7 MB/s eta 0:00:00
+Downloading multidict-6.4.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (224 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 224.7/224.7 kB 7.9 MB/s eta 0:00:00
+Downloading orjson-3.10.18-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (136 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 136.8/136.8 kB 19.9 MB/s eta 0:00:00
+Downloading propcache-0.3.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (226 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 227.0/227.0 kB 8.0 MB/s eta 0:00:00
+Downloading python_dotenv-1.1.0-py3-none-any.whl (20 kB)
+Downloading requests_toolbelt-1.0.0-py2.py3-none-any.whl (54 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 54.5/54.5 kB 5.8 MB/s eta 0:00:00
+Downloading typing_inspect-0.9.0-py3-none-any.whl (8.8 kB)
+Downloading typing_inspection-0.4.1-py3-none-any.whl (14 kB)
+Downloading yarl-1.20.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (352 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 352.3/352.3 kB 9.3 MB/s eta 0:00:00
+Downloading zstandard-0.23.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (4.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.9/4.9 MB 7.4 MB/s eta 0:00:00
+Downloading mypy_extensions-1.1.0-py3-none-any.whl (5.0 kB)
+Downloading anyio-4.9.0-py3-none-any.whl (100 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100.9/100.9 kB 8.0 MB/s eta 0:00:00
+Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading sniffio-1.3.1-py3-none-any.whl (10 kB)
+Installing collected packages: zstandard, typing-extensions, tenacity, sniffio, requests-toolbelt, python-dotenv, propcache, packaging, orjson, mypy-extensions, multidict, jsonpatch, httpx-sse, h11, greenlet, frozenlist, annotated-types, aiohappyeyeballs, yarl, typing-inspection, typing-inspect, SQLAlchemy, pydantic-core, marshmallow, httpcore, anyio, aiosignal, pydantic, httpx, dataclasses-json, aiohttp, pydantic-settings, langsmith, langchain-core, langchain-text-splitters, langchain, langchain-community
+  Attempting uninstall: packaging
+    Found existing installation: packaging 25.0
+    Uninstalling packaging-25.0:
+      Successfully uninstalled packaging-25.0
+Successfully installed SQLAlchemy-2.0.41 aiohappyeyeballs-2.6.1 aiohttp-3.12.12 aiosignal-1.3.2 annotated-types-0.7.0 anyio-4.9.0 dataclasses-json-0.6.7 frozenlist-1.7.0 greenlet-3.2.3 h11-0.16.0 httpcore-1.0.9 httpx-0.28.1 httpx-sse-0.4.0 jsonpatch-1.33 langchain-0.3.25 langchain-community-0.3.25 langchain-core-0.3.65 langchain-text-splitters-0.3.8 langsmith-0.3.45 marshmallow-3.26.1 multidict-6.4.4 mypy-extensions-1.1.0 orjson-3.10.18 packaging-24.2 propcache-0.3.2 pydantic-2.11.5 pydantic-core-2.33.2 pydantic-settings-2.9.1 python-dotenv-1.1.0 requests-toolbelt-1.0.0 sniffio-1.3.1 tenacity-9.1.2 typing-extensions-4.14.0 typing-inspect-0.9.0 typing-inspection-0.4.1 yarl-1.20.1 zstandard-0.23.0
