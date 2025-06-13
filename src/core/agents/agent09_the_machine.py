@@ -132,49 +132,43 @@ class Agent9_TheMachine(ReconstructionAgent):
             'compilation_units': []
         }
         
-        # Gather from Global Reconstructor (Agent 8 - Commander Locke)
+        # Gather from Commander Locke (Agent 8) - PRIMARY SOURCE for integration and orchestration
         if 8 in all_results and hasattr(all_results[8], 'status') and all_results[8].status == AgentStatus.SUCCESS:
-            global_data = all_results[8].data
-            if isinstance(global_data, dict):
-                reconstructed_source = global_data.get('reconstructed_source', {})
+            locke_data = all_results[8].data
+            if isinstance(locke_data, dict):
+                # Get reconstructed source from integration
+                reconstructed_source = locke_data.get('reconstructed_source', {})
                 if isinstance(reconstructed_source, dict):
                     sources['source_files'].update(reconstructed_source.get('source_files', {}))
                     sources['header_files'].update(reconstructed_source.get('header_files', {}))
                     sources['main_function'] = reconstructed_source.get('main_function')
                 
                 # Get build configuration
-                build_config = global_data.get('build_configuration', {})
+                build_config = locke_data.get('build_configuration', {})
                 if build_config:
                     sources['build_files'].update(build_config.get('build_files', {}))
                     sources['dependencies'].extend(build_config.get('dependencies', []))
-        
-        # Gather from Resource Reconstructor (Agent 8)
-        if 8 in all_results and hasattr(all_results[8], 'status') and all_results[8].status == AgentStatus.SUCCESS:
-            resource_data = all_results[8].data
-            if isinstance(resource_data, dict):
-                sources['resource_files'].update(resource_data.get('resource_files', {}))
-        
-        # Gather from Commander Locke (Agent 9) - PRIMARY SOURCE
-        if 9 in all_results and hasattr(all_results[9], 'status') and all_results[9].status == AgentStatus.SUCCESS:
-            locke_data = all_results[9].data
-            if isinstance(locke_data, dict):
-                # Check for reconstructed source files from Commander Locke
-                reconstructed_sources = locke_data.get('source_files', {})
-                if reconstructed_sources:
-                    sources['source_files'].update(reconstructed_sources)
-                    self.logger.info(f"✅ Found Commander Locke's reconstructed source files ({len(reconstructed_sources)} files)")
                 
-                # Also check for header files
-                header_files = locke_data.get('header_files', {})
-                if header_files:
-                    sources['header_files'].update(header_files)
-                    self.logger.info(f"✅ Found Commander Locke's header files ({len(header_files)} files)")
+                # Get resource files from integration
+                sources['resource_files'].update(locke_data.get('resource_files', {}))
                 
-                # Build files
-                build_files = locke_data.get('build_files', {})
-                if build_files:
-                    sources['build_files'].update(build_files)
-                    self.logger.info(f"✅ Found Commander Locke's build files ({len(build_files)} files)")
+                # Also check for additional source files from Commander Locke
+                additional_sources = locke_data.get('source_files', {})
+                if additional_sources:
+                    sources['source_files'].update(additional_sources)
+                    self.logger.info(f"✅ Found Commander Locke's additional source files ({len(additional_sources)} files)")
+                
+                # Additional header files
+                additional_headers = locke_data.get('header_files', {})
+                if additional_headers:
+                    sources['header_files'].update(additional_headers)
+                    self.logger.info(f"✅ Found Commander Locke's additional header files ({len(additional_headers)} files)")
+                
+                # Additional build files
+                additional_builds = locke_data.get('build_files', {})
+                if additional_builds:
+                    sources['build_files'].update(additional_builds)
+                    self.logger.info(f"✅ Found Commander Locke's additional build files ({len(additional_builds)} files)")
         
         # Fallback: Gather from Neo Advanced Decompiler (Agent 5) if Commander Locke not available
         if not sources['source_files'] and 5 in all_results and hasattr(all_results[5], 'status') and all_results[5].status == AgentStatus.SUCCESS:

@@ -343,7 +343,15 @@ class Agent15_Analyst(ReconstructionAgent):
         # Map functions from different agents
         functions_by_agent = {}
         for agent_id, data in agent_outputs.items():
-            functions = data.get('functions', [])
+            # Handle both dict and AgentResult objects
+            if hasattr(data, 'get'):
+                functions = data.get('functions', [])
+            elif isinstance(data, dict):
+                functions = data.get('functions', [])
+            else:
+                # If data is an object, look for common function attributes
+                functions = getattr(data, 'functions', getattr(data, 'function_signatures', []))
+            
             if functions:
                 functions_by_agent[agent_id] = functions
         
