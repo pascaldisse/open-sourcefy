@@ -899,19 +899,39 @@ class Agent10_TheMachine(ReconstructionAgent):
         elif sources.get('main_function'):
             analysis['project_type'] = 'console_application'
         
-        # Analyze includes and dependencies
-        all_content = ' '.join(source_files.values()) + ' '.join(header_files.values())
-        
-        # Windows-specific dependencies (check both cases)
-        content_lower = all_content.lower()
-        if '#include <windows.h>' in content_lower:
-            analysis['dependencies'].extend(['kernel32.lib', 'user32.lib'])
-        if '#include <commctrl.h>' in content_lower or 'InitCommonControlsEx' in all_content:
-            analysis['dependencies'].append('Comctl32.lib')
-        if '#include <winsock2.h>' in content_lower:
-            analysis['dependencies'].extend(['ws2_32.lib', 'wsock32.lib'])
-        if 'printf' in all_content or '#include <stdio.h>' in content_lower:
-            analysis['dependencies'].extend(['msvcrt.lib'])
+        # Get comprehensive library dependencies from Agent 9 (Commander Locke)
+        agent_results = context.get('agent_results', {})
+        if 9 in agent_results:
+            # Agent 9 now provides comprehensive library dependencies from Sentinel import analysis
+            commander_data = agent_results[9]
+            if hasattr(commander_data, 'data') and isinstance(commander_data.data, dict):
+                # Extract library dependencies from Agent 9's data
+                dependencies = commander_data.data.get('library_dependencies', [])
+                if dependencies:
+                    analysis['dependencies'] = dependencies
+                    self.logger.info(f"📦 Using comprehensive library dependencies from Agent 9 (Commander Locke)")
+                    self.logger.info(f"🔗 Loaded {len(dependencies)} libraries: {dependencies}")
+                else:
+                    # Also check build files for backup
+                    build_files = commander_data.data.get('build_files', {})
+                    if 'ReconstructedProgram.vcxproj' in build_files:
+                        self.logger.info("📦 Found Agent 9 build files, but no library dependencies extracted")
+                    
+        # Fallback to basic dependency analysis if Agent 9 data not available
+        if not analysis['dependencies']:
+            self.logger.warning("Agent 9 library dependencies not available, using fallback analysis")
+            all_content = ' '.join(source_files.values()) + ' '.join(header_files.values())
+            content_lower = all_content.lower()
+            
+            # Basic fallback dependencies
+            if '#include <windows.h>' in content_lower:
+                analysis['dependencies'].extend(['kernel32.lib', 'user32.lib'])
+            if '#include <commctrl.h>' in content_lower or 'InitCommonControlsEx' in all_content:
+                analysis['dependencies'].append('Comctl32.lib')
+            if '#include <winsock2.h>' in content_lower:
+                analysis['dependencies'].extend(['ws2_32.lib', 'wsock32.lib'])
+            if 'printf' in all_content or '#include <stdio.h>' in content_lower:
+                analysis['dependencies'].extend(['msvcrt.lib'])
         
         # Determine architecture from context
         if 2 in context.get('agent_results', {}):
@@ -1168,7 +1188,7 @@ EndGlobal
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies>kernel32.lib;user32.lib;ws2_32.lib;wininet.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>{';'.join(analysis['dependencies'])};%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>

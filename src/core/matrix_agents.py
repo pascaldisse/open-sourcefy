@@ -414,7 +414,7 @@ MATRIX_DEPENDENCIES = {
     6: [10],                 # Twins - Depends on The Machine for compiled binary comparison
     7: [1, 2],               # Trainman - Depends on Sentinel and Architect
     8: [1, 2],               # Keymaker - Depends on Sentinel and Architect
-    9: [5, 7, 8],            # Commander Locke - Depends on Phase B agents  
+    9: [1, 5, 7, 8],         # Commander Locke - Depends on Sentinel (import data) + Phase B agents  
     10: [5, 9],              # The Machine - Depends on Neo and Commander Locke (CORRECTED)
     11: [6],                 # Oracle - Depends on Twins comparison
     12: [5, 6, 7],           # Link - Depends on Phase B agents

@@ -145,6 +145,7 @@ class CommanderLockeAgent(ReconstructionAgent):
                 'source_files': final_result.source_files,
                 'header_files': final_result.header_files,
                 'build_files': final_result.build_files,
+                'library_dependencies': self._generate_library_dependencies(analysis_data),
                 'quality_metrics': {
                     'quality_score': final_result.quality_score,
                     'completeness': final_result.completeness,
@@ -226,7 +227,21 @@ class CommanderLockeAgent(ReconstructionAgent):
         try:
             data = result.get('data', {})
             
-            if agent_id == 5:  # Neo - Advanced decompilation
+            if agent_id == 1:  # Sentinel - Binary discovery and metadata analysis
+                # Extract critical import data that was being ignored
+                imports = data.get('imports', {})
+                integration_data['imports'] = imports
+                self.logger.info(f"📊 Extracted import data from Sentinel: {len(imports)} DLLs")
+                
+                # Also extract binary metadata
+                binary_metadata = data.get('binary_metadata', {})
+                integration_data['binary_metadata'].update(binary_metadata)
+                
+                # Extract exports if available
+                exports = data.get('exports', [])
+                integration_data['exports'] = exports
+                
+            elif agent_id == 5:  # Neo - Advanced decompilation
                 functions = data.get('decompiled_functions', {})
                 integration_data['functions'].update(functions)
                 
@@ -425,6 +440,9 @@ class CommanderLockeAgent(ReconstructionAgent):
         """Generate build system files"""
         build_files = {}
         
+        # Generate library dependencies from Sentinel import data
+        library_dependencies = self._generate_library_dependencies(analysis_data)
+        
         # Generate CMakeLists.txt
         cmake_content = self._generate_cmake_file(analysis_data, context)
         build_files['CMakeLists.txt'] = cmake_content
@@ -433,11 +451,150 @@ class CommanderLockeAgent(ReconstructionAgent):
         solution_content = self._generate_solution_file(analysis_data, context)
         build_files['ReconstructedProgram.sln'] = solution_content
         
-        # Generate Visual Studio project file
-        project_content = self._generate_project_file(analysis_data, context)
+        # Generate Visual Studio project file with comprehensive dependencies
+        project_content = self._generate_project_file(analysis_data, context, library_dependencies)
         build_files['ReconstructedProgram.vcxproj'] = project_content
         
+        # Generate function declarations from import data
+        function_declarations = self._generate_function_declarations(analysis_data)
+        build_files['import_declarations.h'] = function_declarations
+        
+        # Generate custom DLL stubs
+        custom_dll_stubs = self._generate_custom_dll_stubs(analysis_data)
+        if custom_dll_stubs:
+            build_files['custom_dll_stubs.c'] = custom_dll_stubs
+        
         return build_files
+    
+    def _generate_library_dependencies(self, analysis_data: Dict[str, Any]) -> List[str]:
+        """Generate comprehensive library list from Sentinel import analysis"""
+        imports = analysis_data.get('imports', {})
+        
+        if not imports:
+            self.logger.warning("No import data from Sentinel, using fallback libraries")
+            return ['kernel32.lib', 'user32.lib', 'ws2_32.lib', 'wininet.lib', 'shlwapi.lib']
+        
+        # Map DLL names to corresponding .lib files based on research findings
+        dll_mapping = {
+            'MFC71.DLL': ['mfc71.lib'],
+            'MSVCR71.dll': ['msvcr71.lib'],
+            'KERNEL32.dll': ['kernel32.lib'],
+            'ADVAPI32.dll': ['advapi32.lib'],
+            'GDI32.dll': ['gdi32.lib'],
+            'USER32.dll': ['user32.lib'],
+            'ole32.dll': ['ole32.lib'],
+            'OLEAUT32.dll': ['oleaut32.lib'],
+            'COMDLG32.dll': ['comdlg32.lib'],
+            'VERSION.dll': ['version.lib'],
+            'WINMM.dll': ['winmm.lib'],
+            'SHELL32.dll': ['shell32.lib'],
+            'COMCTL32.dll': ['comctl32.lib'],
+            # mxowrap.dll is custom - handle with stubs
+        }
+        
+        required_libs = []
+        for dll_name in imports.keys():
+            if dll_name in dll_mapping:
+                libs = dll_mapping[dll_name]
+                required_libs.extend(libs)
+                self.logger.info(f"📦 Mapped {dll_name} to {libs}")
+        
+        # Add standard libraries if not already included
+        standard_libs = ['kernel32.lib', 'user32.lib']
+        for lib in standard_libs:
+            if lib not in required_libs:
+                required_libs.append(lib)
+        
+        self.logger.info(f"🔗 Generated {len(required_libs)} library dependencies from import analysis")
+        return list(set(required_libs))  # Remove duplicates
+    
+    def _generate_function_declarations(self, analysis_data: Dict[str, Any]) -> str:
+        """Generate extern declarations for all imported functions"""
+        imports = analysis_data.get('imports', {})
+        
+        if not imports:
+            return "// No import data available for function declarations\n"
+        
+        declarations = []
+        declarations.append("/*")
+        declarations.append(" * Import Function Declarations")
+        declarations.append(" * Generated by Commander Locke from Sentinel import analysis")
+        declarations.append(" * Based on research findings for launcher.exe import table reconstruction")
+        declarations.append(" */")
+        declarations.append("")
+        declarations.append("#ifndef IMPORT_DECLARATIONS_H")
+        declarations.append("#define IMPORT_DECLARATIONS_H")
+        declarations.append("")
+        declarations.append("#include <windows.h>")
+        declarations.append("")
+        
+        # Check if MFC is needed
+        uses_mfc = 'MFC71.DLL' in imports
+        if uses_mfc:
+            declarations.append("// MFC 7.1 compatibility - requires Visual Studio 2003 toolset")
+            declarations.append("#define _MFC_VER 0x0710")
+            declarations.append("#include <afxwin.h>")
+            declarations.append("")
+        
+        # Group by DLL for organization
+        for dll_name, functions in imports.items():
+            if dll_name == 'mxowrap.dll':
+                continue  # Handle custom DLLs separately
+                
+            declarations.append(f"// Functions from {dll_name}")
+            function_count = 0
+            for func_info in functions:
+                func_name = func_info.get('name')
+                if func_name and not func_name.startswith('?'):  # Skip C++ mangled names
+                    # Generate basic extern declaration
+                    declarations.append(f"extern \"C\" __declspec(dllimport) void {func_name}();")
+                    function_count += 1
+                    
+                    # Limit to prevent massive header files
+                    if function_count >= 50:
+                        declarations.append(f"// ... and {len(functions) - function_count} more functions")
+                        break
+            declarations.append("")
+        
+        declarations.append("#endif /* IMPORT_DECLARATIONS_H */")
+        
+        total_functions = sum(len(funcs) for funcs in imports.values())
+        self.logger.info(f"📋 Generated function declarations for {total_functions} imported functions")
+        
+        return "\n".join(declarations)
+    
+    def _generate_custom_dll_stubs(self, analysis_data: Dict[str, Any]) -> str:
+        """Generate stub implementations for custom DLLs like mxowrap.dll"""
+        imports = analysis_data.get('imports', {})
+        
+        if 'mxowrap.dll' not in imports:
+            return ""
+        
+        stubs = []
+        stubs.append("/*")
+        stubs.append(" * Custom DLL Stubs")
+        stubs.append(" * Generated by Commander Locke for mxowrap.dll functions")
+        stubs.append(" * Matrix Online crash reporting stubs")
+        stubs.append(" */")
+        stubs.append("")
+        stubs.append("#include <windows.h>")
+        stubs.append("#include <stdio.h>")
+        stubs.append("")
+        
+        mxo_functions = imports['mxowrap.dll']
+        for func_info in mxo_functions:
+            func_name = func_info.get('name')
+            if func_name:
+                stubs.append(f"extern \"C\" __declspec(dllexport) void {func_name}() {{")
+                stubs.append(f"    // Stub implementation for Matrix Online function {func_name}")
+                stubs.append(f"    printf(\"Called {func_name}() stub\\n\");")
+                stubs.append("    return;")
+                stubs.append("}")
+                stubs.append("")
+        
+        self.logger.info(f"🔧 Generated stubs for {len(mxo_functions)} mxowrap.dll functions")
+        
+        return "\n".join(stubs)
     
     def _generate_minimal_main(self) -> str:
         """Generate minimal main.c file with complete implementations"""
@@ -850,13 +1007,25 @@ Global
 EndGlobal
 '''
     
-    def _generate_project_file(self, analysis_data: Dict[str, Any], context: Dict[str, Any]) -> str:
-        """Generate Visual Studio project file"""
+    def _generate_project_file(self, analysis_data: Dict[str, Any], context: Dict[str, Any], library_dependencies: List[str] = None) -> str:
+        """Generate Visual Studio project file with comprehensive library dependencies"""
         project_guid = "{12345678-1234-5678-9ABC-123456789012}"
         
         binary_info = context.get('binary_info', {})
         architecture = binary_info.get('architecture', 'x86')
         platform = 'x64' if architecture == 'x64' else 'Win32'
+        
+        # Generate library dependency string
+        if not library_dependencies:
+            library_dependencies = ['kernel32.lib', 'user32.lib']
+        
+        # Check if MFC is required
+        imports = analysis_data.get('imports', {})
+        uses_mfc = 'MFC71.DLL' in imports
+        mfc_setting = "Dynamic" if uses_mfc else "false"
+        
+        # Create semicolon-separated library list
+        lib_deps = ';'.join(library_dependencies) + ';%(AdditionalDependencies)'
         
         return f'''<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -882,6 +1051,7 @@ EndGlobal
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>{mfc_setting}</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="\'$(Configuration)|$(Platform)\'==\'Release|{platform}\'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -889,6 +1059,7 @@ EndGlobal
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>{mfc_setting}</UseOfMfc>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\\Microsoft.Cpp.props" />
   <PropertyGroup Condition="\'$(Configuration)|$(Platform)\'==\'Debug|{platform}\'">
@@ -910,6 +1081,7 @@ EndGlobal
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>{lib_deps}</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="\'$(Configuration)|$(Platform)\'==\'Release|{platform}\'">
@@ -927,6 +1099,7 @@ EndGlobal
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>{lib_deps}</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -934,6 +1107,10 @@ EndGlobal
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="*.h" />
+  </ItemGroup>
+  <!-- Generated Library Dependencies from Import Analysis -->
+  <ItemGroup Label="Library Dependencies">
+''' + '\n'.join(f'    <Library Include="{lib}" />' for lib in library_dependencies) + f'''
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\\Microsoft.Cpp.targets" />
 </Project>
