@@ -17,7 +17,7 @@ from .ai_engine_interface import get_ai_engine
 
 # LangChain imports - STRICT MODE: fail fast in production
 try:
-    from langchain.agents import AgentExecutor, ReActDocstoreAgent
+    from langchain.agents import AgentExecutor, ReActTextWorldAgent
     from langchain.memory import ConversationBufferMemory
     from langchain.tools import Tool
     from langchain.schema import AgentAction, AgentFinish
@@ -32,7 +32,7 @@ except ImportError:
             def __init__(self, *args, **kwargs): pass
             @classmethod
             def from_agent_and_tools(cls, *args, **kwargs): return cls()
-        class ReActDocstoreAgent: 
+        class ReActTextWorldAgent: 
             def __init__(self, *args, **kwargs): pass
             @classmethod
             def from_llm_and_tools(cls, *args, **kwargs): return cls()
