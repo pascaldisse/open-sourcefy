@@ -373,8 +373,18 @@ class Agent15_Analyst(ReconstructionAgent):
         # Analyze confidence scores across agents
         confidence_scores = {}
         for agent_id, data in agent_outputs.items():
-            if 'confidence' in data:
-                confidence_scores[agent_id] = data['confidence']
+            # Handle both dict and AgentResult objects
+            if hasattr(data, 'get') and isinstance(data, dict):
+                if 'confidence' in data:
+                    confidence_scores[agent_id] = data['confidence']
+            elif hasattr(data, '__contains__') and isinstance(data, dict):
+                if 'confidence' in data:
+                    confidence_scores[agent_id] = data['confidence']
+            elif hasattr(data, 'confidence'):
+                # If data is an object with confidence attribute
+                confidence_val = getattr(data, 'confidence', None)
+                if confidence_val is not None:
+                    confidence_scores[agent_id] = confidence_val
         
         intelligence['confidence_analysis'] = {
             'scores_by_agent': confidence_scores,
