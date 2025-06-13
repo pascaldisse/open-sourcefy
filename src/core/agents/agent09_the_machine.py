@@ -1857,6 +1857,16 @@ int main(int argc, char* argv[]) {
                     f.write(content)
                 self.logger.info(f"✅ Written source file: {filename} ({len(content)} chars)")
             
+            # Write all header files to src directory
+            header_files = build_config.get('header_files', {})
+            self.logger.info(f"🔍 DEBUG: Found {len(header_files)} header files to write")
+            
+            for filename, content in header_files.items():
+                header_file = os.path.join(src_dir, filename)
+                with open(header_file, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                self.logger.info(f"✅ Written header file: {filename} ({len(content)} chars)")
+            
             # Phase 2.1: Create resource.h for exact function reconstruction
             resource_header = self._generate_resource_header()
             resource_file = os.path.join(src_dir, 'resource.h')

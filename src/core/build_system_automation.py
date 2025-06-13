@@ -122,14 +122,10 @@ find_package(Threads REQUIRED)
             content += f"# Link libraries\n"
             content += f"target_link_libraries(${{PROJECT_NAME}} Threads::Threads)\n"
             
-            # Platform-specific libraries
+            # Windows-specific libraries only
             content += f"""
-# Platform-specific libraries
-if(WIN32)
-    target_link_libraries(${{PROJECT_NAME}} kernel32 user32 gdi32 winspool comdlg32 advapi32 shell32 ole32 oleaut32 uuid odbc32 odbccp32)
-elseif(UNIX)
-    target_link_libraries(${{PROJECT_NAME}} m dl)
-endif()
+# Windows libraries (VS2022 only)
+target_link_libraries(${{PROJECT_NAME}} kernel32 user32 gdi32 winspool comdlg32 advapi32 shell32 ole32 oleaut32 uuid odbc32 odbccp32)
 
 """
             
@@ -345,105 +341,11 @@ EndGlobal
 """
         return content
     
-    def generate_makefile(self, project_name: str, source_files: List[Path],
-                         include_dirs: List[Path] = None, libraries: List[str] = None) -> Path:
-        """Generate Makefile for Unix systems."""
-        if include_dirs is None:
-            include_dirs = []
-        if libraries is None:
-            libraries = []
-        
-        makefile_content = self._create_makefile_content(project_name, source_files, include_dirs, libraries)
-        makefile_path = self.compilation_dir / "Makefile"
-        
-        with open(makefile_path, 'w') as f:
-            f.write(makefile_content)
-        
-        self.logger.info(f"Generated Makefile: {makefile_path}")
-        return makefile_path
-    
-    def _create_makefile_content(self, project_name: str, source_files: List[Path],
-                               include_dirs: List[Path], libraries: List[str]) -> str:
-        """Create Makefile content."""
-        # Determine compiler based on file extensions
-        has_cpp = any(src.suffix.lower() in ['.cpp', '.cxx', '.cc'] for src in source_files)
-        compiler = "CXX = g++" if has_cpp else "CC = gcc"
-        
-        content = f"""# Generated Makefile for {project_name}
-
-# Compiler settings
-{compiler}
-CFLAGS = -Wall -Wextra -std=c11
-CXXFLAGS = -Wall -Wextra -std=c++17
-
-# Project settings
-TARGET = {project_name}
-"""
-        
-        # Add include directories
-        if include_dirs:
-            content += "INCLUDES = "
-            for inc_dir in include_dirs:
-                rel_path = inc_dir.relative_to(self.compilation_dir) if inc_dir.is_absolute() else inc_dir
-                content += f"-I{rel_path} "
-            content += "\n"
-        else:
-            content += "INCLUDES = \n"
-        
-        # Add libraries
-        if libraries:
-            content += "LIBS = "
-            for lib in libraries:
-                if lib.startswith('-'):
-                    content += f"{lib} "
-                else:
-                    content += f"-l{lib} "
-            content += "\n"
-        else:
-            content += "LIBS = -lm -ldl -lpthread\n"
-        
-        # Add source files
-        content += "\n# Source files\n"
-        content += "SOURCES = "
-        for src_file in source_files:
-            rel_path = src_file.relative_to(self.compilation_dir) if src_file.is_absolute() else src_file
-            content += f"{rel_path} "
-        content += "\n"
-        
-        # Object files
-        content += "\n# Object files\n"
-        content += "OBJECTS = $(SOURCES:.c=.o)\n"
-        content += "OBJECTS := $(OBJECTS:.cpp=.o)\n"
-        
-        # Build rules
-        content += f"""
-# Build rules
-all: $(TARGET)
-
-$(TARGET): $(OBJECTS)
-\t{'$(CXX)' if has_cpp else '$(CC)'} $(OBJECTS) -o $(TARGET) $(LIBS)
-
-.c.o:
-\t$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
-
-.cpp.o:
-\t$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
-
-clean:
-\trm -f $(OBJECTS) $(TARGET)
-
-.PHONY: all clean
-"""
-        
-        return content
     
     def test_compilation(self, build_system: str = 'auto') -> Dict:
         """Test compilation using the specified build system."""
         if build_system == 'auto':
-            if platform.system() == 'Windows':
-                build_system = 'msbuild'
-            else:
-                build_system = 'make'
+            build_system = 'msbuild'
         
         compilation_result = {
             'build_system': build_system,
@@ -459,8 +361,6 @@ clean:
                 result = self._test_cmake_compilation()
             elif build_system == 'msbuild':
                 result = self._test_msbuild_compilation()
-            elif build_system == 'make':
-                result = self._test_make_compilation()
             else:
                 raise ValueError(f"Unsupported build system: {build_system}")
             
@@ -477,10 +377,8 @@ clean:
         build_dir = self.compilation_dir / "build"
         build_dir.mkdir(exist_ok=True)
         
-        # Configure with CMake
-        configure_cmd = ["cmake", "..", "-G", "Unix Makefiles"]
-        if platform.system() == 'Windows':
-            configure_cmd = ["cmake", "..", "-G", "Visual Studio 17 2022", "-A", "x64"]
+        # Configure with CMake - Windows VS2022 only
+        configure_cmd = ["cmake", "..", "-G", "Visual Studio 17 2022", "-A", "x64"]
         
         self.logger.info(f"Running CMake configure: {' '.join(configure_cmd)}")
         configure_result = subprocess.run(configure_cmd, cwd=build_dir, 
@@ -562,45 +460,6 @@ clean:
                 'errors': 'MSBuild not found - install Visual Studio Build Tools'
             }
     
-    def _test_make_compilation(self) -> Dict:
-        """Test Make compilation."""
-        # Check if Makefile exists
-        makefile = self.compilation_dir / "Makefile"
-        if not makefile.exists():
-            return {
-                'success': False,
-                'errors': 'No Makefile found'
-            }
-        
-        # Build with Make
-        build_cmd = ["make", "-j4"]  # Use 4 parallel jobs
-        self.logger.info(f"Running Make: {' '.join(build_cmd)}")
-        
-        try:
-            build_result = subprocess.run(build_cmd, cwd=self.compilation_dir,
-                                        capture_output=True, text=True, timeout=300)
-            
-            # Check if executable was created
-            executables = list(self.compilation_dir.glob("*"))
-            executable_created = any(f.is_file() and os.access(f, os.X_OK) for f in executables)
-            
-            return {
-                'success': build_result.returncode == 0,
-                'output': build_result.stdout,
-                'errors': build_result.stderr,
-                'executable_created': executable_created
-            }
-            
-        except subprocess.TimeoutExpired:
-            return {
-                'success': False,
-                'errors': 'Make timed out'
-            }
-        except FileNotFoundError:
-            return {
-                'success': False,
-                'errors': 'Make not found - install build-essential'
-            }
 
 
 def main():
@@ -625,16 +484,10 @@ def main():
     msbuild_parser.add_argument('--sources', nargs='+', required=True, help='Source files')
     msbuild_parser.add_argument('--includes', nargs='*', default=[], help='Include directories')
     
-    # Generate Makefile
-    make_parser = subparsers.add_parser('makefile', help='Generate Makefile')
-    make_parser.add_argument('--project-name', required=True, help='Project name')
-    make_parser.add_argument('--sources', nargs='+', required=True, help='Source files')
-    make_parser.add_argument('--includes', nargs='*', default=[], help='Include directories')
-    make_parser.add_argument('--libraries', nargs='*', default=[], help='Libraries to link')
     
     # Test compilation
     test_parser = subparsers.add_parser('test', help='Test compilation')
-    test_parser.add_argument('--build-system', choices=['auto', 'cmake', 'msbuild', 'make'], 
+    test_parser.add_argument('--build-system', choices=['auto', 'cmake', 'msbuild'], 
                            default='auto', help='Build system to use')
     
     args = parser.parse_args()
@@ -662,13 +515,6 @@ def main():
             )
             print(f"Generated MSBuild project: {project_file}")
             
-        elif args.command == 'makefile':
-            source_paths = [Path(src) for src in args.sources]
-            include_paths = [Path(inc) for inc in args.includes]
-            makefile = automation.generate_makefile(
-                args.project_name, source_paths, include_paths, args.libraries
-            )
-            print(f"Generated Makefile: {makefile}")
             
         elif args.command == 'test':
             result = automation.test_compilation(args.build_system)
