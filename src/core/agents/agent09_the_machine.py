@@ -1343,37 +1343,40 @@ int ebp(void) { return 0; }
         """
         import re
         
-        # CRITICAL FIX: Only add missing function_ptr symbol for linker (Rule #56)  
-        # NOTE: Parameter variables (param1-param20) are already provided by _add_missing_variable_definitions
-        has_function_ptr_symbol = ('#define function_ptr function_ptr_var' in source_content or 
-                                  'function_ptr_t function_ptr' in source_content)
+        # CRITICAL FIX: Always add function_ptr symbol alias for linker (Rule #56)  
+        # Check if function_ptr calls exist but alias is missing
+        has_function_ptr_calls = 'function_ptr()' in source_content
+        has_function_ptr_alias = '#define function_ptr function_ptr_var' in source_content
         
-        self.logger.info(f"🔍 function_ptr symbol present: {has_function_ptr_symbol}")
+        self.logger.info(f"🔍 function_ptr calls present: {has_function_ptr_calls}")
+        self.logger.info(f"🔍 function_ptr alias present: {has_function_ptr_alias}")
         
-        if not has_function_ptr_symbol:
+        if has_function_ptr_calls and not has_function_ptr_alias:
             self.logger.info("🔧 Adding missing function_ptr symbol alias for linker")
-            # Find the insertion point after param5 declaration  
-            search_text = 'int param1 = 0, param2 = 0, param3 = 0, param4 = 0, param5 = 0;'
+            # Find the insertion point after function_ptr_var declaration  
+            search_text = 'function_ptr_t function_ptr_var = NULL;'
             insert_point = source_content.find(search_text)
             
             if insert_point != -1:
                 # Find the end of this line
                 end_line = source_content.find('\n', insert_point)
                 if end_line != -1:
-                    # Only add function_ptr alias - param variables already provided elsewhere
+                    # Add function_ptr alias directly after function_ptr_var declaration
                     function_ptr_alias = """
 // CRITICAL LINKING FIX: Provide missing function_ptr symbol for linker (Rule #56)
-// imports.h expects 'function_ptr' but we have 'function_ptr_var' - create alias
+// Code calls 'function_ptr()' but symbol is 'function_ptr_var' - create alias
 #define function_ptr function_ptr_var
 """
                     source_content = source_content[:end_line+1] + function_ptr_alias + source_content[end_line+1:]
                     self.logger.info("✅ Applied function_ptr alias fix to source code")
                 else:
-                    self.logger.warning("⚠️ Could not find end of param1-param5 line")
+                    self.logger.warning("⚠️ Could not find end of function_ptr_var line")
             else:
-                self.logger.warning("⚠️ Could not find param1-param5 declaration for function_ptr insertion")
+                self.logger.warning("⚠️ Could not find function_ptr_var declaration for alias insertion")
+        elif has_function_ptr_alias:
+            self.logger.info("✅ function_ptr alias already present in source code")
         else:
-            self.logger.info("✅ function_ptr symbol already present in source code")
+            self.logger.info("ℹ️ No function_ptr calls found in source code")
         
         lines = source_content.split('\n')
         fixed_lines = []
