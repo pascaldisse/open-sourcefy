@@ -426,7 +426,7 @@ class Agent16_AgentBrown(ValidationAgent):
         source_codes = pipeline_data.get('source_code', {})
         if source_codes:
             try:
-                compilation_result = self._test_compilation(source_codes)
+                compilation_result = self._test_compilation(source_codes, context)
                 validation_report['compilation_test'] = compilation_result
             except Exception as e:
                 validation_report['compilation_test'] = {
@@ -609,7 +609,7 @@ class Agent16_AgentBrown(ValidationAgent):
         else:
             return 'not_ready'
 
-    def _test_compilation(self, source_codes: Dict[int, str]) -> Dict[str, Any]:
+    def _test_compilation(self, source_codes: Dict[int, str], context: Dict[str, Any]) -> Dict[str, Any]:
         """Test compilation of generated source code"""
         compilation_result = {
             'status': 'passed',
