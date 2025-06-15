@@ -836,14 +836,14 @@ This project was reconstructed from binary analysis by Neo Advanced Decompiler.
         parts = op_str.split(', ')
         if len(parts) == 2:
             left, right = parts
-            # Look for interesting comparisons
+            # Generate comparison without opening braces to avoid malformed control structures
             if right.isdigit():
                 value = int(right)
                 if value == 3:
-                    return f"if ({self._clean_operand(left)} == 3) {{  // FOUND: Comparison with 3!"
+                    return f"// Comparison: {self._clean_operand(left)} == 3"
                 else:
-                    return f"if ({self._clean_operand(left)} == {value}) {{"
-            return f"if ({self._clean_operand(left)} == {self._clean_operand(right)}) {{"
+                    return f"// Comparison: {self._clean_operand(left)} == {value}"
+            return f"// Comparison: {self._clean_operand(left)} == {self._clean_operand(right)}"
         return f"// cmp {op_str}"
     
     def _convert_jump_instruction(self, mnemonic: str, op_str: str) -> str:
