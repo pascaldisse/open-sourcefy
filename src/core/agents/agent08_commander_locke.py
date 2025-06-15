@@ -508,11 +508,12 @@ class Agent8_CommanderLocke(ReconstructionAgent):
         return '\n'.join(content_lines)
     
     def _generate_real_import_declarations(self, imports: Dict[str, List]) -> str:
-        """Generate actual import declarations from real DLL analysis"""
+        """Generate actual import declarations from real DLL analysis, excluding Windows system functions"""
         content_lines = [
             "/*",
             " * Import Declarations - REAL DLL Dependencies",
             f" * Generated from actual import table analysis: {len(imports)} DLLs",
+            " * Note: Standard Windows API functions are excluded to avoid conflicts",
             " */",
             "",
             "#ifndef IMPORTS_H",
@@ -522,13 +523,58 @@ class Agent8_CommanderLocke(ReconstructionAgent):
             ""
         ]
         
+        # List of common Windows API and CRT functions to exclude
+        excluded_functions = {
+            # Windows API functions
+            'timeGetTime', 'PlaySoundA', 'CreateWindowExA', 'ShowWindow', 'UpdateWindow', 'GetMessageA', 'DefWindowProcA',
+            'PostQuitMessage', 'RegisterClassExA', 'LoadImageA', 'SetWindowTextA',
+            'GetWindowTextA', 'GetWindowRect', 'OffsetRect', 'CopyRect', 'LoadBitmapA',
+            'LoadIconA', 'IsWindow', 'PostThreadMessageA', 'GetClientRect', 'SendMessageA',
+            'SetForegroundWindow', 'SetRect', 'SetWindowPos', 'GetDC', 'ReleaseDC',
+            # Registry API
+            'RegOpenKeyA', 'RegCloseKey', 'RegSetValueExA', 'RegOpenKeyExA', 'RegQueryValueExA',
+            # Crypto API  
+            'CryptGenRandom', 'CryptReleaseContext', 'CryptAcquireContextA',
+            # Shell API
+            'ShellExecuteA', 'SHFileOperationA',
+            # COM API
+            'CoCreateInstance', 'CoInitialize', 'CoUninitialize',
+            # Version API
+            'VerQueryValueA', 'GetFileVersionInfoA', 'GetFileVersionInfoSizeA',
+            # Network API
+            'WSACleanup', 'inet_ntoa', 'inet_addr', 'socket', 'ioctlsocket', 'getsockname',
+            'getsockopt', 'connect', 'setsockopt', 'accept', 'htons', 'WSAStartup', 'htonl',
+            'gethostbyname', 'closesocket', 'ntohs', 'WSAGetLastError', 'shutdown', 'sendto',
+            'send', 'recvfrom', 'recv', '__WSAFDIsSet', 'select', 'listen', 'bind',
+            # Standard C library functions
+            '_exit', '_onexit', 'isdigit', 'memset', 'memchr', 'putc', 'getc', 'malloc', 'free', 
+            '_aligned_malloc', '_aligned_free', 'ungetc', 'setvbuf', '_fcvt', '_ecvt', '_isnan',
+            '_copysign', '_fpclass', '_finite', 'realloc', '_chdir', '_findfirst', '_findnext',
+            '_findclose', 'localtime', '_heapchk', '_iob', 'exit', 'puts', 'abort',
+            # MSVCRT internal functions with conflicts
+            '__p__fmode', '__p__commode'
+        }
+        
         for dll_name, functions in imports.items():
+            # Skip DLLs that are typically included with Windows headers  
+            if dll_name.upper() in ['KERNEL32.DLL', 'USER32.DLL', 'GDI32.DLL', 'WINMM.DLL', 
+                                   'ADVAPI32.DLL', 'SHELL32.DLL', 'COMCTL32.DLL', 'OLE32.DLL',
+                                   'OLEAUT32.DLL', 'VERSION.DLL', 'WS2_32.DLL']:
+                content_lines.append(f"/* {dll_name} functions available via #include <windows.h> */")
+                content_lines.append("")
+                continue
+                
             content_lines.append(f"/* Functions from {dll_name} */")
             
+            custom_functions_found = False
             for func_info in functions[:50]:  # Limit to first 50 per DLL
                 func_name = func_info.get('name')
-                if func_name and not func_name.startswith('?'):  # Skip C++ mangled names
-                    content_lines.append(f"__declspec(dllimport) void {func_name}();")
+                if func_name and not func_name.startswith('?') and func_name not in excluded_functions:
+                    content_lines.append(f"extern void {func_name}();")
+                    custom_functions_found = True
+            
+            if not custom_functions_found:
+                content_lines.append("/* All functions from this DLL are standard Windows API */")
             
             content_lines.append("")
         

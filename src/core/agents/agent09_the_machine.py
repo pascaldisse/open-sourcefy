@@ -1139,8 +1139,24 @@ EndGlobal
         # Get include and library directories from centralized build system with correct toolchain
         toolchain = analysis.get('toolchain', 'vs2022')
         build_manager = self._get_build_manager(toolchain)
-        include_dirs = ";".join(build_manager.get_include_dirs())
-        library_dirs = ";".join(build_manager.get_library_dirs(analysis['architecture']))
+        
+        # Convert WSL paths to Windows paths for MSBuild compatibility
+        wsl_include_dirs = build_manager.get_include_dirs()
+        wsl_library_dirs = build_manager.get_library_dirs(analysis['architecture'])
+        
+        # Convert each path from WSL format to Windows format
+        windows_include_dirs = []
+        for path in wsl_include_dirs:
+            windows_path = build_manager._convert_wsl_path_to_windows(path)
+            windows_include_dirs.append(windows_path)
+        
+        windows_library_dirs = []
+        for path in wsl_library_dirs:
+            windows_path = build_manager._convert_wsl_path_to_windows(path)
+            windows_library_dirs.append(windows_path)
+        
+        include_dirs = ";".join(windows_include_dirs)
+        library_dirs = ";".join(windows_library_dirs)
         
         vcxproj = f"""<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
