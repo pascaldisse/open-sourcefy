@@ -416,9 +416,9 @@ class Agent8_CommanderLocke(ReconstructionAgent):
     # Helper methods for actual implementation generation
     def _group_functions_by_functionality(self, functions: Dict[str, Any], detected_functions: List) -> Dict[str, List]:
         """Group functions into logical modules based on actual analysis"""
-        # Implementation would analyze function names and signatures to group logically
+        # Use "reconstructed" instead of "main" to avoid overwriting Neo's main.c
         if isinstance(functions, dict):
-            return {"main": list(functions.items())}
+            return {"reconstructed": list(functions.items())}
         elif isinstance(functions, list):
             # Handle case where functions is a list - convert to (name, data) tuples
             function_items = []
@@ -427,10 +427,10 @@ class Agent8_CommanderLocke(ReconstructionAgent):
                     function_items.append((func['name'], func))
                 else:
                     function_items.append((f'function_{i:04d}', func))
-            return {"main": function_items}
+            return {"reconstructed": function_items}
         else:
             # Fallback for unexpected data types
-            return {"main": [(f'function_0000', functions)]}
+            return {"reconstructed": [(f'function_0000', functions)]}
     
     def _generate_module_source_code(self, module_name: str, module_functions: List) -> str:
         """Generate actual C source code for a module with real function implementations"""
