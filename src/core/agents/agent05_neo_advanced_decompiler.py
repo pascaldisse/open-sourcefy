@@ -722,15 +722,16 @@ This project was reconstructed from binary analysis by Neo Advanced Decompiler.
         variables = []
         
         # Always declare the standard variables used by register mapping
+        # Note: Using int types for all variables to avoid pointer arithmetic issues
         standard_vars = [
             "int result = 0;",
             "int temp1 = 0;", 
             "int counter = 0;",
             "int temp2 = 0;",
-            "void* src_ptr = NULL;",
-            "void* dst_ptr = NULL;",
-            "void* stack_ptr = NULL;",
-            "void* frame_ptr = NULL;",
+            "int src_ptr = 0;",      # Changed from void* to int
+            "int dst_ptr = 0;",      # Changed from void* to int  
+            "int stack_ptr = 0;",    # Changed from void* to int
+            "int frame_ptr = 0;",    # Changed from void* to int
             "int memory_access = 0;",
             "int param = 0;",
             "int local_var = 0;",
@@ -757,8 +758,12 @@ This project was reconstructed from binary analysis by Neo Advanced Decompiler.
             # Convert common assembly patterns to C
             c_statement = self._assembly_instruction_to_c(mnemonic, op_str, address, binary_analysis)
             if c_statement:
-                c_statements.append(f"// 0x{address:x}: {mnemonic} {op_str}")
-                c_statements.append(c_statement)
+                # Only add assembly comment, the C statement already includes the comment if needed
+                c_statements.append(f"// 0x{address:x}: {mnemonic} ")
+                c_statements.append(f"// Assembly: {mnemonic} {op_str}")
+                # Only add actual C code if it's not just a comment
+                if not c_statement.startswith('//'):
+                    c_statements.append(c_statement)
         
         return c_statements[:50]  # Limit output length
     
@@ -870,14 +875,33 @@ This project was reconstructed from binary analysis by Neo Advanced Decompiler.
         """Clean assembly operand for C code"""
         # Convert common register names to C variables
         reg_map = {
+            # 32-bit registers
             'eax': 'result',
             'ebx': 'temp1',
             'ecx': 'counter',
             'edx': 'temp2',
             'esi': 'src_ptr',
-            'edi': 'dst_ptr',
+            'edi': 'dst_ptr', 
             'esp': 'stack_ptr',
-            'ebp': 'frame_ptr'
+            'ebp': 'frame_ptr',
+            # 16-bit registers (map to same variables as 32-bit counterparts)
+            'ax': 'result',
+            'bx': 'temp1',
+            'cx': 'counter',
+            'dx': 'temp2',
+            'si': 'src_ptr',
+            'di': 'dst_ptr',
+            'sp': 'stack_ptr',
+            'bp': 'frame_ptr',
+            # 8-bit registers (map to same variables as 32-bit counterparts)
+            'al': 'result',     # low byte of eax
+            'ah': 'result',     # high byte of eax
+            'bl': 'temp1',      # low byte of ebx
+            'bh': 'temp1',      # high byte of ebx
+            'cl': 'counter',    # low byte of ecx
+            'ch': 'counter',    # high byte of ecx
+            'dl': 'temp2',      # low byte of edx
+            'dh': 'temp2'       # high byte of edx
         }
         
         operand = operand.strip()
