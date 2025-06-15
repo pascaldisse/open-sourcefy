@@ -1010,10 +1010,32 @@ class Agent9_TheMachine(ReconstructionAgent):
                 sentinel_imports = imports_data
                 analysis['sentinel_imports'] = imports_data  # Store for later use
                 self.logger.info(f"🔥 CRITICAL: Found Agent 1 (Sentinel) import table with {len(imports_data)} DLLs")
-                # Extract unique DLL names for dependencies
+                # Extract unique DLL names for dependencies with VS2022 compatibility mapping
                 dll_names = [imp.get('dll', '').lower() for imp in imports_data if imp.get('dll')]
-                # Convert to library names (remove .dll extension and add .lib)
-                lib_names = [dll.replace('.dll', '.lib') for dll in dll_names if dll.endswith('.dll')]
+                # Convert to library names with MFC 7.1 → VS2022 compatibility fixes
+                lib_names = []
+                for dll in dll_names:
+                    if dll.endswith('.dll'):
+                        lib_name = dll.replace('.dll', '.lib')
+                        # CRITICAL FIX: Replace legacy MFC 7.1 with VS2022 compatible libraries  
+                        if lib_name == 'mfc71.lib':
+                            # MFC 7.1 → Skip MFC and use Win32 API instead (MFC not available in VS2022 Preview)
+                            self.logger.info("🔧 COMPATIBILITY FIX: Skipped mfc71.lib - using Win32 API instead (MFC not available in VS2022 Preview)")
+                            continue  # Skip MFC libraries entirely
+                        elif lib_name == 'msvcr71.lib':
+                            # MSVCR71 → Modern UCRT for VS2022
+                            lib_names.extend(['ucrt.lib', 'vcruntime.lib', 'msvcrt.lib'])
+                            self.logger.info("🔧 COMPATIBILITY FIX: Replaced msvcr71.lib with ucrt.lib + vcruntime.lib + msvcrt.lib (VS2022)")
+                        elif lib_name == 'mxowrap.lib':
+                            # Custom DLL - skip since it won't exist in VS2022
+                            self.logger.info("🔧 COMPATIBILITY: Skipped mxowrap.lib (custom DLL not available in VS2022)")
+                            continue
+                        elif lib_name == 'dllwebbrowser.lib':
+                            # Custom DLL - skip since it won't exist in VS2022
+                            self.logger.info("🔧 COMPATIBILITY: Skipped dllwebbrowser.lib (custom DLL not available in VS2022)")
+                            continue
+                        else:
+                            lib_names.append(lib_name)
                 if lib_names:
                     analysis['dependencies'] = lib_names
                     self.logger.info(f"✅ Using REAL import table: {len(lib_names)} libraries from Sentinel analysis")
@@ -2904,15 +2926,33 @@ BEGIN
             imports_content.append("#include <stdlib.h>")
             imports_content.append("")
             
-            # Generate pragma comment directives for all DLLs found
-            imports_content.append("// Library dependencies from original binary import table")
+            # Generate pragma comment directives for all DLLs found with VS2022 compatibility
+            imports_content.append("// Library dependencies from original binary import table (VS2022 compatible)")
             for imp_data in real_imports:
                 dll_name = imp_data.get('dll', '')
                 if dll_name:
-                    # Convert DLL name to lib name (e.g., kernel32.dll -> kernel32.lib)
-                    lib_name = dll_name.lower().replace('.dll', '.lib')
                     functions = imp_data.get('functions', [])
-                    imports_content.append(f"#pragma comment(lib, \"{lib_name}\")  // {dll_name} ({len(functions)} functions)")
+                    lib_name = dll_name.lower().replace('.dll', '.lib')
+                    
+                    # CRITICAL FIX: Apply VS2022 compatibility mappings
+                    if lib_name == 'mfc71.lib':
+                        # MFC 7.1 → Skip MFC and use Win32 API instead (MFC not available in VS2022 Preview)
+                        imports_content.append(f"// #pragma comment(lib, \"mfc140.lib\")   // {dll_name} → MFC not available in VS2022 Preview ({len(functions)} functions)")
+                        imports_content.append(f"// #pragma comment(lib, \"mfcs140.lib\")  // {dll_name} → Using Win32 API instead ({len(functions)} functions)")
+                    elif lib_name == 'msvcr71.lib':
+                        # MSVCR71 → Modern UCRT
+                        imports_content.append(f"#pragma comment(lib, \"ucrt.lib\")      // {dll_name} → Universal CRT ({len(functions)} functions)")
+                        imports_content.append(f"#pragma comment(lib, \"vcruntime.lib\") // {dll_name} → VC Runtime ({len(functions)} functions)")
+                        imports_content.append(f"#pragma comment(lib, \"msvcrt.lib\")    // {dll_name} → MSVC Runtime ({len(functions)} functions)")
+                    elif lib_name == 'mxowrap.lib':
+                        # Custom DLL - add comment but skip linking
+                        imports_content.append(f"// #pragma comment(lib, \"{lib_name}\")  // {dll_name} - Custom DLL ({len(functions)} functions) - SKIPPED")
+                    elif lib_name == 'dllwebbrowser.lib':
+                        # Custom DLL - add comment but skip linking
+                        imports_content.append(f"// #pragma comment(lib, \"{lib_name}\")  // {dll_name} - Custom DLL ({len(functions)} functions) - SKIPPED")
+                    else:
+                        # Standard Windows libraries
+                        imports_content.append(f"#pragma comment(lib, \"{lib_name}\")  // {dll_name} ({len(functions)} functions)")
             
             imports_content.append("")
             imports_content.append("// Function declarations extracted from original binary")
