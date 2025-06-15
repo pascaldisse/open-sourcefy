@@ -975,13 +975,13 @@ class Agent9_TheMachine(ReconstructionAgent):
             runtime_deps = ['msvcrt.lib', 'msvcprt.lib']  
             
             # Add missing critical dependencies for complete import table reconstruction
-            network_deps = ['ws2_32.lib', 'wininet.lib', 'winhttp.lib', 'urlmon.lib', 'iphlpapi.lib']
-            security_deps = ['crypt32.lib', 'wintrust.lib', 'secur32.lib', 'bcrypt.lib', 'ncrypt.lib']
-            multimedia_deps = ['winmm.lib', 'dsound.lib', 'ddraw.lib', 'dxguid.lib', 'strmiids.lib'] 
-            system_deps = ['winspool.lib', 'comdlg32.lib', 'odbc32.lib', 'odbccp32.lib', 'rpcrt4.lib', 'version.lib', 'setupapi.lib']
-            mfc_deps = ['mfc42.lib', 'mfcs42.lib', 'atl.lib']  # Add MFC libraries for size
+            # Use only libraries that are guaranteed to exist in Windows SDK
+            network_deps = ['ws2_32.lib', 'wininet.lib', 'winhttp.lib']
+            security_deps = ['crypt32.lib', 'wintrust.lib', 'secur32.lib']
+            multimedia_deps = ['winmm.lib'] 
+            system_deps = ['winspool.lib', 'comdlg32.lib', 'rpcrt4.lib', 'version.lib']
             
-            analysis['dependencies'].extend(core_deps + gui_deps + runtime_deps + network_deps + security_deps + multimedia_deps + system_deps + mfc_deps)
+            analysis['dependencies'].extend(core_deps + gui_deps + runtime_deps + network_deps + security_deps + multimedia_deps + system_deps)
             self.logger.info(f"📦 Using comprehensive fallback dependencies ({len(analysis['dependencies'])} libraries) for binary size equivalence")
         
         # Determine architecture from context
@@ -1270,16 +1270,16 @@ EndGlobal
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|{platform}'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>DEBUG;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>DEBUG;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>false</ConformanceMode>
       <Optimization>Disabled</Optimization>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>{subsystem}</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>{';'.join(analysis['dependencies'])};$(IntDir)resources.res;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>{';'.join(analysis['dependencies'])};%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|{platform}'">
@@ -1320,14 +1320,14 @@ EndGlobal
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>false</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>{';'.join(analysis['dependencies'])};$(IntDir)resources.res;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>{';'.join(analysis['dependencies'])};%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <BaseAddress>0x400000</BaseAddress>
-      <FixedBaseAddress>true</FixedBaseAddress>
-      <AdditionalOptions>/MANIFEST:NO /ALLOWISOLATION /SAFESEH:NO /SECTION:.rdata,RW /SECTION:.data,RW /FORCE:MULTIPLE %(AdditionalOptions)</AdditionalOptions>
+      <FixedBaseAddress>false</FixedBaseAddress>
+      <AdditionalOptions>/MANIFEST:NO /SAFESEH:NO %(AdditionalOptions)</AdditionalOptions>
       <GenerateMapFile>true</GenerateMapFile>
       <MapFileName>$(TargetDir)$(TargetName).map</MapFileName>
       <EmbedManifest>false</EmbedManifest>

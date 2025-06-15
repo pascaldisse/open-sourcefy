@@ -582,10 +582,31 @@ void {func_name}_wrapper() {{
             ""
         ])
         
-        # Add function implementations directly (no separate declarations)
+        # Add function implementations directly (no separate declarations)  
+        function_stubs = set()
         for func in decompiled_functions:
             main_c_content.append(func.source_code)
             main_c_content.append("")
+            
+            # Extract function calls that need stub implementations
+            calls = self._extract_function_calls(func.source_code)
+            for call in calls:
+                if call.startswith('func_'):
+                    function_stubs.add(call)
+        
+        # Generate stub implementations for all called functions
+        main_c_content.append("// Function stub implementations")
+        main_c_content.append("")
+        for stub_func in sorted(function_stubs):
+            addr = stub_func.replace('func_', '')
+            stub_impl = f"""// Stub implementation for {stub_func} at address 0x{addr}
+int {stub_func}(void)
+{{
+    // Placeholder function - returns success
+    return 0;
+}}
+"""
+            main_c_content.append(stub_impl)
             
         project_files['main.c'] = "\n".join(main_c_content)
         
