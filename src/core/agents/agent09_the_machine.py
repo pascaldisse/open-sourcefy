@@ -422,9 +422,9 @@ class Agent9_TheMachine(ReconstructionAgent):
             self.logger.error(f"Error in resource loading priority system: {e}")
     
     def _generate_complete_resources_rc(self, string_files: List[Path], bmp_files: List[Path]) -> str:
-        """Generate complete resources.rc with all 22,317 strings and 21 BMPs from Agent 8 extraction"""
+        """Generate optimized resources.rc with chunked strings to avoid RC2168 size limit"""
         try:
-            self.logger.info(f"🔥 Generating MASSIVE resources.rc with {len(string_files)} strings + {len(bmp_files)} BMPs")
+            self.logger.info(f"🔥 Generating OPTIMIZED resources.rc with {len(string_files)} strings + {len(bmp_files)} BMPs (chunked for size limits)")
             
             rc_content = []
             
@@ -464,83 +464,96 @@ class Agent9_TheMachine(ReconstructionAgent):
             rc_content.append('END')
             rc_content.append('')
             
-            # Add ALL extracted strings as STRINGTABLE resources
-            rc_content.append('STRINGTABLE')
-            rc_content.append('BEGIN')
+            # Add extracted strings as chunked STRINGTABLE resources to avoid RC2168 size limit
+            chunk_size = 3000  # Conservative chunk size to avoid RC compiler limits
+            string_file_list = sorted(string_files)
+            total_chunks = (len(string_file_list) + chunk_size - 1) // chunk_size
+            self.logger.info(f"🔧 Splitting {len(string_file_list)} strings into {total_chunks} STRINGTABLE chunks of max {chunk_size} strings")
             
             # Track used IDs to prevent duplicates
             used_ids = set()
             processed_strings = 0
             
-            for i, string_file in enumerate(sorted(string_files)):
-                try:
-                    with open(string_file, 'r', encoding='utf-8', errors='ignore') as f:
-                        string_content = f.read().strip()
-                    if string_content:
-                        # Generate unique sequential ID instead of parsing filename
-                        # Start from 1 and increment to avoid duplicates
-                        string_id = processed_strings + 1
-                        while string_id in used_ids:
-                            string_id += 1
-                        used_ids.add(string_id)
+            for chunk_num in range(total_chunks):
+                start_idx = chunk_num * chunk_size
+                end_idx = min(start_idx + chunk_size, len(string_file_list))
+                chunk_files = string_file_list[start_idx:end_idx]
+                
+                rc_content.append(f'// String Table Chunk {chunk_num + 1}/{total_chunks} ({len(chunk_files)} strings)')
+                rc_content.append('STRINGTABLE')
+                rc_content.append('BEGIN')
+                
+                for i, string_file in enumerate(chunk_files):
+                    try:
+                        with open(string_file, 'r', encoding='utf-8', errors='ignore') as f:
+                            string_content = f.read().strip()
+                        if string_content:
+                            # Generate unique sequential ID instead of parsing filename
+                            # Start from 1 and increment to avoid duplicates
+                            string_id = processed_strings + 1
+                            while string_id in used_ids:
+                                string_id += 1
+                            used_ids.add(string_id)
                         
-                        # Complete RC syntax escaping for all special characters
-                        escaped_content = (string_content
-                                         .replace('\\', '\\\\')    # Escape backslashes first
-                                         .replace('"', '\\"')      # Escape quotes
-                                         .replace('\n', '\\n')     # Escape newlines
-                                         .replace('\r', '\\r')     # Escape carriage returns
-                                         .replace('\t', '\\t')     # Escape tabs
-                                         .replace('`', '\\`')      # Escape backticks
-                                         .replace('$', '\\$')      # Escape dollar signs
-                                         .replace('%', '\\%')      # Escape percent signs
-                                         .replace('^', '\\^')      # Escape caret symbols
-                                         .replace('[', '\\[')      # Escape square brackets
-                                         .replace(']', '\\]')      # Escape square brackets
-                                         .replace('{', '\\{')      # Escape braces
-                                         .replace('}', '\\}'))     # Escape braces
-                        
-                        # Comprehensive RC compiler compatibility validation
-                        # Check for binary/control characters (except printable ones)
-                        has_binary_data = any(ord(c) < 32 and c not in ['\n', '\r', '\t'] for c in string_content)
-                        has_high_ascii = any(ord(c) > 126 for c in string_content)
-                        
-                        # Check for RC syntax conflicts in the original string
-                        problematic_patterns = [
-                            '^[', '_^[]', ']+', '{}[]', '\\x', '\x00', '\x01', '\x02', '\x03', '\x04', '\x05',
-                            '\\\\', '\\"', '\\n', '\\r', '\\t', '\\`', '\\$', '\\%', '\\^', '\\[', '\\]', '\\{', '\\}'
-                        ]
-                        has_rc_conflicts = any(pattern in string_content for pattern in problematic_patterns)
-                        
-                        # Only include strings that are clean printable text
-                        is_valid_string = (
-                            not has_binary_data and 
-                            not has_high_ascii and
-                            not has_rc_conflicts and
-                            len(string_content.strip()) > 0 and
-                            len(string_content) < 1000 and  # Limit string length
-                            string_content.isprintable() and
-                            not string_content.startswith('\\') and
-                            not any(char in string_content for char in ['\\', '"', '\n', '\r', '\t', '^', '[', ']', '{', '}', '$', '%', '`'])
-                        )
-                        
-                        if is_valid_string:
-                            # Simple escaping for quotes only (no other escaping needed for clean strings)
-                            clean_content = string_content.replace('"', '\\"')
-                            rc_content.append(f'    {string_id}, "{clean_content}"')
-                            processed_strings += 1
-                        else:
-                            self.logger.debug(f"Filtered out problematic string from {string_file}: contains binary data, RC conflicts, or non-printable characters")
-                except Exception as e:
-                    self.logger.warning(f"Failed to process string file {string_file}: {e}")
+                            # Complete RC syntax escaping for all special characters
+                            escaped_content = (string_content
+                                             .replace('\\', '\\\\')    # Escape backslashes first
+                                             .replace('"', '\\"')      # Escape quotes
+                                             .replace('\n', '\\n')     # Escape newlines
+                                             .replace('\r', '\\r')     # Escape carriage returns
+                                             .replace('\t', '\\t')     # Escape tabs
+                                             .replace('`', '\\`')      # Escape backticks
+                                             .replace('$', '\\$')      # Escape dollar signs
+                                             .replace('%', '\\%')      # Escape percent signs
+                                             .replace('^', '\\^')      # Escape caret symbols
+                                             .replace('[', '\\[')      # Escape square brackets
+                                             .replace(']', '\\]')      # Escape square brackets
+                                             .replace('{', '\\{')      # Escape braces
+                                             .replace('}', '\\}'))     # Escape braces
+                            
+                            # Comprehensive RC compiler compatibility validation
+                            # Check for binary/control characters (except printable ones)
+                            has_binary_data = any(ord(c) < 32 and c not in ['\n', '\r', '\t'] for c in string_content)
+                            has_high_ascii = any(ord(c) > 126 for c in string_content)
+                            
+                            # Check for RC syntax conflicts in the original string
+                            problematic_patterns = [
+                                '^[', '_^[]', ']+', '{}[]', '\\x', '\x00', '\x01', '\x02', '\x03', '\x04', '\x05',
+                                '\\\\', '\\"', '\\n', '\\r', '\\t', '\\`', '\\$', '\\%', '\\^', '\\[', '\\]', '\\{', '\\}'
+                            ]
+                            has_rc_conflicts = any(pattern in string_content for pattern in problematic_patterns)
+                            
+                            # Only include strings that are clean printable text
+                            is_valid_string = (
+                                not has_binary_data and 
+                                not has_high_ascii and
+                                not has_rc_conflicts and
+                                len(string_content.strip()) > 0 and
+                                len(string_content) < 1000 and  # Limit string length
+                                string_content.isprintable() and
+                                not string_content.startswith('\\') and
+                                not any(char in string_content for char in ['\\', '"', '\n', '\r', '\t', '^', '[', ']', '{', '}', '$', '%', '`'])
+                            )
+                            
+                            if is_valid_string:
+                                # Simple escaping for quotes only (no other escaping needed for clean strings)
+                                clean_content = string_content.replace('"', '\\"')
+                                rc_content.append(f'    {string_id}, "{clean_content}"')
+                                processed_strings += 1
+                            else:
+                                self.logger.debug(f"Filtered out problematic string from {string_file}: contains binary data, RC conflicts, or non-printable characters")
+                    except Exception as e:
+                        self.logger.warning(f"Failed to process string file {string_file}: {e}")
+                
+                # Close this STRINGTABLE chunk
+                rc_content.append('END')
+                rc_content.append('')
             
-            rc_content.append('END')
-            rc_content.append('')
-            
-            # Add ALL extracted BMPs as BITMAP resources
-            for i, bmp_file in enumerate(sorted(bmp_files)):
-                bmp_id = 100 + i  # Start BMP IDs at 100
-                rc_content.append(f'{bmp_id} BITMAP "{bmp_file.name}"')
+            # Skip problematic bitmap resources that cause RC.exe timeout
+            # TODO: Fix bitmap format issues - current BMPs are corrupted (8KB data files)
+            self.logger.info(f"⚠️ Skipping {len(bmp_files)} bitmap resources due to RC.exe timeout issues")
+            rc_content.append('// Bitmap resources temporarily disabled due to RC.exe timeout')
+            rc_content.append('// Total bitmap count: ' + str(len(bmp_files)))
             
             rc_content.append('')
             
