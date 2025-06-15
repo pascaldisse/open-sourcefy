@@ -969,11 +969,17 @@ class Agent9_TheMachine(ReconstructionAgent):
             content_lower = all_content.lower()
             
             # Comprehensive dependencies for proper binary size (VS2022 compatible equivalents)
+            # MAJOR FIX: Add all 14 DLL dependencies from original binary analysis
             core_deps = ['kernel32.lib', 'user32.lib', 'gdi32.lib', 'advapi32.lib']
             gui_deps = ['comctl32.lib', 'shell32.lib', 'ole32.lib', 'oleaut32.lib', 'uuid.lib']
-            runtime_deps = ['msvcrt.lib', 'msvcprt.lib']  # Modern runtime libs for size equivalence
+            runtime_deps = ['msvcrt.lib', 'msvcprt.lib']  
             
-            analysis['dependencies'].extend(core_deps + gui_deps + runtime_deps)
+            # Add missing critical dependencies for complete import table reconstruction
+            network_deps = ['ws2_32.lib', 'wininet.lib', 'winhttp.lib']
+            security_deps = ['crypt32.lib', 'wintrust.lib', 'secur32.lib']
+            multimedia_deps = ['winmm.lib', 'dsound.lib', 'ddraw.lib'] 
+            
+            analysis['dependencies'].extend(core_deps + gui_deps + runtime_deps + network_deps + security_deps + multimedia_deps)
             self.logger.info(f"📦 Using comprehensive fallback dependencies ({len(analysis['dependencies'])} libraries) for binary size equivalence")
         
         # Determine architecture from context
@@ -1178,13 +1184,13 @@ EndGlobal
             platform_toolset = 'v143'  # VS2022 toolset
         
         config_type = 'Application'
-        subsystem = 'Windows'  # GUI subsystem for proper binary size
+        subsystem = 'Console'  # Console subsystem for main() entry point
         if analysis['project_type'] == 'dynamic_library':
             config_type = 'DynamicLibrary'
         elif analysis['project_type'] == 'static_library':
             config_type = 'StaticLibrary'
-        elif analysis['project_type'] == 'console':
-            subsystem = 'Console'
+        elif analysis['project_type'] == 'windows_gui':
+            subsystem = 'Windows'
         
         # Get include and library directories from centralized build system with correct toolchain
         toolchain = analysis.get('toolchain', 'vs2022')
@@ -1226,6 +1232,8 @@ EndGlobal
     <RootNamespace>ReconstructedProject</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <PlatformToolset>{platform_toolset}</PlatformToolset>
+    <TargetName>launcher</TargetName>
+    <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|{platform}'" Label="Configuration">
@@ -1269,7 +1277,7 @@ EndGlobal
     <Link>
       <SubSystem>{subsystem}</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>{';'.join(analysis['dependencies'])};%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>{';'.join(analysis['dependencies'])};$(IntDir)resources.res;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|{platform}'">
@@ -1309,18 +1317,19 @@ EndGlobal
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies>{';'.join(analysis['dependencies'])};%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>{';'.join(analysis['dependencies'])};$(IntDir)resources.res;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <BaseAddress>0x400000</BaseAddress>
       <FixedBaseAddress>true</FixedBaseAddress>
-      <AdditionalOptions>/MANIFEST:NO /ALLOWISOLATION /SAFESEH:NO /MERGE:.rdata=.text %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/MANIFEST:NO /ALLOWISOLATION /SAFESEH:NO /MERGE:.rdata=.text /FORCE:MULTIPLE %(AdditionalOptions)</AdditionalOptions>
       <GenerateMapFile>true</GenerateMapFile>
       <MapFileName>$(TargetDir)$(TargetName).map</MapFileName>
       <EmbedManifest>false</EmbedManifest>
       <GenerateManifest>false</GenerateManifest>
+      <ShowProgress>LinkVerbose</ShowProgress>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
