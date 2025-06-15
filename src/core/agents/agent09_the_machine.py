@@ -693,9 +693,9 @@ class Agent9_TheMachine(ReconstructionAgent):
                     bmp_id = 2000
                     
                     for bmp_file in bmp_files:
-                        # Use relative path for RC file
-                        rel_path = bmp_file.name
-                        rc_content.append(f'{bmp_id} BITMAP "{rel_path}"')
+                        # Use absolute path for RC file to ensure MSBuild can find the files
+                        abs_path = str(bmp_file.resolve()).replace('\\', '/')
+                        rc_content.append(f'{bmp_id} BITMAP "{abs_path}"')
                         bmp_id += 1
                 
                 rc_content.append("")
@@ -1739,10 +1739,20 @@ Write-Host "Build complete!" -ForegroundColor Green
                     
                     result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)  # 5 minutes for large resource compilation
                     if result.returncode == 0:
-                        resource_result['res_file'] = res_file
-                        self.logger.info(f"✅ Compiled resources to: {res_file}")
+                        # Validate that .res file was actually created
+                        if os.path.exists(res_file) and os.path.getsize(res_file) > 0:
+                            resource_result['res_file'] = res_file
+                            res_size = os.path.getsize(res_file)
+                            self.logger.info(f"✅ Compiled resources to: {res_file} ({res_size:,} bytes)")
+                            self.logger.info(f"✅ Resource compilation successful - .rsrc section will be included")
+                        else:
+                            self.logger.error(f"Resource compilation completed but .res file missing: {res_file}")
+                            resource_result['error'] = "Resource file not created"
                     else:
-                        self.logger.warning(f"Resource compilation failed: {result.stderr}")
+                        self.logger.error(f"Resource compilation failed: {result.stderr}")
+                        if result.stdout:
+                            self.logger.error(f"RC stdout: {result.stdout}")
+                        resource_result['error'] = f"RC compilation failed: {result.stderr}"
                 else:
                     self.logger.info("Resource compiler not found - RC file generated for manual compilation")
                     

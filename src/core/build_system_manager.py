@@ -193,27 +193,34 @@ class BuildSystemManager:
             # rc.exe is typically in the same directory as cl.exe
             vc_tools_base = "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.44.35207"
             
-            # Try x64 host tools first
+            # Try x64 host tools first (for Win32 target)
+            rc_x64_x86 = f"{vc_tools_base}/bin/Hostx64/x86/rc.exe"
+            if Path(rc_x64_x86).exists():
+                self.logger.info(f"Found resource compiler: {rc_x64_x86}")
+                return rc_x64_x86
+            
+            # Try x64 host tools
             rc_x64 = f"{vc_tools_base}/bin/Hostx64/x64/rc.exe"
             if Path(rc_x64).exists():
+                self.logger.info(f"Found resource compiler: {rc_x64}")
                 return rc_x64
             
             # Try x86 host tools
             rc_x86 = f"{vc_tools_base}/bin/Hostx86/x86/rc.exe"
             if Path(rc_x86).exists():
+                self.logger.info(f"Found resource compiler: {rc_x86}")
                 return rc_x86
             
-            # Try Windows SDK location (alternative)
-            sdk_paths = [
-                "/mnt/c/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/rc.exe",
-                "/mnt/c/Program Files (x86)/Windows Kits/10/bin/10.0.19041.0/x64/rc.exe"
-            ]
+            # Try Windows SDK locations (comprehensive search)
+            sdk_versions = ["10.0.26100.0", "10.0.22621.0", "10.0.19041.0", "10.0.18362.0"]
+            for version in sdk_versions:
+                for arch in ["x64", "x86"]:
+                    sdk_rc = f"/mnt/c/Program Files (x86)/Windows Kits/10/bin/{version}/{arch}/rc.exe"
+                    if Path(sdk_rc).exists():
+                        self.logger.info(f"Found resource compiler in Windows SDK: {sdk_rc}")
+                        return sdk_rc
             
-            for sdk_rc in sdk_paths:
-                if Path(sdk_rc).exists():
-                    return sdk_rc
-            
-            self.logger.warning("Resource compiler (rc.exe) not found in VS2022 installation")
+            self.logger.error("Resource compiler (rc.exe) not found in VS2022 or Windows SDK")
             return None
             
         except Exception as e:

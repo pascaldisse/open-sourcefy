@@ -793,23 +793,40 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
         resources_dir = agent_output_dir / "resources"
         resources_dir.mkdir(exist_ok=True)
         
-        # Save extracted resources
+        # Save extracted resources in Machine-compatible structure
         for category in keymaker_result.resource_categories:
-            category_dir = resources_dir / category.category_name
+            # Map category names to Machine-expected directory names
+            dir_name_map = {
+                'strings': 'string',
+                'string_resources': 'string', 
+                'images': 'embedded_file',
+                'bitmaps': 'embedded_file',
+                'icons': 'embedded_file',
+                'embedded_files': 'embedded_file'
+            }
+            
+            # Use mapped directory name or original category name
+            target_dir_name = dir_name_map.get(category.category_name.lower(), category.category_name)
+            category_dir = resources_dir / target_dir_name
             category_dir.mkdir(exist_ok=True)
             
             for item in category.items:
                 if item.resource_type == 'string':
-                    # Save string resources as text files
-                    item_file = category_dir / f"{item.name}.txt"
+                    # Save string resources as numbered text files for Machine compatibility
+                    string_filename = f"string_{item.resource_id}.txt" if item.resource_id.isdigit() else f"{item.name}.txt"
+                    item_file = category_dir / string_filename
                     with open(item_file, 'w', encoding='utf-8', errors='ignore') as f:
                         f.write(str(item.content))
                 elif item.resource_type in ['image', 'icon', 'bitmap']:
-                    # Save image resources as binary files
-                    item_file = category_dir / item.name
+                    # Ensure bitmap files have .bmp extension for Machine compatibility
+                    if not item.name.lower().endswith(('.bmp', '.ico', '.png', '.jpg', '.jpeg')):
+                        item_name = f"{item.name}.bmp"
+                    else:
+                        item_name = item.name
+                    item_file = category_dir / item_name
                     with open(item_file, 'wb') as f:
                         f.write(item.content)
-                    self.logger.info(f"💾 Saved {item.resource_type}: {item.name} ({item.size:,} bytes)")
+                    self.logger.info(f"💾 Saved {item.resource_type}: {item_name} ({item.size:,} bytes)")
                 else:
                     # Save other binary resources
                     item_file = category_dir / item.name
