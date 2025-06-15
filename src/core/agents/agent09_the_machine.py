@@ -1343,15 +1343,16 @@ int ebp(void) { return 0; }
         """
         import re
         
-        # CRITICAL FIX: Add missing parameter variables and linker symbols
-        # Check if param8 is used but not declared as int param8
-        has_param8_declaration = 'int param8' in source_content or 'param8 = 0' in source_content
-        has_function_ptr_symbol = '#define function_ptr function_ptr_var' in source_content
-        self.logger.info(f"🔍 Checking for param8 declaration: {has_param8_declaration}, function_ptr symbol: {has_function_ptr_symbol}")
+        # CRITICAL FIX: Only add missing function_ptr symbol for linker (Rule #56)  
+        # NOTE: Parameter variables (param1-param20) are already provided by _add_missing_variable_definitions
+        has_function_ptr_symbol = ('#define function_ptr function_ptr_var' in source_content or 
+                                  'function_ptr_t function_ptr' in source_content)
         
-        if not has_param8_declaration or not has_function_ptr_symbol:
-            self.logger.info("🔍 param8 used but not declared, adding parameter variables")
-            # Find the insertion point after param5 declaration
+        self.logger.info(f"🔍 function_ptr symbol present: {has_function_ptr_symbol}")
+        
+        if not has_function_ptr_symbol:
+            self.logger.info("🔧 Adding missing function_ptr symbol alias for linker")
+            # Find the insertion point after param5 declaration  
             search_text = 'int param1 = 0, param2 = 0, param3 = 0, param4 = 0, param5 = 0;'
             insert_point = source_content.find(search_text)
             
@@ -1359,23 +1360,20 @@ int ebp(void) { return 0; }
                 # Find the end of this line
                 end_line = source_content.find('\n', insert_point)
                 if end_line != -1:
-                    # Insert additional parameter variables right after param5 line
-                    additional_vars = """int param6 = 0, param7 = 0, param8 = 0, param9 = 0, param10 = 0;
-int param11 = 0, param12 = 0, param13 = 0, param14 = 0, param15 = 0;
-int param16 = 0, param17 = 0, param18 = 0, param19 = 0, param20 = 0;
-
+                    # Only add function_ptr alias - param variables already provided elsewhere
+                    function_ptr_alias = """
 // CRITICAL LINKING FIX: Provide missing function_ptr symbol for linker (Rule #56)
 // imports.h expects 'function_ptr' but we have 'function_ptr_var' - create alias
 #define function_ptr function_ptr_var
 """
-                    source_content = source_content[:end_line+1] + additional_vars + source_content[end_line+1:]
-                    self.logger.info("🔧 Added missing parameter variables (param6-param20) to source code")
+                    source_content = source_content[:end_line+1] + function_ptr_alias + source_content[end_line+1:]
+                    self.logger.info("✅ Applied function_ptr alias fix to source code")
                 else:
                     self.logger.warning("⚠️ Could not find end of param1-param5 line")
             else:
-                self.logger.warning("⚠️ Could not find param1-param5 declaration to insert additional variables")
+                self.logger.warning("⚠️ Could not find param1-param5 declaration for function_ptr insertion")
         else:
-            self.logger.info("✅ param8 declaration already present in source code")
+            self.logger.info("✅ function_ptr symbol already present in source code")
         
         lines = source_content.split('\n')
         fixed_lines = []
