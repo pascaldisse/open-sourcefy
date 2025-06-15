@@ -179,14 +179,50 @@ class MatrixPipelineOrchestrator:
                     execution_time=time.time() - self.execution_start_time
                 )
             
-            # Step 2: Execute selected agents in parallel (or use master agent results)
+            # Step 2: CRITICAL FIX - Always execute agents independently per rules.md
+            # Rule #26: NO FAKE COMPILATION - Never simulate or mock compilation results
+            # Rule #74: ALL OR NOTHING - Either execute fully or fail completely
+            # Rule #82: STRICT SUCCESS CRITERIA - Only report success when all components work
+            
+            # Check if master agent attempted to bypass execution (VIOLATION)
             if 'agent_results' in self.global_context and self.global_context['agent_results']:
-                # Master agent already executed agents, use those results
-                agent_results = self.global_context['agent_results']
-                self.logger.info("📋 Using agent results from Deus Ex Machina execution")
-            else:
-                # Execute agents independently
-                agent_results = await self._execute_parallel_agents()
+                # SECURITY FIX: Master agent bypass detected - this violates rules.md
+                bypass_agents = list(self.global_context['agent_results'].keys())
+                self.logger.error(f"🚨 RULES VIOLATION: Deus Ex Machina attempted to bypass agent execution for agents {bypass_agents}")
+                self.logger.error("🚨 This violates rules.md Rule #26 (NO FAKE COMPILATION) and Rule #74 (ALL OR NOTHING)")
+                self.logger.error("🚨 All agents must execute independently - no shortcuts allowed")
+                
+                # Clear fake results and force proper execution
+                self.global_context['agent_results'] = {}
+                self.logger.info("🔒 Cleared fake agent results, enforcing real execution")
+            
+            # Execute agents independently (ALWAYS - no exceptions)
+            self.logger.info(f"🔥 Starting real agent execution for {len(self.selected_agents)} agents: {self.selected_agents}")
+            agent_results = await self._execute_parallel_agents()
+            
+            # CRITICAL VALIDATION: Verify all agents attempted execution
+            executed_agents = list(agent_results.keys())
+            missing_agents = set(self.selected_agents) - set(executed_agents)
+            
+            if missing_agents:
+                self.logger.error(f"🚨 EXECUTION FAILURE: Agents {sorted(missing_agents)} never attempted execution!")
+                self.logger.error(f"🚨 Selected: {self.selected_agents}")
+                self.logger.error(f"🚨 Executed: {executed_agents}")
+                self.logger.error("🚨 This violates rules.md Rule #74 (ALL OR NOTHING)")
+            
+            # Log execution results summary
+            successful_agents = [aid for aid, result in agent_results.items() 
+                               if result.status.value == 'success']
+            failed_agents = [aid for aid, result in agent_results.items() 
+                           if result.status.value != 'success']
+            
+            self.logger.info(f"🎯 Agent execution summary:")
+            self.logger.info(f"  - Selected: {len(self.selected_agents)} agents {self.selected_agents}")
+            self.logger.info(f"  - Executed: {len(executed_agents)} agents {executed_agents}")
+            self.logger.info(f"  - Successful: {len(successful_agents)} agents {successful_agents}")
+            self.logger.info(f"  - Failed: {len(failed_agents)} agents {failed_agents}")
+            if missing_agents:
+                self.logger.error(f"  - Missing: {len(missing_agents)} agents {sorted(missing_agents)}")
             
             # Step 3: Execute final validation first (required for accurate success determination)
             final_validation_success = True
@@ -289,6 +325,16 @@ class MatrixPipelineOrchestrator:
         for batch_idx, batch_agents in enumerate(execution_batches):
             self.logger.info(f"🚀 Executing batch {batch_idx + 1}/{len(execution_batches)}: Agents {batch_agents}")
             
+            # Pre-execution validation
+            self.logger.debug(f"📋 Batch {batch_idx + 1} agent registry check:")
+            for agent_id in batch_agents:
+                try:
+                    from .agents import get_agent_by_id
+                    agent_class = get_agent_by_id(agent_id)
+                    self.logger.debug(f"  ✅ Agent {agent_id}: {type(agent_class).__name__} available")
+                except Exception as e:
+                    self.logger.error(f"  ❌ Agent {agent_id}: MISSING - {e}")
+            
             batch_results = await self._execute_agent_batch(batch_agents)
             
             # Update results and count successes
@@ -322,10 +368,19 @@ class MatrixPipelineOrchestrator:
         """Calculate execution batches for selected agents based on dependencies"""
         from .matrix_agents import MATRIX_DEPENDENCIES
         
+        self.logger.info(f"🧮 Calculating execution batches for agents: {selected_agents}")
+        
         # Filter dependencies to only include selected agents
         filtered_deps = {agent_id: [dep for dep in deps if dep in selected_agents] 
                         for agent_id, deps in MATRIX_DEPENDENCIES.items() 
                         if agent_id in selected_agents}
+        
+        self.logger.debug(f"📊 Filtered dependencies: {filtered_deps}")
+        
+        # Validate all selected agents have dependency definitions
+        missing_deps = set(selected_agents) - set(filtered_deps.keys())
+        if missing_deps:
+            self.logger.warning(f"⚠️ Agents {sorted(missing_deps)} have no dependency definitions in MATRIX_DEPENDENCIES")
         
         completed = set()
         batches = []
@@ -333,21 +388,35 @@ class MatrixPipelineOrchestrator:
         while len(completed) < len(selected_agents):
             current_batch = []
             
+            self.logger.debug(f"🔄 Batch calculation iteration - completed: {sorted(completed)}")
+            
             for agent_id in selected_agents:
                 if agent_id in completed:
                     continue
                     
                 # Check if all dependencies are completed
                 dependencies = filtered_deps.get(agent_id, [])
-                if all(dep in completed for dep in dependencies):
+                deps_satisfied = all(dep in completed for dep in dependencies)
+                
+                self.logger.debug(f"  Agent {agent_id}: deps={dependencies}, satisfied={deps_satisfied}")
+                
+                if deps_satisfied:
                     current_batch.append(agent_id)
             
             if not current_batch:
                 remaining = set(selected_agents) - completed
+                self.logger.error(f"🚨 Cannot resolve dependencies for agents: {remaining}")
+                self.logger.error(f"🚨 Completed agents: {sorted(completed)}")
+                self.logger.error(f"🚨 Dependency deadlock detected!")
                 raise ValueError(f"Cannot resolve dependencies for agents: {remaining}")
             
             batches.append(sorted(current_batch))  # Sort for consistent ordering
             completed.update(current_batch)
+            self.logger.debug(f"📦 Batch {len(batches)}: {sorted(current_batch)}")
+        
+        self.logger.info(f"✅ Batch calculation complete: {len(batches)} batches")
+        for i, batch in enumerate(batches):
+            self.logger.info(f"  Batch {i+1}: {batch}")
         
         return batches
     
@@ -391,10 +460,14 @@ class MatrixPipelineOrchestrator:
     
     async def _execute_single_agent(self, agent_id: int):
         """Execute a single agent with context"""
+        self.logger.info(f"🤖 Attempting to execute Agent {agent_id}...")
+        
         try:
             # Get agent from agents registry
             from .agents import get_agent_by_id
+            self.logger.debug(f"📦 Importing agent {agent_id} from registry...")
             agent = get_agent_by_id(agent_id)
+            self.logger.debug(f"✅ Agent {agent_id} imported: {type(agent).__name__}")
             
             # Get current shared_memory state from global context or initialize
             current_shared_memory = self.global_context.get('shared_memory', {
@@ -440,7 +513,9 @@ class MatrixPipelineOrchestrator:
             self.logger.debug(f"Agent {agent_id} context contains agent_results for agents: {list(self.agent_results.keys())}")
             self.logger.debug(f"Agent {agent_id} shared_memory analysis_results keys: {list(current_shared_memory['analysis_results'].keys())}")
             
+            self.logger.info(f"🔄 Executing Agent {agent_id} ({type(agent).__name__})...")
             result = agent.execute(agent_context)
+            self.logger.info(f"✅ Agent {agent_id} execution completed with status: {result.status if hasattr(result, 'status') else 'unknown'}")
             
             # Update global context with any shared memory changes from agent execution
             if 'shared_memory' in agent_context:
@@ -508,9 +583,44 @@ class MatrixPipelineOrchestrator:
         # Calculate performance metrics
         execution_time = time.time() - self.execution_start_time
         
-        # CRITICAL FIX: Pipeline success requires BOTH agent success AND final validation success
-        # This enforces rules.md Rule #74 (NO PARTIAL SUCCESS) and Rule #80 (ALL OR NOTHING)
-        overall_success = (failed_count == 0) and final_validation_success
+        # CRITICAL FIX: Enhanced validation per rules.md
+        # Rule #74: NO PARTIAL SUCCESS - Never report partial success when components fail
+        # Rule #80: ALL OR NOTHING - Either execute fully or fail completely
+        # Rule #82: STRICT SUCCESS CRITERIA - Only report success when all components work
+        
+        # Validate ALL selected agents actually executed
+        expected_agents = set(self.selected_agents)
+        executed_agents = set(agent_results.keys())
+        missing_agents = expected_agents - executed_agents
+        
+        if missing_agents:
+            error_messages.append(f"CRITICAL: Agents {sorted(missing_agents)} did not execute - violates Rule #74 (ALL OR NOTHING)")
+            self.logger.error(f"🚨 Missing agent execution: {sorted(missing_agents)}")
+        
+        # Validate critical agents (1-5, 8-9, 11-13) executed successfully
+        critical_agents = {1, 2, 3, 4, 5, 8, 9, 11, 12, 13}
+        critical_in_selection = critical_agents.intersection(expected_agents)
+        critical_failed = []
+        
+        for critical_agent in critical_in_selection:
+            if critical_agent not in executed_agents:
+                critical_failed.append(critical_agent)
+            elif agent_results[critical_agent].status != AgentStatus.SUCCESS:
+                critical_failed.append(critical_agent)
+        
+        if critical_failed:
+            error_messages.append(f"CRITICAL: Core agents {sorted(critical_failed)} failed - pipeline cannot succeed per Rule #74")
+            self.logger.error(f"🚨 Critical agent failures: {sorted(critical_failed)}")
+        
+        # Pipeline success requires: ALL agents executed + ALL succeeded + final validation success + NO critical failures
+        agents_fully_executed = len(missing_agents) == 0
+        agents_all_succeeded = failed_count == 0
+        no_critical_failures = len(critical_failed) == 0
+        
+        overall_success = (agents_fully_executed and 
+                          agents_all_succeeded and 
+                          no_critical_failures and 
+                          final_validation_success)
         
         result = MatrixPipelineResult(
             success=overall_success,
