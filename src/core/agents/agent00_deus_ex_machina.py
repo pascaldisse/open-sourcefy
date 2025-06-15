@@ -383,24 +383,45 @@ class DeusExMachinaAgent(MatrixAgent):
         """Generate comprehensive master orchestration report"""
         execution_time = time.time() - self.execution_start_time
         
-        return {
-            'pipeline_summary': {
-                'total_agents': len(context.get('selected_agents', [])),
-                'successful_agents': len(orchestration_results['successful_agents']),
-                'failed_agents': len(orchestration_results['failed_agents']),
-                'skipped_agents': len(orchestration_results['skipped_agents']),
-                'execution_time': execution_time,
-                'success_rate': (len(orchestration_results['successful_agents']) / 
-                               max(1, len(context.get('selected_agents', []))))
-            },
-            'orchestration_mode': self.execution_plan.execution_mode,
-            'batch_execution': {
-                'total_batches': len(self.execution_plan.agent_batches),
-                'batch_results': orchestration_results['batch_results']
-            },
-            'quality_metrics': self._calculate_quality_metrics(),
-            'recommendations': self._generate_recommendations(orchestration_results)
-        }
+        # Handle coordination-only mode vs actual execution mode
+        if orchestration_results.get('coordination_mode') == 'planning_only':
+            # Coordination-only mode - no agents were executed
+            return {
+                'pipeline_summary': {
+                    'total_agents': len(context.get('selected_agents', [])),
+                    'coordination_mode': 'planning_only',
+                    'execution_time': execution_time,
+                    'orchestrator_status': 'coordination_complete'
+                },
+                'orchestration_mode': self.execution_plan.execution_mode,
+                'execution_plan': {
+                    'total_batches': len(self.execution_plan.agent_batches),
+                    'agent_batches': self.execution_plan.agent_batches,
+                    'estimated_time': self.execution_plan.estimated_time
+                },
+                'coordination_results': orchestration_results,
+                'recommendations': ['Execute pipeline through Matrix Pipeline Orchestrator']
+            }
+        else:
+            # Actual execution mode (when agents were executed)
+            return {
+                'pipeline_summary': {
+                    'total_agents': len(context.get('selected_agents', [])),
+                    'successful_agents': len(orchestration_results.get('successful_agents', [])),
+                    'failed_agents': len(orchestration_results.get('failed_agents', [])),
+                    'skipped_agents': len(orchestration_results.get('skipped_agents', [])),
+                    'execution_time': execution_time,
+                    'success_rate': (len(orchestration_results.get('successful_agents', [])) / 
+                                   max(1, len(context.get('selected_agents', []))))
+                },
+                'orchestration_mode': self.execution_plan.execution_mode,
+                'batch_execution': {
+                    'total_batches': len(self.execution_plan.agent_batches),
+                    'batch_results': orchestration_results.get('batch_results', [])
+                },
+                'quality_metrics': self._calculate_quality_metrics(),
+                'recommendations': self._generate_recommendations(orchestration_results)
+            }
     
     def _calculate_pipeline_metrics(self) -> Dict[str, Any]:
         """Calculate comprehensive pipeline metrics"""
@@ -426,10 +447,20 @@ class DeusExMachinaAgent(MatrixAgent):
         """Generate recommendations based on execution results"""
         recommendations = []
         
-        if orchestration_results['failed_agents']:
-            recommendations.append(f"Review failed agents: {orchestration_results['failed_agents']}")
+        # Handle coordination-only mode vs actual execution mode
+        if orchestration_results.get('coordination_mode') == 'planning_only':
+            recommendations.append("Execute pipeline through Matrix Pipeline Orchestrator")
+            recommendations.append("Agent coordination plan has been prepared successfully")
+            return recommendations
         
-        if len(orchestration_results['successful_agents']) < 10:
+        # Actual execution mode recommendations
+        failed_agents = orchestration_results.get('failed_agents', [])
+        successful_agents = orchestration_results.get('successful_agents', [])
+        
+        if failed_agents:
+            recommendations.append(f"Review failed agents: {failed_agents}")
+        
+        if len(successful_agents) < 10:
             recommendations.append("Consider running more agents for better reconstruction quality")
         
         return recommendations
