@@ -504,6 +504,65 @@ void {func_name}_wrapper() {{
         """Create complete project structure with source files"""
         project_files = {}
         
+        # Create main.h with function declarations
+        main_h_content = []
+        main_h_content.extend([
+            "#ifndef MAIN_H",
+            "#define MAIN_H",
+            "",
+            "// Function declarations for all decompiled functions",
+            ""
+        ])
+        
+        # Extract function signatures and generate additional function declarations
+        additional_functions = set()
+        for func in decompiled_functions:
+            # Extract function signature from source code
+            func_signature = self._extract_function_signature(func.source_code)
+            if func_signature:
+                main_h_content.append(f"{func_signature};")
+            
+            # Extract function calls from source code to create declarations
+            func_calls = self._extract_function_calls(func.source_code)
+            additional_functions.update(func_calls)
+        
+        # Add declarations for all called functions
+        main_h_content.extend([
+            "",
+            "// Additional function declarations from call analysis",
+            ""
+        ])
+        
+        for func_call in sorted(additional_functions):
+            main_h_content.append(f"int {func_call}(void);")
+        
+        main_h_content.extend([
+            "",
+            "#endif // MAIN_H",
+            ""
+        ])
+        
+        project_files['main.h'] = "\n".join(main_h_content)
+        
+        # Create imports.h with Windows API and common functions
+        imports_h_content = [
+            "#ifndef IMPORTS_H",
+            "#define IMPORTS_H",
+            "",
+            "#include <windows.h>",
+            "#include <stdio.h>",
+            "#include <stdlib.h>",
+            "",
+            "// Common function pointer type",
+            "typedef int (*function_ptr_t)(void);",
+            "extern function_ptr_t function_ptr;",
+            "",
+            "#endif // IMPORTS_H",
+            ""
+        ]
+        
+        project_files['imports.h'] = "\n".join(imports_h_content)
+        
         # Create main.c with all functions
         main_c_content = []
         
@@ -517,6 +576,9 @@ void {func_name}_wrapper() {{
             "",
             '#include "main.h"',
             '#include "imports.h"',
+            "",
+            "// Global function pointer for indirect calls",
+            "function_ptr_t function_ptr = NULL;",
             ""
         ])
         
@@ -645,6 +707,46 @@ This project was reconstructed from binary analysis by Neo Advanced Decompiler.
         code_completeness = min(1.0, sum(len(f.source_code) for f in decompiled_functions) / 1000.0)  # Expect 1000+ chars
         
         return (avg_confidence * 0.5 + function_coverage * 0.3 + code_completeness * 0.2)
+    
+    def _extract_function_signature(self, source_code: str) -> str:
+        """Extract function signature from source code"""
+        lines = source_code.split('\n')
+        for line in lines:
+            line = line.strip()
+            if line and not line.startswith('//') and not line.startswith('/*') and '(' in line and ')' in line:
+                # Look for function definition pattern
+                if line.endswith(')') or ('{' in line and line.index('(') < line.index('{')):
+                    # Extract just the signature part
+                    if '{' in line:
+                        signature = line[:line.index('{')].strip()
+                    else:
+                        signature = line
+                    return signature
+        return ""
+    
+    def _extract_function_calls(self, source_code: str) -> set:
+        """Extract function calls from source code that need declarations"""
+        import re
+        function_calls = set()
+        
+        # Pattern to match function calls like func_1234(), function_name()
+        call_pattern = r'(\w+)\s*\(\s*\)'
+        
+        lines = source_code.split('\n')
+        for line in lines:
+            # Skip comments
+            if line.strip().startswith('//'):
+                continue
+            
+            # Find function calls
+            matches = re.findall(call_pattern, line)
+            for match in matches:
+                # Skip common C keywords and variable names
+                if match not in ['if', 'while', 'for', 'return', 'sizeof', 'printf', 'malloc', 
+                               'free', 'result', 'temp1', 'counter', 'temp2']:
+                    function_calls.add(match)
+        
+        return function_calls
 
     def _decompile_from_assembly(self, func: Dict[str, Any], assembly_instructions: List[Dict[str, Any]], binary_analysis: Dict[str, Any], decompilation_context: Dict[str, Any]) -> str:
         """Convert actual assembly instructions to C source code"""
@@ -808,17 +910,35 @@ This project was reconstructed from binary analysis by Neo Advanced Decompiler.
         parts = op_str.split(', ')
         if len(parts) == 2:
             dest, src = parts
-            # Look for interesting constant assignments that might be game logic
-            if src.isdigit():
-                value = int(src)
-                if value == 3:
-                    return f"player_number = 3;  // FOUND: Player number assignment!"
-                elif value in [1, 2, 4, 5]:
-                    return f"game_value = {value};  // Potential game constant"
-                else:
-                    return f"{self._clean_operand(dest)} = {value};"
+            dest_clean = self._clean_operand(dest)
+            src_clean = self._clean_operand(src)
+            
+            # Handle memory operations
+            if '[' in src and ']' in src:
+                # Memory read: mov eax, [ebp-4] -> result = local_var;
+                return f"{dest_clean} = memory_access;"
+            elif '[' in dest and ']' in dest:
+                # Memory write: mov [ebp-4], eax -> memory_access = result;
+                return f"memory_access = {src_clean};"
+            
+            # Handle immediate values
+            elif src.startswith('0x') or src.isdigit():
+                try:
+                    value = int(src, 16) if src.startswith('0x') else int(src)
+                    if value == 0:
+                        return f"{dest_clean} = 0;"
+                    elif value == 1:
+                        return f"{dest_clean} = 1;"
+                    elif value < 256:  # Likely a small constant
+                        return f"{dest_clean} = {value};"
+                    else:  # Likely a pointer or large constant
+                        return f"{dest_clean} = 0x{value:x};"
+                except ValueError:
+                    return f"{dest_clean} = {src_clean};"
+            
+            # Register to register transfer
             else:
-                return f"{self._clean_operand(dest)} = {self._clean_operand(src)};"
+                return f"{dest_clean} = {src_clean};"
         return f"// mov {op_str}"
     
     def _convert_arithmetic_instruction(self, mnemonic: str, op_str: str) -> str:
@@ -836,14 +956,18 @@ This project was reconstructed from binary analysis by Neo Advanced Decompiler.
         parts = op_str.split(', ')
         if len(parts) == 2:
             left, right = parts
-            # Generate comparison without opening braces to avoid malformed control structures
-            if right.isdigit():
-                value = int(right)
-                if value == 3:
-                    return f"// Comparison: {self._clean_operand(left)} == 3"
-                else:
-                    return f"// Comparison: {self._clean_operand(left)} == {value}"
-            return f"// Comparison: {self._clean_operand(left)} == {self._clean_operand(right)}"
+            left_clean = self._clean_operand(left)
+            right_clean = self._clean_operand(right)
+            
+            # Set comparison flags for use by subsequent jump instructions
+            if right.isdigit() or right.startswith('0x'):
+                try:
+                    value = int(right, 16) if right.startswith('0x') else int(right)
+                    return f"zero_flag = ({left_clean} == {value}); less_than = ({left_clean} < {value}); greater_than = ({left_clean} > {value});"
+                except ValueError:
+                    return f"zero_flag = ({left_clean} == {right_clean}); less_than = ({left_clean} < {right_clean}); greater_than = ({left_clean} > {right_clean});"
+            else:
+                return f"zero_flag = ({left_clean} == {right_clean}); less_than = ({left_clean} < {right_clean}); greater_than = ({left_clean} > {right_clean});"
         return f"// cmp {op_str}"
     
     def _convert_jump_instruction(self, mnemonic: str, op_str: str) -> str:
@@ -863,13 +987,22 @@ This project was reconstructed from binary analysis by Neo Advanced Decompiler.
     
     def _convert_call_instruction(self, op_str: str, binary_analysis: Dict[str, Any]) -> str:
         """Convert call instruction to C function call"""
-        # Simplify function calls to avoid compilation errors
+        # Generate actual C function calls instead of comments
         if op_str.startswith('0x'):
-            return f"// Call to function at {op_str}"
+            # Direct address call - create a function call
+            addr = op_str.replace('0x', '')
+            return f"result = func_{addr}();"
         elif '[' in op_str and ']' in op_str:
-            return f"// Indirect call via {op_str}"
+            # Indirect call via function pointer
+            ptr_ref = op_str.strip('[]')
+            if 'ptr' in ptr_ref:
+                return f"result = (*function_ptr)();"
+            else:
+                return f"result = (*({self._clean_operand(ptr_ref)}))();"
         else:
-            return f"// Call to {op_str}"
+            # Named function call
+            func_name = op_str.replace(' ', '_').replace('.', '_')
+            return f"result = {func_name}();"
     
     def _clean_operand(self, operand: str) -> str:
         """Clean assembly operand for C code"""
