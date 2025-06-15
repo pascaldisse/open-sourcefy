@@ -504,7 +504,7 @@ class SentinelAgent(AnalysisAgent):
                 for entry in pe.DIRECTORY_ENTRY_IMPORT:
                     dll_name = entry.dll.decode('utf-8', errors='ignore')
                     functions = []
-                    for imp in entry.imports[:50]:  # Limit to first 50 imports per DLL
+                    for imp in entry.imports:  # Extract ALL imports (removed 50 limit for complete import table)
                         if imp.name:
                             functions.append(imp.name.decode('utf-8', errors='ignore'))
                     imports.append({'dll': dll_name, 'functions': functions})
