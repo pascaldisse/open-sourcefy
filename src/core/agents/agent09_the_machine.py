@@ -1463,6 +1463,37 @@ int ebp(void) { return 0; }
         self.logger.info(f"✅ Generated import retention for {dll_count} DLLs from {len(real_imports)} total DLLs")
         return '\n'.join(content)
 
+    def _generate_linker_include_options(self, analysis: Dict[str, Any]) -> str:
+        """Generate /INCLUDE linker options to force import retention
+        
+        Rules compliance: Rule #56 - Fix build system, not source code
+        /INCLUDE forces linker to include specific symbols.
+        """
+        real_imports = analysis.get('real_imports', [])
+        if not real_imports:
+            return ""
+        
+        include_options = []
+        include_count = 0
+        
+        for imp_data in real_imports:
+            dll_name = imp_data.get('dll', '')
+            functions = imp_data.get('functions', [])
+            if dll_name and functions:
+                lib_name = dll_name.lower().replace('.dll', '.lib')
+                # Skip custom DLLs and MFC which we can't link
+                if lib_name not in ['mfc71.lib', 'mxowrap.lib', 'dllwebbrowser.lib']:
+                    for func in functions[:20]:  # Limit to prevent excessive includes
+                        if isinstance(func, str) and func.replace('_', '').replace('A', '').replace('W', '').isalnum():
+                            # Only include well-known Windows API functions
+                            if any(prefix in func for prefix in ['Get', 'Set', 'Create', 'Load', 'Free', 'Open', 'Close', 'Read', 'Write']):
+                                include_options.append(f"/INCLUDE:{func}")
+                                include_count += 1
+        
+        result = ' '.join(include_options[:100])  # Limit to 100 includes to prevent command line overflow
+        self.logger.info(f"✅ Generated {min(include_count, 100)} /INCLUDE options for import retention")
+        return result
+
     def _fix_neo_assembly_syntax(self, source_content: str) -> str:
         """
         RULES COMPLIANCE: Rule #56 - Fix build system, not source code
