@@ -967,23 +967,68 @@ class Agent9_TheMachine(ReconstructionAgent):
         elif sources.get('main_function'):
             analysis['project_type'] = 'console_application'
         
-        # Get comprehensive library dependencies from Agent 9 (Commander Locke)
+        # CRITICAL FIX: Get actual import table from Agent 1 (Sentinel) analysis
         agent_results = context.get('agent_results', {})
-        if 9 in agent_results:
-            # Agent 9 now provides comprehensive library dependencies from Sentinel import analysis
-            commander_data = agent_results[9]
-            if hasattr(commander_data, 'data') and isinstance(commander_data.data, dict):
-                # Extract library dependencies from Agent 9's data
-                dependencies = commander_data.data.get('library_dependencies', [])
-                if dependencies:
-                    analysis['dependencies'] = dependencies
-                    self.logger.info(f"📦 Using comprehensive library dependencies from Agent 9 (Commander Locke)")
-                    self.logger.info(f"🔗 Loaded {len(dependencies)} libraries: {dependencies}")
-                else:
-                    # Also check build files for backup
-                    build_files = commander_data.data.get('build_files', {})
-                    if 'ReconstructedProgram.vcxproj' in build_files:
-                        self.logger.info("📦 Found Agent 9 build files, but no library dependencies extracted")
+        shared_memory = context.get('shared_memory', {})
+        sentinel_imports = []
+        
+        # DEBUG: Log available agent data
+        self.logger.info(f"🔍 DEBUG: Available agent results: {list(agent_results.keys())}")
+        self.logger.info(f"🔍 DEBUG: Shared memory keys: {list(shared_memory.keys())}")
+        
+        # Check Agent 1 (Sentinel) for actual import table analysis in shared memory
+        sentinel_data = None
+        
+        # First try agent_results (direct execution)
+        if 1 in agent_results:
+            sentinel_data = agent_results[1]
+            self.logger.info("🔍 Found Agent 1 data in agent_results")
+        # Then try shared_memory (orchestrated execution)
+        elif 'analysis_results' in shared_memory and 1 in shared_memory['analysis_results']:
+            sentinel_data = shared_memory['analysis_results'][1]
+            self.logger.info("🔍 Found Agent 1 data in shared_memory")
+        
+        if sentinel_data:
+            # Handle both AgentResult objects and dict data
+            if hasattr(sentinel_data, 'data') and isinstance(sentinel_data.data, dict):
+                # DEBUG: Log what keys are actually available
+                self.logger.info(f"🔍 DEBUG: Agent 1 data keys: {list(sentinel_data.data.keys())}")
+                # Import data is in format_analysis sub-dict
+                format_analysis = sentinel_data.data.get('format_analysis', {})
+                imports_data = format_analysis.get('imports', [])
+            elif isinstance(sentinel_data, dict):
+                # DEBUG: Log what keys are actually available
+                self.logger.info(f"🔍 DEBUG: Agent 1 dict keys: {list(sentinel_data.keys())}")
+                # Import data is in format_analysis sub-dict
+                format_analysis = sentinel_data.get('format_analysis', {})
+                imports_data = format_analysis.get('imports', [])
+            else:
+                imports_data = []
+                self.logger.warning(f"⚠️ Agent 1 data format not recognized: {type(sentinel_data)}")
+                
+            if imports_data:
+                sentinel_imports = imports_data
+                analysis['sentinel_imports'] = imports_data  # Store for later use
+                self.logger.info(f"🔥 CRITICAL: Found Agent 1 (Sentinel) import table with {len(imports_data)} DLLs")
+                # Extract unique DLL names for dependencies
+                dll_names = [imp.get('dll', '').lower() for imp in imports_data if imp.get('dll')]
+                # Convert to library names (remove .dll extension and add .lib)
+                lib_names = [dll.replace('.dll', '.lib') for dll in dll_names if dll.endswith('.dll')]
+                if lib_names:
+                    analysis['dependencies'] = lib_names
+                    self.logger.info(f"✅ Using REAL import table: {len(lib_names)} libraries from Sentinel analysis")
+                    self.logger.info(f"🔗 Libraries: {lib_names[:5]}..." if len(lib_names) > 5 else f"🔗 Libraries: {lib_names}")
+                
+                # Count total functions
+                total_functions = sum(len(imp.get('functions', [])) for imp in imports_data)
+                self.logger.info(f"🎯 Total imported functions: {total_functions} (targeting 538 from original binary)")
+            else:
+                self.logger.warning("⚠️ Agent 1 data found but no import table extracted")
+        else:
+            self.logger.warning("⚠️ Agent 1 (Sentinel) data not available - cannot extract real import table")
+        
+        # Store sentinel imports for comprehensive imports.h generation
+        analysis['real_imports'] = sentinel_imports
                     
         # Fallback to comprehensive dependency analysis if Agent 9 data not available
         if not analysis['dependencies']:
@@ -1101,6 +1146,7 @@ class Agent9_TheMachine(ReconstructionAgent):
             'build_scripts': {},
             'automated_build': {},
             'centralized_config': True,
+            'build_analysis': analysis,  # Pass analysis data including real imports
             'vs_version': vs_version
         }
         
@@ -2482,20 +2528,29 @@ int main(int argc, char* argv[]) {
             header_files = build_config.get('header_files', {})
             self.logger.info(f"🔍 DEBUG: Found {len(header_files)} header files to write")
             
-            # CRITICAL FIX: Generate comprehensive imports.h with ALL 538 functions from 14 DLLs
-            if 'imports.h' not in header_files:
-                self.logger.info("🔥 CRITICAL FIX: Generating comprehensive imports.h with 538 functions from 14 DLLs")
-                comprehensive_imports = self._generate_comprehensive_import_declarations()
+            # CRITICAL FIX: Generate comprehensive imports.h using REAL import table from Agent 1
+            build_analysis = build_config.get('build_analysis', {})
+            has_real_imports = build_analysis and build_analysis.get('real_imports', [])
+            
+            if 'imports.h' not in header_files or has_real_imports:
+                if has_real_imports:
+                    self.logger.info("🔥 CRITICAL FIX: Regenerating imports.h with REAL Agent 1 (Sentinel) import table")
+                else:
+                    self.logger.info("🔥 CRITICAL FIX: Generating imports.h using Agent 1 (Sentinel) import analysis")
+                comprehensive_imports = self._generate_comprehensive_import_declarations(build_analysis)
                 header_files['imports.h'] = comprehensive_imports
                 self.logger.info(f"✅ Generated comprehensive imports.h: {len(comprehensive_imports)} chars")
             
             for filename, content in header_files.items():
                 header_file = os.path.join(src_dir, filename)
                 
-                # Enhance imports.h if it exists but is basic
-                if filename == 'imports.h' and len(content) < 1000:
-                    self.logger.info("🔧 Enhancing basic imports.h with comprehensive import declarations")
-                    content = self._generate_comprehensive_import_declarations()
+                # Enhance imports.h if it exists but is basic OR if we have real imports
+                if filename == 'imports.h' and (len(content) < 1000 or has_real_imports):
+                    if has_real_imports:
+                        self.logger.info("🔧 Replacing imports.h with REAL import table from Agent 1 (Sentinel)")
+                    else:
+                        self.logger.info("🔧 Enhancing basic imports.h with comprehensive import declarations")
+                    content = self._generate_comprehensive_import_declarations(build_analysis)
                 
                 # CRITICAL FIX: Remove conflicting function declarations from main.h
                 if filename == 'main.h':
@@ -2820,30 +2875,68 @@ BEGIN
 #endif
 """
     
-    def _generate_comprehensive_import_declarations(self) -> str:
-        """Generate comprehensive import declarations for ALL 538 functions from 14 DLLs
+    def _generate_comprehensive_import_declarations(self, build_analysis: Dict[str, Any] = None) -> str:
+        """Generate comprehensive import declarations using REAL import table from Agent 1 (Sentinel)
         
         This fixes the CRITICAL bottleneck where original binary imports 538 functions
-        but reconstruction only includes 5 basic DLLs. This is the PRIMARY cause of
-        the size discrepancy (5.3MB original vs 492KB reconstructed).
+        but reconstruction only includes 5 basic DLLs. Uses actual PE import analysis.
         """
         
         imports_content = []
         imports_content.append("#ifndef IMPORTS_H")
         imports_content.append("#define IMPORTS_H")
         imports_content.append("")
-        imports_content.append("// COMPREHENSIVE IMPORT DECLARATIONS")
-        imports_content.append("// Original binary imports 538 functions from 14 DLLs")
-        imports_content.append("// This fixes the critical import table mismatch bottleneck")
-        imports_content.append("")
         
-        # Core Windows headers
-        imports_content.append("#include <windows.h>")
-        imports_content.append("#include <stdio.h>")
-        imports_content.append("#include <stdlib.h>")
-        imports_content.append("")
+        # CRITICAL: Check if we have REAL import data from Agent 1 (Sentinel)
+        real_imports = build_analysis.get('real_imports', []) if build_analysis else []
         
-        # Win32 API replacement for MFC 7.1 (234 functions equivalent - using standard Win32)
+        if real_imports:
+            # Use ACTUAL import table from PE analysis
+            imports_content.append("// REAL IMPORT DECLARATIONS FROM ORIGINAL BINARY")
+            imports_content.append(f"// Agent 1 (Sentinel) extracted {len(real_imports)} DLLs with actual function lists")
+            total_functions = sum(len(imp.get('functions', [])) for imp in real_imports)
+            imports_content.append(f"// Total functions: {total_functions} (from original PE import table)")
+            imports_content.append("")
+            
+            # Core Windows headers
+            imports_content.append("#include <windows.h>")
+            imports_content.append("#include <stdio.h>")
+            imports_content.append("#include <stdlib.h>")
+            imports_content.append("")
+            
+            # Generate pragma comment directives for all DLLs found
+            imports_content.append("// Library dependencies from original binary import table")
+            for imp_data in real_imports:
+                dll_name = imp_data.get('dll', '')
+                if dll_name:
+                    # Convert DLL name to lib name (e.g., kernel32.dll -> kernel32.lib)
+                    lib_name = dll_name.lower().replace('.dll', '.lib')
+                    functions = imp_data.get('functions', [])
+                    imports_content.append(f"#pragma comment(lib, \"{lib_name}\")  // {dll_name} ({len(functions)} functions)")
+            
+            imports_content.append("")
+            imports_content.append("// Function declarations extracted from original binary")
+            imports_content.append("// Note: Using standard Windows headers instead of explicit declarations")
+            imports_content.append("// for maximum compatibility and to avoid declaration conflicts")
+            imports_content.append("")
+            
+            self.logger.info(f"✅ Generated imports.h using REAL import table: {len(real_imports)} DLLs, {total_functions} functions")
+        else:
+            # Fallback to comprehensive import system
+            imports_content.append("// COMPREHENSIVE IMPORT DECLARATIONS (FALLBACK)")
+            imports_content.append("// Original binary imports 538 functions from 14 DLLs")
+            imports_content.append("// Using fallback comprehensive system - Agent 1 import data not available")
+            imports_content.append("")
+            
+            self.logger.warning("⚠️ Using fallback import system - Agent 1 (Sentinel) import data not available")
+            
+            # Core Windows headers for fallback
+            imports_content.append("#include <windows.h>")
+            imports_content.append("#include <stdio.h>")
+            imports_content.append("#include <stdlib.h>")
+            imports_content.append("")
+            
+            # Win32 API replacement for MFC 7.1 (234 functions equivalent - using standard Win32)
         imports_content.append("// Win32 API equivalent to MFC 7.1 Library (234 functions)")
         imports_content.append("// Note: MFC not available, using Win32 API equivalents")
         imports_content.append("#include <commctrl.h>       // Common controls")
