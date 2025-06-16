@@ -1,118 +1,169 @@
-# Open-Sourcefy Implementation Tasks
+# Open-Sourcefy 100% Functional Identity Implementation
 
-## Current Status: Research Complete, Implementation Ready
+## Current Status: Exit Code 5 Runtime Issues - 5 Phase Implementation Plan
 
-**Last Updated**: December 2024  
-**Priority**: Import Table Mismatch Fix (Primary Bottleneck)  
-**Expected Impact**: 60% → 85% pipeline validation  
-
----
-
-## ✅ High Priority Tasks (COMPLETED)
-
-### Task 1: Fix Agent 9 Data Flow ✅ COMPLETE
-**File**: `/src/core/agents/agent09_commander_locke.py`  
-**Problem**: Agent 9 ignores rich import data from Agent 1, uses hardcoded minimal DLL list  
-**Impact**: 20-25% validation improvement  
-**Status**: ✅ **IMPLEMENTED** 
-
-**✅ Implementation Complete**:
-- Added `agent_id == 1` case to `_extract_agent_data()` method
-- Added Agent 1 dependency to MATRIX_DEPENDENCIES for Agent 9
-- Agent 9 now extracts and logs import data from Sentinel
-- Created `_generate_library_dependencies()` method with DLL-to-lib mapping
-
-### Task 2: Generate Function Declarations ✅ COMPLETE
-**File**: `/src/core/agents/agent09_commander_locke.py`  
-**Problem**: Missing extern declarations for 538 imported functions  
-**Impact**: 15-20% validation improvement  
-**Status**: ✅ **IMPLEMENTED**
-
-**✅ Implementation Complete**:
-- Added `_generate_function_declarations()` method to Agent 9
-- Creates extern declarations for all imported functions grouped by DLL
-- Handles MFC 7.1 compatibility with #define _MFC_VER 0x0710
-- Generates `import_declarations.h` file in build output
-- Added `_generate_custom_dll_stubs()` for mxowrap.dll functions
-
-### Task 3: Update VS Project Configuration ✅ COMPLETE
-**File**: `/src/core/agents/agent10_the_machine.py`  
-**Problem**: VS projects only include 5 basic libraries, missing 9 critical DLLs  
-**Impact**: 10-15% validation improvement  
-**Status**: ✅ **IMPLEMENTED**
-
-**✅ Implementation Complete**:
-- Enhanced `_generate_project_file()` with comprehensive library dependencies
-- Added MFC support with `<UseOfMfc>Dynamic</UseOfMfc>` when MFC71.DLL detected
-- Updated Agent 10 to use library dependencies from Agent 9 instead of hardcoded list
-- Fixed both Debug and Release configurations with proper AdditionalDependencies
-
-### Task 4: MFC 7.1 Compatibility Resolution ⚠️ DECISION REQUIRED
-**Research Status**: VS2022 incompatible with MFC 7.1 (v71 toolset)  
-**Options**:
-1. Use Visual Studio 2003 environment
-2. Modernize to newer MFC version compatible with VS2022  
-3. Implement MFC 7.1 compatibility layer
-
-**Impact**: Determines feasibility of direct compilation  
-**Status**: Decision pending, implementation blocked  
+**Last Updated**: June 2025  
+**Priority**: Achieve 100% functional binary identity through systematic fixes  
+**Expected Impact**: Exit Code 5 → Exit Code 0 (fully functional launcher)  
 
 ---
 
-## 🔧 Medium Priority Tasks
+## 🚨 Implementation Protocol: 5 Phase System
 
-### Task 5: Reverse Engineer mxowrap.dll
-**Status**: Method confirmed (IDA Pro/Ghidra)  
-**Impact**: Handle 12 custom Matrix Online functions  
-**Timeline**: 1-2 days after high priority tasks  
-
-### Task 6: Implement Ordinal Import Resolution
-**Status**: Tool identified (dumpbin /exports MFC71.DLL)  
-**Impact**: Resolve ordinal-based MFC imports  
-**Timeline**: 1 day after Task 1-3 complete  
-
-### Task 7: Download MFC 7.1 Signatures
-**Source**: [Visual Studio 2003 Retired Documentation](https://www.microsoft.com/en-us/download/details.aspx?id=55979)  
-**Impact**: Complete function signature database  
-**Timeline**: Can be done in parallel with implementation  
+**Each Phase Must Follow Strict Protocol:**
+1. **Read Rules** (`rules.md`) - Mandatory before ANY work
+2. **Implement** - Execute phase objectives with Rule #57 compliance
+3. **Git Commit All** - Document progress and ensure rollback capability
 
 ---
 
-## 📊 Task Dependencies
+## PHASE 1: Thread Information Block (TIB) Simulation
+**Objective**: Implement full TIB simulation with actual SEH chain
 
-```
-Task 1 (Agent 9 Fix) → Blocks Task 2, 3
-Task 4 (MFC Decision) → Blocks final compilation testing
-Task 7 (MFC Signatures) → Required for Task 2 completion
-Tasks 1-3 → Must complete before Task 5, 6
-```
+### Phase 1 Tasks:
+- [ ] **Read rules.md** - Understand Rule #57 constraints for TIB fixes
+- [ ] Create comprehensive TIB simulation in `assembly_globals.h`
+- [ ] Implement proper Exception Handler (SEH) chain structure
+- [ ] Add stack base/limit pointer management
+- [ ] Implement Thread Local Storage (TLS) simulation
+- [ ] Add Process Environment Block (PEB) reference simulation
+- [ ] **Git commit all** - "PHASE 1 COMPLETE: TIB simulation with SEH chain"
 
-## 🎯 Success Metrics
-
-### Immediate Targets (After Tasks 1-3)
-- [ ] All 14 DLLs included in VS project
-- [ ] 538 imported functions declared or stubbed  
-- [ ] Agent 9 uses Sentinel import analysis
-- [ ] Build succeeds with comprehensive libraries
-- [ ] Validation improves to 75-80%
-
-### Final Targets (After All Tasks)
-- [ ] Binary comparison shows <5% import table difference
-- [ ] Function resolution accuracy >95%
-- [ ] Overall pipeline validation >85%
-- [ ] Compilation succeeds with full functionality
+**Expected Impact**: Eliminate fs:[0] access violations
+**Rule #57 Compliance**: Build system fixes only, no source modification
 
 ---
 
-## 🚨 Immediate Next Steps
+## PHASE 2: Complete Import Table Restoration  
+**Objective**: Restore all 538 original imports with proper MFC 7.1 compatibility
 
-1. **START HERE**: Implement Task 1 (Agent 9 data flow fix)
-2. **DECISION REQUIRED**: Choose MFC 7.1 compatibility approach (Task 4)
-3. **PARALLEL**: Download VS2003 documentation (Task 7)
-4. **SEQUENCE**: Tasks 2-3 after Task 1 complete
+### Phase 2 Tasks:
+- [ ] **Read rules.md** - Verify import restoration approach compliance
+- [ ] Download MFC 7.1 signatures from VS2003 documentation
+- [ ] Implement ordinal resolution via `dumpbin /exports MFC71.DLL`
+- [ ] Generate all 538 function declarations in `import_declarations.h`
+- [ ] Update VS project with all 14 DLL dependencies
+- [ ] Handle MFC 7.1 compatibility requirements
+- [ ] Create comprehensive import retention system
+- [ ] **Git commit all** - "PHASE 2 COMPLETE: Full 538 import restoration"
 
-**Estimated Timeline**: 1-2 weeks for 60% → 85% improvement
+**Expected Impact**: Resolve import table mismatch (64.3% discrepancy)
+**Rule #57 Compliance**: Build system library configuration only
 
 ---
 
-*This task list represents the actionable implementation plan based on completed research. All technical approaches have been validated and are ready for coding.*
+## PHASE 3: Memory Layout and Address Resolution
+**Objective**: Fix hardcoded memory addresses and implement proper data sections
+
+### Phase 3 Tasks:
+- [ ] **Read rules.md** - Understand memory layout fix constraints
+- [ ] Map all hardcoded addresses (e.g., `0x4aca58`) to actual data sections
+- [ ] Implement proper virtual address mapping in linker settings
+- [ ] Create data section initialization for expected memory locations
+- [ ] Fix function pointer resolution for indirect calls
+- [ ] Implement proper resource layout matching original PE structure
+- [ ] **Git commit all** - "PHASE 3 COMPLETE: Memory layout and address resolution"
+
+**Expected Impact**: Eliminate hardcoded address failures
+**Rule #57 Compliance**: Linker configuration and resource mapping only
+
+---
+
+## PHASE 4: Assembly Code Semantics and Control Flow
+**Objective**: Replace int3 breakpoints with functional code and fix entry point logic
+
+### Phase 4 Tasks:
+- [ ] **Read rules.md** - Verify assembly code fix approach
+- [ ] Replace all `int3` breakpoint instructions with NOP or functional code
+- [ ] Implement proper WinMain entry point flow
+- [ ] Fix `text_x86_000071e0()` initialization function
+- [ ] Create proper message loop implementation
+- [ ] Handle decompiled function call patterns correctly
+- [ ] Implement register function stubs for assembly compatibility
+- [ ] **Git commit all** - "PHASE 4 COMPLETE: Assembly semantics and control flow"
+
+**Expected Impact**: Enable proper application execution flow
+**Rule #57 Compliance**: Build system function substitution only
+
+---
+
+## PHASE 5: Exception Handling and Runtime Environment
+**Objective**: Implement proper exception handling instead of access violation exit
+
+### Phase 5 Tasks:
+- [ ] **Read rules.md** - Understand exception handling fix requirements
+- [ ] Implement structured exception handling (SEH) framework
+- [ ] Create proper error handling for missing runtime environment
+- [ ] Add Windows compatibility layer for missing components
+- [ ] Implement graceful fallbacks for unavailable resources
+- [ ] Create comprehensive runtime validation
+- [ ] Verify exit code 0 achievement
+- [ ] **Git commit all** - "PHASE 5 COMPLETE: 100% functional identity achieved"
+
+**Expected Impact**: Exit Code 5 → Exit Code 0 (fully functional)
+**Rule #57 Compliance**: Build system exception handling only
+
+---
+
+## 🎯 Success Metrics by Phase
+
+### Phase 1 Success Criteria:
+- [ ] No fs:[0] access violations in debug output
+- [ ] TIB simulation functions correctly
+- [ ] SEH chain properly initialized
+
+### Phase 2 Success Criteria:
+- [ ] All 14 DLLs included in build
+- [ ] 538 function declarations generated
+- [ ] Import table matches original binary structure
+
+### Phase 3 Success Criteria:
+- [ ] Hardcoded addresses resolve to valid memory
+- [ ] Virtual address layout matches original
+- [ ] Resource loading successful
+
+### Phase 4 Success Criteria:
+- [ ] No int3 breakpoint crashes
+- [ ] WinMain executes properly
+- [ ] Application initializes correctly
+
+### Phase 5 Success Criteria:
+- [ ] **Exit Code 0** achieved
+- [ ] Application runs without crashes
+- [ ] Full functional identity confirmed
+
+---
+
+## 🚨 Critical Implementation Rules
+
+### Rule #57 Compliance:
+- **NEVER edit source code directly**
+- **ONLY fix through build system/compiler**
+- **ALL fixes via assembly_globals.h and project configuration**
+- **NO source file modifications allowed**
+
+### Phase Protocol:
+1. **MANDATORY**: Read `rules.md` before each phase
+2. **MANDATORY**: Git commit after each phase completion
+3. **MANDATORY**: Verify phase success criteria before proceeding
+
+### Rollback Strategy:
+- Each phase commit enables rollback to last working state
+- Phase isolation prevents cascading failures
+- Git history maintains implementation audit trail
+
+---
+
+## 📊 Overall Timeline
+
+**Total Estimated Time**: 2-3 weeks
+- **Phase 1-2**: 1 week (TIB + Imports)
+- **Phase 3-4**: 1 week (Memory + Assembly)  
+- **Phase 5**: 3-5 days (Exception handling + testing)
+
+**Critical Path**: Each phase blocks the next - no parallel execution
+**Success Target**: Transform Exit Code 5 → Exit Code 0 with full functionality
+
+---
+
+*This 5-phase plan represents the systematic approach to achieve 100% functional binary identity while maintaining strict Rule #57 compliance through build system fixes only.*
