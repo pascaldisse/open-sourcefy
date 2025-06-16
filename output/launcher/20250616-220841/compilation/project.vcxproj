@@ -124,7 +124,7 @@
       <FixedBaseAddress>true</FixedBaseAddress>
       <SectionAlignment>4096</SectionAlignment>
       <FileAlignment>512</FileAlignment>
-      <AdditionalOptions>/MANIFEST:NO /SAFESEH:NO /OPT:NOREF /OPT:NOICF /SECTION:.text,ER /SECTION:.text,!D /SECTION:.rdata,R /SECTION:.rdata,!D /SECTION:.data,WR /SECTION:.data,!D /SECTION:STLPORT_,WR /SECTION:STLPORT_,!D /SECTION:.rsrc,R /SECTION:.rsrc,!D /SECTION:.reloc,R /SECTION:.reloc,!D /FUNCTIONPADMIN /HEAP:1048576,4096 /STACK:1048576,4096 /STUB:stub.exe %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/MANIFEST:NO /SAFESEH:NO /OPT:NOREF /OPT:NOICF /SECTION:.text,ER /SECTION:.text,!D /SECTION:.rdata,R /SECTION:.rdata,!D /SECTION:.data,WR /SECTION:.data,!D /SECTION:STLPORT_,WR /SECTION:STLPORT_,!D /SECTION:.rsrc,R /SECTION:.rsrc,!D /SECTION:.reloc,R /SECTION:.reloc,!D /FUNCTIONPADMIN /HEAP:1048576,4096 /STACK:1048576,4096 /STUB:stub.exe /ALIGN:4096 /FILEALIGN:512 %(AdditionalOptions)</AdditionalOptions>
       <GenerateMapFile>true</GenerateMapFile>
       <MapFileName>$(TargetDir)$(TargetName).map</MapFileName>
       <EmbedManifest>false</EmbedManifest>
