@@ -3325,6 +3325,22 @@ BEGIN
 #endif
 """
     
+    def _detect_vs2003_availability(self):
+        """Check if Visual Studio 2003 is available for MFC 7.1 compilation."""
+        vs2003_paths = [
+            "C:\\Mac\\Home\\Downloads\\Visual Studio .NET 2003",
+            "C:\\Program Files\\Microsoft Visual Studio .NET 2003",
+            "C:\\Program Files (x86)\\Microsoft Visual Studio .NET 2003"
+        ]
+        
+        for path in vs2003_paths:
+            if os.path.exists(path.replace('C:\\', '/mnt/c/')):
+                self.logger.info(f"✅ VS2003 detected at: {path}")
+                return path
+        
+        self.logger.info("ℹ️ VS2003 not detected - using VS2022 with compatibility mappings")
+        return None
+
     def _generate_comprehensive_import_declarations(self, build_analysis: Dict[str, Any] = None) -> str:
         """Generate comprehensive import declarations using REAL import table from Agent 1 (Sentinel)
         
@@ -3354,24 +3370,40 @@ BEGIN
             imports_content.append("#include <stdlib.h>")
             imports_content.append("")
             
-            # Generate pragma comment directives for all DLLs found with VS2022 compatibility
-            imports_content.append("// Library dependencies from original binary import table (VS2022 compatible)")
+            # Check for VS2003 availability for true binary equivalence
+            vs2003_path = self._detect_vs2003_availability()
+            
+            # Generate pragma comment directives for all DLLs found
+            if vs2003_path:
+                imports_content.append("// Library dependencies from original binary import table (VS2003 MFC 7.1 - TRUE BINARY EQUIVALENCE)")
+            else:
+                imports_content.append("// Library dependencies from original binary import table (VS2022 compatible)")
+            
             for imp_data in real_imports:
                 dll_name = imp_data.get('dll', '')
                 if dll_name:
                     functions = imp_data.get('functions', [])
                     lib_name = dll_name.lower().replace('.dll', '.lib')
                     
-                    # CRITICAL FIX: Apply VS2022 compatibility mappings
+                    # Apply compatibility mappings based on available toolchain
                     if lib_name == 'mfc71.lib':
-                        # MFC 7.1 → Skip MFC and use Win32 API instead (MFC not available in VS2022 Preview)
-                        imports_content.append(f"// #pragma comment(lib, \"mfc140.lib\")   // {dll_name} → MFC not available in VS2022 Preview ({len(functions)} functions)")
-                        imports_content.append(f"// #pragma comment(lib, \"mfcs140.lib\")  // {dll_name} → Using Win32 API instead ({len(functions)} functions)")
+                        if vs2003_path:
+                            # VS2003 available - use original MFC 7.1 for true binary equivalence
+                            imports_content.append(f"#pragma comment(lib, \"mfc71.lib\")     // {dll_name} → Original MFC 7.1 ({len(functions)} functions)")
+                            imports_content.append(f"#pragma comment(lib, \"mfcs71.lib\")    // {dll_name} → MFC 7.1 Static ({len(functions)} functions)")
+                        else:
+                            # VS2022 fallback - skip MFC and use Win32 API instead
+                            imports_content.append(f"// #pragma comment(lib, \"mfc140.lib\")   // {dll_name} → MFC not available in VS2022 Preview ({len(functions)} functions)")
+                            imports_content.append(f"// #pragma comment(lib, \"mfcs140.lib\")  // {dll_name} → Using Win32 API instead ({len(functions)} functions)")
                     elif lib_name == 'msvcr71.lib':
-                        # MSVCR71 → Modern UCRT
-                        imports_content.append(f"#pragma comment(lib, \"ucrt.lib\")      // {dll_name} → Universal CRT ({len(functions)} functions)")
-                        imports_content.append(f"#pragma comment(lib, \"vcruntime.lib\") // {dll_name} → VC Runtime ({len(functions)} functions)")
-                        imports_content.append(f"#pragma comment(lib, \"msvcrt.lib\")    // {dll_name} → MSVC Runtime ({len(functions)} functions)")
+                        if vs2003_path:
+                            # VS2003 available - use original MSVCR71 for true binary equivalence
+                            imports_content.append(f"#pragma comment(lib, \"msvcr71.lib\")   // {dll_name} → Original MSVCR71 ({len(functions)} functions)")
+                        else:
+                            # VS2022 fallback - use modern UCRT
+                            imports_content.append(f"#pragma comment(lib, \"ucrt.lib\")      // {dll_name} → Universal CRT ({len(functions)} functions)")
+                            imports_content.append(f"#pragma comment(lib, \"vcruntime.lib\") // {dll_name} → VC Runtime ({len(functions)} functions)")
+                            imports_content.append(f"#pragma comment(lib, \"msvcrt.lib\")    // {dll_name} → MSVC Runtime ({len(functions)} functions)")
                     elif lib_name == 'mxowrap.lib':
                         # Custom DLL - add comment but skip linking
                         imports_content.append(f"// #pragma comment(lib, \"{lib_name}\")  // {dll_name} - Custom DLL ({len(functions)} functions) - SKIPPED")
