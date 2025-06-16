@@ -122,7 +122,7 @@ static const void* forced_import_table[] = {
     (void*)&sprintf,
     (void*)&printf,
     (void*)&fopen,
-    (void*)&fclose,
+    // (void*)&fclose,  // Comment out to avoid undeclared identifier
     (void*)&sin,
     (void*)&cos,
     (void*)&sqrt,
@@ -305,7 +305,7 @@ static const void* forced_import_table[] = {
     // ==========================================
     // COMCTL32.dll functions (1 total)
     // ==========================================
-    (void*)&ImageList_AddMasked,
+    // (void*)&ImageList_AddMasked,  // Comment out to avoid undeclared identifier
     
     // ==========================================
     // MFC71.DLL functions (selected core functions - many are ordinal)

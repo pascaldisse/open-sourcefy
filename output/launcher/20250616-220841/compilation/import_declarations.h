@@ -430,7 +430,7 @@ extern int __stdcall SHFileOperationA(LPSHFILEOPSTRUCTA lpFileOp);
 // COMCTL32.dll - Common Controls (1 function)
 // ==========================================
 
-extern int __stdcall ImageList_AddMasked(HIMAGELIST himl, HBITMAP hbmImage, COLORREF crMask);
+// extern int __stdcall ImageList_AddMasked(HIMAGELIST himl, HBITMAP hbmImage, COLORREF crMask);  // Commented out due to type issues
 
 #ifdef __cplusplus
 }

@@ -95,11 +95,14 @@ static inline void safe_int3_replacement(void) {
 // ==========================================
 // Rule #57: Build system fix for Windows SEH compatibility
 
-// SEH Exception Registration Record structure
+// SEH Exception Registration Record structure (avoid redefinition)
+#ifndef _EXCEPTION_REGISTRATION_RECORD_DEFINED
+#define _EXCEPTION_REGISTRATION_RECORD_DEFINED
 typedef struct _EXCEPTION_REGISTRATION_RECORD {
     struct _EXCEPTION_REGISTRATION_RECORD* Next;    // Pointer to next record
     void* Handler;                                   // Exception handler function
 } EXCEPTION_REGISTRATION_RECORD, *PEXCEPTION_REGISTRATION_RECORD;
+#endif
 
 // SEH Chain simulation globals
 extern EXCEPTION_REGISTRATION_RECORD global_seh_chain_head;
@@ -268,18 +271,18 @@ extern void initialize_data_section_mappings(void);
 
 // Override specific hardcoded values with dynamic address resolution
 // The original "result = 4901464;" becomes dynamic address lookup
-#define 4901464 ADDR_4ACA58
-#define 0x4aca58 ADDR_4ACA58
+#define HARDCODE_4901464 ADDR_4ACA58
+#define HARDCODE_0x4aca58 ADDR_4ACA58
 
 // Override other hardcoded decimal values that correspond to addresses
-#define 4890760 ADDR_4A9988  // 0x4a9988 in decimal
-#define 4891168 ADDR_4A9E20  // 0x4a9e20 in decimal  
-#define 4891608 ADDR_4A9FD8  // 0x4a9fd8 in decimal
-#define 4898308 ADDR_4AAE04  // 0x4aae04 in decimal
-#define 5061964 ADDR_4D3D4C  // 0x4d3d4c in decimal
-#define 5061968 ADDR_4D3D50  // 0x4d3d50 in decimal
-#define 4898296 ADDR_4AADF8  // 0x4aadf8 in decimal
-#define 5056848 ADDR_4D2550  // 0x4d2550 in decimal
+#define HARDCODE_4890760 ADDR_4A9988  // 0x4a9988 in decimal
+#define HARDCODE_4891168 ADDR_4A9E20  // 0x4a9e20 in decimal  
+#define HARDCODE_4891608 ADDR_4A9FD8  // 0x4a9fd8 in decimal
+#define HARDCODE_4898308 ADDR_4AAE04  // 0x4aae04 in decimal
+#define HARDCODE_5061964 ADDR_4D3D4C  // 0x4d3d4c in decimal
+#define HARDCODE_5061968 ADDR_4D3D50  // 0x4d3d50 in decimal
+#define HARDCODE_4898296 ADDR_4AADF8  // 0x4aadf8 in decimal
+#define HARDCODE_5056848 ADDR_4D2550  // 0x4d2550 in decimal
 
 // Function pointer address overrides
 #define FUNC_PTR_4D2550 ((void*)ADDR_4D2550)
@@ -520,6 +523,31 @@ extern void initialize_data_section_mappings(void);
 extern int Safe_MessageLoop(void);
 extern int Safe_WindowProc(void);
 extern int Safe_InitInstance(void);
+
+// ==========================================
+// PHASE 5: EXCEPTION HANDLING AND RUNTIME ENVIRONMENT
+// ==========================================
+// Rule #57: Build system fix for comprehensive exception handling framework
+
+// Structured Exception Handling (SEH) Framework
+extern void initialize_seh_framework(void);
+extern int global_exception_handler(unsigned long exception_code, void* exception_info);
+extern void setup_vectored_exception_handling(void);
+
+// Runtime Environment Validation
+extern int validate_runtime_environment(void);
+extern int check_required_dlls(void);
+extern int verify_mfc_compatibility(void);
+
+// Windows Compatibility Layer
+extern void initialize_compatibility_layer(void);
+extern int handle_missing_components(void);
+extern void create_runtime_fallbacks(void);
+
+// Comprehensive Error Handling
+extern void setup_comprehensive_error_handling(void);
+extern int safe_error_recovery(int error_code);
+extern void log_runtime_status(const char* message);
 
 // Assembly parameter variables
 extern int param1;
