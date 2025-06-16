@@ -1859,6 +1859,7 @@ int ebp(void) { return 0; }
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <TreatWarningAsError>false</TreatWarningAsError>
+      <AdditionalOptions>/FI"../assembly_globals.h" /D"NULL=((void*)0)" /D"__ASSEMBLY_REGISTER_DEFS__" /D"_CRT_SECURE_NO_WARNINGS" /D"function_ptr_var=static_function_ptr_var" /wd2374 /wd2054 /wd2099 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>{subsystem}</SubSystem>
@@ -1882,10 +1883,10 @@ int ebp(void) { return 0; }
       <Optimization>Disabled</Optimization>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <OmitFramePointers>false</OmitFramePointers>
-      <DisableSpecificWarnings>2065;4716;4715;4013;4024;4047;4101;4129;4133;4189;4244;4267;4700;4702;4703;4005;4018;4020;4028;4029;4033;4035;4090;4113;4132;4206;4996;2143;2365;2063;2021;4002</DisableSpecificWarnings>
+      <DisableSpecificWarnings>2065;4716;4715;4013;4024;4047;4101;4129;4133;4189;4244;4267;4700;4702;4703;4005;4018;4020;4028;4029;4033;4035;4090;4113;4132;4206;4996;2143;2365;2063;2021;4002;2054;2065;2099;2374;4099;4005</DisableSpecificWarnings>
       <TreatWarningAsError>false</TreatWarningAsError>
       <CompileAs>CompileAsC</CompileAs>
-      <AdditionalOptions>/Oi- /Ob0 /Oy- /WX- /FI"../assembly_globals.h" /permissive- /Zc:wchar_t- /D"_CRT_SECURE_NO_WARNINGS" /D"_ALLOW_KEYWORD_MACROS" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Oi- /Ob0 /Oy- /WX- /FI"../assembly_globals.h" /permissive- /Zc:wchar_t- /D"_CRT_SECURE_NO_WARNINGS" /D"_ALLOW_KEYWORD_MACROS" /D"NULL=((void*)0)" /D"__ASSEMBLY_REGISTER_DEFS__" /D"function_ptr_var=static_function_ptr_var" /wd2374 /wd2054 /wd2099 %(AdditionalOptions)</AdditionalOptions>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <StringPooling>false</StringPooling>
       <BufferSecurityCheck>true</BufferSecurityCheck>
