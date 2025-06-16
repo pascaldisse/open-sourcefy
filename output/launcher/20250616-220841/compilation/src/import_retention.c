@@ -25,60 +25,67 @@ extern int jnp_condition;
 extern int jo_condition;
 extern int jno_condition;
 
-// Assembly register representations - extern declarations (defined in main.c)
-extern int dx;
-extern int ax;
-extern int bx;
-extern int cx;
-extern int al;
-extern int bl;
-extern int dl;
-extern int ah;
-extern int bh;
-extern int ch;
-extern int dh;
-extern int eax;
-extern int ebx;
-extern int ecx;
-extern int edx;
-extern int esi;
-extern int edi;
-extern int esp;
-extern int ebp;
+// ==========================================
+// PHASE 4: ASSEMBLY REGISTER IMPLEMENTATIONS
+// ==========================================
+// Rule #57: Build system fix for assembly register function stubs
 
-// Assembly parameter variables
-extern int param1;
-extern int param2;
-extern int param3;
-extern int param4;
-extern int param5;
-extern int param6;
-extern int param7;
-extern int param8;
-extern int param9;
-extern int param10;
-extern int param11;
-extern int param12;
-extern int param13;
-extern int param14;
-extern int param15;
-extern int param16;
-extern int param_1;
-extern int param_2;
-extern int param_3;
-extern int param_4;
-extern int param_5;
-extern int param_6;
-extern int param_7;
-extern int param_8;
-extern int param_9;
-extern int param_10;
-extern int param_11;
-extern int param_12;
-extern int param_13;
-extern int param_14;
-extern int param_15;
-extern int param_16;
+// Assembly register representations - actual definitions (not extern)
+int dx = 0;
+int ax = 0;
+int bx = 0;
+int cx = 0;
+int al = 0;
+int bl = 0;
+int dl = 0;
+int ah = 0;
+int bh = 0;
+int ch = 0;
+int dh = 0;
+
+// Assembly register function implementations
+int reg_eax(void) { return 0; }
+int reg_ebx(void) { return 0; }
+int reg_ecx(void) { return 0; }
+int reg_edx(void) { return 0; }
+int reg_esi(void) { return 0; }
+int reg_edi(void) { return 0; }
+int reg_esp(void) { return 0x1000; }  // Realistic stack pointer value
+int reg_ebp(void) { return 0x1004; }  // Realistic base pointer value
+
+// Assembly parameter variables - actual definitions for assembly compatibility
+int param1 = 0;
+int param2 = 0;
+int param3 = 0;
+int param4 = 0;
+int param5 = 0;
+int param6 = 0;
+int param7 = 0;
+int param8 = 0;
+int param9 = 0;
+int param10 = 0;
+int param11 = 0;
+int param12 = 0;
+int param13 = 0;
+int param14 = 0;
+int param15 = 0;
+int param16 = 0;
+int param_1 = 0;
+int param_2 = 0;
+int param_3 = 0;
+int param_4 = 0;
+int param_5 = 0;
+int param_6 = 0;
+int param_7 = 0;
+int param_8 = 0;
+int param_9 = 0;
+int param_10 = 0;
+int param_11 = 0;
+int param_12 = 0;
+int param_13 = 0;
+int param_14 = 0;
+int param_15 = 0;
+int param_16 = 0;
 
 // Function pointer variable definition (matches forced include header)
 // Note: Definition moved to forced include header to avoid redefinition
