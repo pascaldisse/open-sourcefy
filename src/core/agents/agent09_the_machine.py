@@ -1068,25 +1068,9 @@ class Agent9_TheMachine(ReconstructionAgent):
                     
         # Fallback to comprehensive dependency analysis if Agent 9 data not available
         if not analysis['dependencies']:
-            self.logger.warning("Agent 9 library dependencies not available, using comprehensive fallback analysis")
-            all_content = ' '.join(source_files.values()) + ' '.join(header_files.values())
-            content_lower = all_content.lower()
-            
-            # Comprehensive dependencies for proper binary size (VS2022 compatible equivalents)
-            # MAJOR FIX: Add all 14 DLL dependencies from original binary analysis
-            core_deps = ['kernel32.lib', 'user32.lib', 'gdi32.lib', 'advapi32.lib']
-            gui_deps = ['comctl32.lib', 'shell32.lib', 'ole32.lib', 'oleaut32.lib', 'uuid.lib']
-            runtime_deps = ['msvcrt.lib', 'msvcprt.lib']  
-            
-            # Add missing critical dependencies for complete import table reconstruction
-            # Use only libraries that are guaranteed to exist in Windows SDK
-            network_deps = ['ws2_32.lib', 'wininet.lib', 'winhttp.lib']
-            security_deps = ['crypt32.lib', 'wintrust.lib', 'secur32.lib']
-            multimedia_deps = ['winmm.lib'] 
-            system_deps = ['winspool.lib', 'comdlg32.lib', 'rpcrt4.lib', 'version.lib']
-            
-            analysis['dependencies'].extend(core_deps + gui_deps + runtime_deps + network_deps + security_deps + multimedia_deps + system_deps)
-            self.logger.info(f"📦 Using comprehensive fallback dependencies ({len(analysis['dependencies'])} libraries) for binary size equivalence")
+            # RULES COMPLIANCE: Rules #1, #4, #5, #53 - NO FALLBACKS EVER, STRICT MODE ONLY, NO MOCK IMPLEMENTATIONS, STRICT ERROR HANDLING
+            # Must FAIL when Agent 1 dependency data is missing - NO FALLBACKS ALLOWED
+            raise Exception("Agent 1 (Sentinel) import table data required for authentic compilation - cannot proceed without real dependencies (Rules #1, #4, #5: NO FALLBACKS EVER, STRICT MODE ONLY, NO MOCK IMPLEMENTATIONS)")
         
         # CRITICAL FIX: Force x86 architecture to match original PE32 binary
         # Original launcher.exe is PE32 (32-bit), not PE32+ (64-bit)
@@ -1284,15 +1268,14 @@ class Agent9_TheMachine(ReconstructionAgent):
         self.logger.info(f"🔍 DEBUG: Build system header files: {list(build_system['header_files'].keys())}")
         
         # Generate project files based on toolchain
+        self.logger.info(f"🔍 DEBUG: Toolchain value: '{toolchain}' (type: {type(toolchain)})")
         if toolchain == 'vs2003':
-            # Generate VS2003-compatible project files
-            vcxproj_content = self._generate_vs2003_project_file(analysis)
-            build_system['build_files']['project.vcproj'] = vcxproj_content  # VS2003 uses .vcproj
-            
-            # Generate VS2003 solution file
-            sln_content = self._generate_vs2003_solution_file(analysis)
-            build_system['build_files']['project.sln'] = sln_content
+            # VS2003 uses direct compilation - skip project file generation
+            self.logger.info("🔧 VS2003 toolchain detected - skipping project file generation (using direct compilation)")
+            # VS2003 doesn't need project files - it uses direct cl.exe calls
+            pass
         else:
+            self.logger.info(f"🔧 Non-VS2003 toolchain detected: '{toolchain}' - generating MSBuild project files")
             # Generate VS2022 project files using centralized build system
             vcxproj_content = self._generate_vcxproj_file(analysis, sources)
             build_system['build_files']['project.vcxproj'] = vcxproj_content
@@ -4187,25 +4170,45 @@ BEGIN
         try:
             self.logger.info("🔧 Starting VS2003 direct compilation for authentic MFC 7.1 binary reconstruction")
             
-            # Get output directory
-            output_dir = build_system.get('output_dir', './output/launcher/latest/compilation')
-            src_dir = os.path.join(output_dir, 'src')
-            bin_dir = os.path.join(output_dir, 'bin', 'Release', 'Win32')
+            # Get output directory from context - use current execution output dir
+            context_output_dir = context.get('output_dir', './output/launcher/latest/compilation')
+            output_dir = build_system.get('output_dir', context_output_dir)
+            
+            self.logger.info(f"🔍 DEBUG: context_output_dir: {context_output_dir}")
+            self.logger.info(f"🔍 DEBUG: output_dir: {output_dir}")
+            
+            # Agent 9 should look in the compilation subdirectory where source files are actually written
+            compilation_dir = os.path.join(output_dir, 'compilation')
+            src_dir = os.path.join(compilation_dir, 'src')
+            bin_dir = os.path.join(compilation_dir, 'bin', 'Release', 'Win32')
             
             # Ensure directories exist
             os.makedirs(bin_dir, exist_ok=True)
             
-            # VS2003 compiler paths from configuration
-            vs2003_cl = "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/bin/cl.exe"
-            vs2003_link = "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/bin/link.exe"
-            vs2003_rc = "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/bin/rc.exe"
+            # VS2003 compiler paths from configuration - Windows paths for WSL execution
+            vs2003_cl_windows = "C:\\Program Files (x86)\\Microsoft Visual Studio .NET 2003\\Vc7\\bin\\cl.exe"
+            vs2003_link_windows = "C:\\Program Files (x86)\\Microsoft Visual Studio .NET 2003\\Vc7\\bin\\link.exe"
+            vs2003_rc_windows = "C:\\Program Files (x86)\\Microsoft Visual Studio .NET 2003\\Vc7\\bin\\rc.exe"
             
-            # Check if VS2003 tools exist
-            if not os.path.exists(vs2003_cl):
-                result['error'] = f"VS2003 compiler not found: {vs2003_cl}"
+            # Check if VS2003 tools exist (WSL mount path)
+            vs2003_cl_wsl = "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/bin/cl.exe"
+            if not os.path.exists(vs2003_cl_wsl):
+                result['error'] = f"VS2003 compiler not found: {vs2003_cl_wsl}"
                 return result
             
-            # Find source files
+            # Ensure source files are written to disk before compilation
+            source_files = build_system.get('source_files', {})
+            if source_files:
+                self.logger.info(f"🔧 Writing {len(source_files)} source files to {src_dir} for VS2003 compilation")
+                os.makedirs(src_dir, exist_ok=True)
+                for filename, content in source_files.items():
+                    if filename.endswith('.c') or filename.endswith('.h'):
+                        file_path = os.path.join(src_dir, filename)
+                        with open(file_path, 'w', encoding='utf-8') as f:
+                            f.write(content)
+                        self.logger.info(f"🔧 Written {filename} ({len(content)} chars)")
+            
+            # Find source files on disk
             c_files = []
             if os.path.exists(src_dir):
                 for f in os.listdir(src_dir):
@@ -4218,7 +4221,14 @@ BEGIN
             
             self.logger.info(f"🔧 Found {len(c_files)} source files for VS2003 compilation")
             
-            # VS2003 compiler flags for authentic MFC 7.1 compilation
+            # Convert source file paths to Windows format for VS2003
+            c_files_windows = []
+            for c_file in c_files:
+                # Convert WSL path to Windows path
+                windows_path = c_file.replace("/mnt/c/", "C:\\").replace("/", "\\")
+                c_files_windows.append(windows_path)
+            
+            # VS2003 compiler flags for authentic MFC 7.1 compilation (Windows paths)
             compiler_flags = [
                 "/nologo",           # Suppress startup banner
                 "/W3",               # Warning level 3
@@ -4227,23 +4237,24 @@ BEGIN
                 "/O2",               # Maximum optimization (Release mode)
                 "/DNDEBUG",          # Release mode define
                 "/Zc:wchar_t-",      # VS2003 wchar_t compatibility
-                "/I" + "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/include",
-                "/I" + "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/atlmfc/include",
-                "/I" + "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/PlatformSDK/Include"
+                "/I", "C:\\Program Files (x86)\\Microsoft Visual Studio .NET 2003\\Vc7\\include",
+                "/I", "C:\\Program Files (x86)\\Microsoft Visual Studio .NET 2003\\Vc7\\atlmfc\\include",
+                "/I", "C:\\Program Files (x86)\\Microsoft Visual Studio .NET 2003\\Vc7\\PlatformSDK\\Include"
             ]
             
-            # Output executable path
-            exe_path = os.path.join(bin_dir, "launcher.exe")
+            # Output executable path (Windows format)
+            exe_path_windows = bin_dir.replace("/mnt/c/", "C:\\").replace("/", "\\") + "\\launcher.exe"
+            exe_path = os.path.join(bin_dir, "launcher.exe")  # Keep WSL path for file checks
             
-            # Compile command
-            compile_cmd = [vs2003_cl] + compiler_flags + ["/Fe" + exe_path] + c_files
+            # Build VS2003 compile command for Windows execution
+            compile_cmd = [vs2003_cl_windows] + compiler_flags + ["/Fe" + exe_path_windows] + c_files_windows
             
-            # Add MFC 7.1 libraries
+            # Add MFC 7.1 libraries (Windows paths)
             mfc_libs = [
                 "/link",
-                "/LIBPATH:/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/lib",
-                "/LIBPATH:/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/atlmfc/lib",
-                "/LIBPATH:/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/PlatformSDK/Lib",
+                "/LIBPATH:C:\\Program Files (x86)\\Microsoft Visual Studio .NET 2003\\Vc7\\lib",
+                "/LIBPATH:C:\\Program Files (x86)\\Microsoft Visual Studio .NET 2003\\Vc7\\atlmfc\\lib", 
+                "/LIBPATH:C:\\Program Files (x86)\\Microsoft Visual Studio .NET 2003\\Vc7\\PlatformSDK\\Lib",
                 "mfc71.lib",         # MFC 7.1 static library
                 "msvcr71.lib",       # VS2003 runtime
                 "kernel32.lib",
@@ -4265,13 +4276,23 @@ BEGIN
             
             self.logger.info(f"🔧 VS2003 compile command: {' '.join(compile_cmd[:10])}... (truncated)")
             
-            # Execute compilation
+            # Convert working directory to Windows format - use absolute path
+            output_dir_abs = os.path.abspath(output_dir)
+            output_dir_windows = output_dir_abs.replace("/mnt/c/", "C:\\").replace("/", "\\")
+            
+            # Execute compilation using cmd.exe to run Windows executables from WSL
+            # Change to the correct directory and run the command
+            cd_and_compile = f'cd /d "{output_dir_windows}" && ' + ' '.join(compile_cmd)
+            full_cmd = ["cmd.exe", "/c", cd_and_compile]
+            
+            self.logger.info(f"🔧 VS2003 executing: {cd_and_compile[:100]}...")
+            
             compile_result = subprocess.run(
-                compile_cmd,
+                full_cmd,
                 capture_output=True,
                 text=True,
                 timeout=300,  # 5 minutes
-                cwd=output_dir
+                shell=False
             )
             
             if compile_result.returncode == 0 and os.path.exists(exe_path):
