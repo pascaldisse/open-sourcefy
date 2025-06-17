@@ -1822,6 +1822,34 @@ int ebp(void) { return 0; }
         
         return processed_content
 
+    def _generate_imports_header(self, dependencies: List[str]) -> str:
+        """Generate imports header file for VS2003 compilation (Rule #57: fix build system)"""
+        header_content = []
+        header_content.append("#ifndef IMPORTS_H")
+        header_content.append("#define IMPORTS_H")
+        header_content.append("")
+        header_content.append("// IMPORTS HEADER - Generated for VS2003 MFC 7.1 compilation")
+        header_content.append("// Rule #57 compliance: Build system generated, not manually edited")
+        header_content.append("")
+        header_content.append("#include <windows.h>")
+        
+        # Add MFC headers if MFC dependencies detected
+        if any('mfc71' in dep.lower() for dep in dependencies):
+            header_content.append("#include <afxwin.h>")
+            header_content.append("#include <afxext.h>")
+        
+        header_content.append("")
+        header_content.append("// Library dependencies")
+        for dep in dependencies:
+            if dep.endswith('.lib'):
+                header_content.append(f"#pragma comment(lib, \"{dep}\")")
+        
+        header_content.append("")
+        header_content.append("#endif // IMPORTS_H")
+        
+        self.logger.info(f"🔧 Generated imports header with {len(dependencies)} dependencies")
+        return '\n'.join(header_content)
+
     def _generate_linker_include_options(self, analysis: Dict[str, Any]) -> str:
         """Generate /INCLUDE linker options to force import retention
         
