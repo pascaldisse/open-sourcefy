@@ -52,42 +52,44 @@ build_system:
   # VISUAL STUDIO 2003 PATHS FOR MFC 7.1 COMPATIBILITY (LEGACY BINARY RECONSTRUCTION)
   visual_studio_2003:
     version: "2003"
-    base_path: "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003"
-    vc7_tools_path: "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7"
+    base_path: "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003"
+    vc7_tools_path: "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7"
     framework_path: "/mnt/c/WINDOWS/Microsoft.NET/Framework/v1.1.4322"
     
     # COMPILER PATHS (VS2003)
     compiler:
-      x86: "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/bin/cl.exe"
+      x86: "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/bin/cl.exe"
       # Note: VS2003 only supports x86, no x64 target
     
     # LINKER PATHS (VS2003)
     linker:
-      x86: "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/bin/link.exe"
+      x86: "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/bin/link.exe"
     
     # INCLUDE DIRECTORIES (VS2003)
     includes:
-      - "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/include"
-      - "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/atlmfc/include"
-      - "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/PlatformSDK/Include"
+      - "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/include"
+      - "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/atlmfc/include"
+      - "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/PlatformSDK/Include"
     
     # LIBRARY DIRECTORIES (VS2003)
     libraries:
       x86:
-        - "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/lib"
-        - "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/atlmfc/lib"
-        - "/mnt/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7/PlatformSDK/Lib"
+        - "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/lib"
+        - "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/atlmfc/lib"
+        - "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/PlatformSDK/Lib"
   
-  # MSBUILD CONFIGURATION
+  # BUILD SYSTEM CONFIGURATION
   msbuild:
     # VS2022 MSBuild (PREFERRED)
     vs2022_path: "/mnt/c/Program Files/Microsoft Visual Studio/2022/Preview/MSBuild/Current/Bin/MSBuild.exe"
     
-    # VS2003 MSBuild (FOR MFC 7.1 COMPATIBILITY)
-    vs2003_path: "/mnt/c/WINDOWS/Microsoft.NET/Framework/v1.1.4322/MSBuild.exe"
-    
     # LEGACY MSBuild (NEVER USE - NO FALLBACKS EVER)
     legacy_path: "/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319/MSBuild.exe"
+  
+  # VS2003 BUILD SYSTEM (USES DEVENV, NOT MSBUILD)
+  vs2003_build:
+    devenv_path: "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Common7/IDE/devenv.com"
+    nmake_path: "/mnt/c/Program Files (x86)/Microsoft Visual Studio .NET 2003/Vc7/bin/nmake.exe"
     
     # MSBuild Configuration
     default_configuration: "Release"
