@@ -4,6 +4,7 @@ Orchestrates the Matrix Phase 4 pipeline with master-first execution model
 """
 
 import asyncio
+import json
 import logging
 import time
 from dataclasses import dataclass, field
@@ -98,6 +99,7 @@ class PipelineConfig:
     dry_run: bool = False
     profile_performance: bool = False
     enable_final_validation: bool = True
+    use_cache: bool = True  # Enable caching by default
 
 
 @dataclass
@@ -161,6 +163,128 @@ class MatrixPipelineOrchestrator:
             
         return sorted(agents)
     
+    def _check_agent_cache(self, agent_id: int, output_dir: str) -> Optional[Any]:
+        """Check if agent results are cached and valid"""
+        if not self.config.use_cache:
+            return None
+            
+        try:
+            # Check for agent output directory
+            agent_output_dir = Path(output_dir) / 'agents' / f'agent_{agent_id:02d}_{self._get_agent_name(agent_id).lower()}'
+            
+            if not agent_output_dir.exists():
+                self.logger.info(f"🔍 Agent {agent_id} cache miss: output directory not found at {agent_output_dir}")
+                return None
+            
+            # Check for result file
+            result_file = agent_output_dir / 'agent_result.json'
+            if not result_file.exists():
+                self.logger.info(f"🔍 Agent {agent_id} cache miss: result file not found at {result_file}")
+                return None
+            
+            # Check for generated files (agent-specific)
+            if not self._validate_agent_outputs(agent_id, agent_output_dir):
+                self.logger.info(f"🔍 Agent {agent_id} cache miss: output validation failed")
+                return None
+            
+            # Load cached result
+            with open(result_file, 'r') as f:
+                cached_data = json.load(f)
+            
+            # Validate cache format
+            if not self._validate_cache_format(cached_data):
+                self.logger.debug(f"🔍 Agent {agent_id} cache miss: invalid format")
+                return None
+            
+            self.logger.info(f"✅ Agent {agent_id} cache hit: using cached results")
+            return self._deserialize_agent_result(cached_data)
+            
+        except Exception as e:
+            self.logger.debug(f"🔍 Agent {agent_id} cache miss: {e}")
+            return None
+    
+    def _get_agent_name(self, agent_id: int) -> str:
+        """Get agent name for cache directory"""
+        agent_names = {
+            1: "sentinel", 2: "architect", 3: "merovingian", 4: "agent_smith",
+            5: "neo", 6: "twins", 7: "keymaker", 8: "keymaker", 9: "machine",
+            10: "machine", 11: "oracle", 12: "link", 13: "johnson",
+            14: "cleaner", 15: "analyst", 16: "brown"
+        }
+        return agent_names.get(agent_id, f"agent{agent_id}")
+    
+    def _validate_agent_outputs(self, agent_id: int, agent_output_dir: Path) -> bool:
+        """Validate that agent outputs exist and are complete"""
+        # Basic validation: just check if agent_result.json exists and is non-empty
+        result_file = agent_output_dir / 'agent_result.json'
+        if not result_file.exists() or result_file.stat().st_size == 0:
+            self.logger.debug(f"Missing/empty result file: {result_file}")
+            return False
+        
+        # Optional: check for any additional files that indicate successful completion
+        # This is more lenient - we don't require specific files since agents may save different outputs
+        
+        # Count total files in the directory
+        total_files = sum(1 for f in agent_output_dir.iterdir() if f.is_file())
+        if total_files == 0:
+            self.logger.debug(f"No files found in agent directory: {agent_output_dir}")
+            return False
+        
+        self.logger.debug(f"Agent {agent_id} validation passed: {total_files} files in {agent_output_dir}")
+        return True
+    
+    def _validate_cache_format(self, cached_data: dict) -> bool:
+        """Validate cached result format"""
+        required_keys = ['agent_id', 'status', 'data']
+        return all(key in cached_data for key in required_keys)
+    
+    def _deserialize_agent_result(self, cached_data: dict):
+        """Convert cached data back to AgentResult object"""
+        from .matrix_agents import AgentResult, AgentStatus
+        
+        status_map = {
+            'success': AgentStatus.SUCCESS,
+            'failed': AgentStatus.FAILED,
+            'error': AgentStatus.ERROR
+        }
+        
+        return AgentResult(
+            agent_id=cached_data['agent_id'],
+            status=status_map.get(cached_data['status'], AgentStatus.ERROR),
+            data=cached_data.get('data', {}),
+            error_message=cached_data.get('error_message'),
+            execution_time=cached_data.get('execution_time', 0.0)
+        )
+    
+    def _save_agent_cache(self, agent_id: int, result, output_dir: str):
+        """Save agent result to cache"""
+        if not self.config.use_cache:
+            return
+            
+        try:
+            agent_output_dir = Path(output_dir) / 'agents' / f'agent_{agent_id:02d}_{self._get_agent_name(agent_id).lower()}'
+            agent_output_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Serialize result
+            cache_data = {
+                'agent_id': agent_id,
+                'status': result.status.value if hasattr(result.status, 'value') else str(result.status),
+                'data': result.data if hasattr(result, 'data') else {},
+                'error_message': getattr(result, 'error_message', None),
+                'execution_time': getattr(result, 'execution_time', 0.0),
+                'timestamp': time.time()
+            }
+            
+            # Save to cache file
+            result_file = agent_output_dir / 'agent_result.json'
+            with open(result_file, 'w') as f:
+                json.dump(cache_data, f, indent=2, default=str)
+                
+            self.logger.debug(f"💾 Agent {agent_id} result cached to {result_file}")
+            
+        except Exception as e:
+            self.logger.debug(f"⚠️ Failed to cache Agent {agent_id} result: {e}")
+    
     async def execute_pipeline(self, binary_path: str, output_dir: str) -> MatrixPipelineResult:
         """Execute the complete Matrix pipeline"""
         self.execution_start_time = time.time()
@@ -170,6 +294,7 @@ class MatrixPipelineOrchestrator:
             self.logger.info(f"Pipeline Mode: {self.config.pipeline_mode.value}")
             self.logger.info(f"Execution Mode: {self.config.execution_mode.value}")
             self.logger.info(f"Selected Agents: {self.selected_agents}")
+            self.logger.info(f"Cache Mode: {'Enabled' if self.config.use_cache else 'Disabled'}")
             
             # Step 1: Execute Deus Ex Machina (Master Agent)
             if not await self._execute_master_agent(binary_path, output_dir):
@@ -462,6 +587,17 @@ class MatrixPipelineOrchestrator:
         """Execute a single agent with context"""
         self.logger.info(f"🤖 Attempting to execute Agent {agent_id}...")
         
+        # Check cache first (for --update mode or normal mode)
+        output_dir = self.global_context.get('output_dir', '')
+        self.logger.debug(f"🔍 Agent {agent_id} checking cache in: {output_dir}")
+        cached_result = self._check_agent_cache(agent_id, output_dir)
+        if cached_result is not None:
+            self.logger.info(f"📦 Agent {agent_id} using cached result, skipping execution")
+            # Ensure we return the cached result and skip execution completely
+            return cached_result
+        else:
+            self.logger.info(f"🔍 Agent {agent_id} cache miss, proceeding with execution")
+        
         try:
             # Get agent from agents registry
             from .agents import get_agent_by_id
@@ -516,6 +652,9 @@ class MatrixPipelineOrchestrator:
             self.logger.info(f"🔄 Executing Agent {agent_id} ({type(agent).__name__})...")
             result = agent.execute(agent_context)
             self.logger.info(f"✅ Agent {agent_id} execution completed with status: {result.status if hasattr(result, 'status') else 'unknown'}")
+            
+            # Save result to cache
+            self._save_agent_cache(agent_id, result, output_dir)
             
             # Update global context with any shared memory changes from agent execution
             if 'shared_memory' in agent_context:

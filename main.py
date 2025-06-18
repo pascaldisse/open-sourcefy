@@ -63,6 +63,7 @@ class MatrixCLIConfig:
     binary_path: Optional[str] = None
     output_dir: Optional[str] = None
     update_mode: bool = False
+    clean_mode: bool = False
     
     # Pipeline configuration
     pipeline_mode: str = "full_pipeline" if not MATRIX_AVAILABLE else PipelineMode.FULL_PIPELINE
@@ -133,6 +134,11 @@ class MatrixCLI:
             "--update", 
             action="store_true",
             help="Update mode: save to output/{binary-name}/latest and only update files, don't remove them"
+        )
+        parser.add_argument(
+            "--clean", 
+            action="store_true",
+            help="Clean mode: delete output/{binary-name} folder and perform a clean build"
         )
         
         # Pipeline mode arguments
@@ -324,6 +330,7 @@ class MatrixCLI:
         config.binary_path = args.binary
         config.output_dir = args.output_dir
         config.update_mode = args.update
+        config.clean_mode = args.clean
         
         # Pipeline mode
         config.pipeline_mode = getattr(args, 'pipeline_mode', None) or PipelineMode.FULL_PIPELINE
@@ -621,7 +628,8 @@ class MatrixCLI:
 Usage Examples:
   %(prog)s                                    # Full pipeline on default binary
   %(prog)s launcher.exe                       # Full pipeline on specific binary
-  %(prog)s --update                           # Update mode: save to output/{binary}/latest
+  %(prog)s --update                           # Update mode: use cache and incremental builds
+  %(prog)s --clean                            # Clean mode: delete output and rebuild from scratch
   %(prog)s --decompile-only                  # Decompilation only
   %(prog)s --agents 1,3,7                    # Run specific agents
   %(prog)s --agents 1-5                      # Run agent range
@@ -740,6 +748,10 @@ Usage Examples:
                 self.logger.error(f"Binary file not found: {binary_path}")
                 return False
             
+            # Handle clean mode
+            if config.clean_mode:
+                self._handle_clean_mode(binary_path)
+            
             # Setup output directory
             output_dir = self._setup_output_directory(config.output_dir, binary_path, config.update_mode)
             
@@ -779,7 +791,8 @@ Usage Examples:
                 debug=config.debug,
                 save_reports=config.save_reports,
                 dry_run=config.dry_run,
-                profile_performance=config.profile_performance
+                profile_performance=config.profile_performance,
+                use_cache=not config.clean_mode  # Disable cache only in clean mode
             )
             
             # Create agents
@@ -884,6 +897,24 @@ Usage Examples:
         except (OSError, ValueError) as e:
             self.logger.error(f"Invalid binary path: {e}")
             return None
+    
+    def _handle_clean_mode(self, binary_path: Path):
+        """Handle clean mode by deleting the binary output folder"""
+        import shutil
+        
+        binary_name = binary_path.stem if binary_path else 'unknown_binary'
+        output_base = project_root / "output" / binary_name
+        
+        if output_base.exists():
+            self.logger.info(f"🧹 Clean mode: Removing {output_base}")
+            try:
+                shutil.rmtree(output_base)
+                self.logger.info(f"✅ Successfully removed {output_base}")
+            except Exception as e:
+                self.logger.error(f"❌ Failed to remove {output_base}: {e}")
+                raise
+        else:
+            self.logger.info(f"🧹 Clean mode: {output_base} does not exist, nothing to clean")
     
     def _setup_output_directory(self, output_dir: Optional[str], binary_path: Optional[Path] = None, update_mode: bool = False) -> Path:
         """Setup output directory securely."""

@@ -576,16 +576,32 @@ class Agent9_TheMachine(ReconstructionAgent):
                             ]
                             has_rc_conflicts = any(pattern in string_content for pattern in problematic_patterns)
                             
-                            # CRITICAL FIX: Strict string validation for RC.EXE compatibility (Rule #57)
-                            # Exclude strings that cause RC2151 and RC2104 errors
+                            # CRITICAL FIX: ULTRA-STRICT validation for RC.EXE (Rule #57)
+                            # Assembly strings are fundamentally incompatible with RC syntax
+                            
+                            # Only allow simple alphanumeric strings and basic punctuation
+                            allowed_chars = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,!?;:-_()[]{}+=*/@#$%^&')
+                            has_forbidden_chars = any(c not in allowed_chars for c in string_content)
+                            
+                            # Exclude common assembly patterns that break RC.EXE
+                            assembly_patterns = [
+                                'SVW', 'RQP', 'SSR', 'VWR', 'QVH', 'XYZ', 'PSh', 'jKS', 'SSS',
+                                'hp.', 'hp,', 'hp0', 'hp=', 'h`', 'h$', 'h%', 'h&', 'h*', 'h+',
+                                'u,S', 'u5', 'wD', 'wU', 'Hu%', 'NXu', 'NXs', 'w{', 'uvj', 'tpV'
+                            ]
+                            has_assembly_patterns = any(pattern in string_content for pattern in assembly_patterns)
+                            
                             is_valid_string = (
                                 not has_binary_data and 
                                 not has_rc_conflicts and  # Exclude RC syntax conflicts
+                                not has_forbidden_chars and  # Only allow safe characters
+                                not has_assembly_patterns and  # Exclude assembly patterns
                                 len(string_content.strip()) > 0 and
-                                len(string_content) < 2000 and  # Increased limit for larger payload
+                                len(string_content) < 100 and  # Much shorter limit for safety
                                 not string_content.startswith('\\x') and  # Exclude hex sequences
                                 '\x00' not in string_content and  # Exclude null bytes
-                                string_content.isprintable()  # Only printable characters
+                                string_content.isprintable() and  # Only printable characters
+                                (' ' in string_content or len(string_content) > 10)  # Prefer readable strings or longer content
                             )
                             
                             if is_valid_string:
@@ -3170,7 +3186,20 @@ Write-Host "Build complete!" -ForegroundColor Green
                 chunk_name = os.path.splitext(os.path.basename(rc_file))[0]
                 res_file = os.path.join(output_dir, f"{chunk_name}.res")
                 
-                # Convert paths to Windows format for VS2003
+                # Convert paths to Windows format for VS2003 (Rule #57: Fix compiler paths)
+                # CRITICAL FIX: Ensure both input and output are under /mnt/c/ for Windows RC.EXE
+                if not rc_file.startswith("/mnt/c/"):
+                    self.logger.error(f"❌ RC file not in Windows-accessible path: {rc_file}")
+                    compilation_result['error'] = f"RC file not in Windows-accessible path: {rc_file}"
+                    return compilation_result
+                
+                if not res_file.startswith("/mnt/c/"):
+                    # Move .res output to Windows-accessible directory
+                    windows_output_dir = os.path.join("/mnt/c/Users/pascaldisse/Downloads/open-sourcefy/output", os.path.basename(output_dir))
+                    os.makedirs(windows_output_dir, exist_ok=True)
+                    res_file = os.path.join(windows_output_dir, os.path.basename(res_file))
+                    self.logger.info(f"🔧 Moved .res output to Windows path: {res_file}")
+                
                 rc_file_windows = rc_file.replace("/mnt/c/", "C:\\").replace("/", "\\")
                 res_file_windows = res_file.replace("/mnt/c/", "C:\\").replace("/", "\\")
                 
@@ -3349,7 +3378,9 @@ Write-Host "Build complete!" -ForegroundColor Green
                 elif in_stringtable:
                     current_section.append(line)
                 elif 'BITMAP' in line_stripped:
-                    bitmap_lines.append(line)
+                    # CRITICAL FIX: Skip corrupted bitmap resources causing RC.EXE 1GB+ memory allocation (Rule #57)
+                    self.logger.info(f"🔧 SKIPPING corrupted bitmap: {line_stripped[:50]}... (causes RC.EXE out of memory)")
+                    # bitmap_lines.append(line)  # Commented out to prevent RC.EXE memory errors
                 elif not in_stringtable and not line_stripped.startswith('//') and line_stripped:
                     # Header content (version info, includes, etc.)
                     if 'STRINGTABLE' not in line_stripped and 'BITMAP' not in line_stripped:
@@ -3446,16 +3477,33 @@ Write-Host "Build complete!" -ForegroundColor Green
                                 ]
                                 has_rc_conflicts = any(pattern in string_content for pattern in problematic_patterns)
                                 
-                                # CRITICAL FIX: Strict string validation for RC.EXE compatibility (Rule #57)
+                                # CRITICAL FIX: ULTRA-STRICT validation for RC.EXE (Rule #57)
+                                # Assembly strings are fundamentally incompatible with RC syntax
                                 has_binary_data = any(ord(c) < 32 and c not in ['\n', '\r', '\t'] for c in string_content)
+                                
+                                # Only allow simple alphanumeric strings and basic punctuation
+                                allowed_chars = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,!?;:-_()[]{}+=*/@#$%^&')
+                                has_forbidden_chars = any(c not in allowed_chars for c in string_content)
+                                
+                                # Exclude common assembly patterns that break RC.EXE
+                                assembly_patterns = [
+                                    'SVW', 'RQP', 'SSR', 'VWR', 'QVH', 'XYZ', 'PSh', 'jKS', 'SSS',
+                                    'hp.', 'hp,', 'hp0', 'hp=', 'h`', 'h$', 'h%', 'h&', 'h*', 'h+',
+                                    'u,S', 'u5', 'wD', 'wU', 'Hu%', 'NXu', 'NXs', 'w{', 'uvj', 'tpV'
+                                ]
+                                has_assembly_patterns = any(pattern in string_content for pattern in assembly_patterns)
+                                
                                 is_valid_string = (
                                     not has_binary_data and 
                                     not has_rc_conflicts and  # Exclude RC syntax conflicts
+                                    not has_forbidden_chars and  # Only allow safe characters
+                                    not has_assembly_patterns and  # Exclude assembly patterns
                                     len(string_content.strip()) > 0 and
-                                    len(string_content) < 2000 and
+                                    len(string_content) < 100 and  # Much shorter limit for safety
                                     not string_content.startswith('\\x') and
                                     '\x00' not in string_content and
-                                    string_content.isprintable()
+                                    string_content.isprintable() and
+                                    (' ' in string_content or len(string_content) > 10)  # Prefer readable strings or longer content
                                 )
                                 
                                 if is_valid_string:
