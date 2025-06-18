@@ -4508,30 +4508,49 @@ BEGIN
             "dl", "dh", "cl", "ch", "al", "ah", "bl", "bh"
         ]
         
-        # CRITICAL FIX: Use extern "C" linkage and __declspec(dllexport) for VS2003 compatibility
-        content.append("#ifdef __cplusplus")
-        content.append("extern \"C\" {")
-        content.append("#endif")
-        content.append("")
-        
+        # CRITICAL FIX: Use proper static linking for VS2003 EXE (not DLL export)
+        # Rule #57: Fix build system for proper symbol resolution in static executable
         for reg in assembly_registers:
-            content.append(f"__declspec(dllexport) int _{reg} = 0;  // {reg.upper()} register stub")
+            content.append(f"int _{reg} = 0;  // {reg.upper()} register stub")
         
         content.append("")
         content.append("// Function to prevent linker optimization of register stubs")
-        content.append("__declspec(dllexport) void force_register_retention() {")
+        content.append("void force_register_retention() {")
         content.append("    // Reference all register stubs to prevent optimization")
         for reg in assembly_registers:
             content.append(f"    (void)_{reg};")
         content.append("}")
+        content.append("")
         
-        content.append("")
-        content.append("#ifdef __cplusplus")
+        # CRITICAL FIX: Add initialization function to ensure symbols are retained
+        content.append("// Initialization function to force symbol retention (Rule #57)")
+        content.append("void __init_assembly_stubs() {")
+        content.append("    force_register_retention();")
         content.append("}")
-        content.append("#endif")
         content.append("")
+        
         
         return "\n".join(content)
+    
+    def _generate_assembly_stubs_def_file(self) -> str:
+        """Generate module definition file for assembly register symbols
+        
+        Rule #57: Fix build system by creating .def file to properly export symbols
+        """
+        assembly_registers = [
+            "edi", "esi", "ebx", "edx", "ecx", "eax", "ebp", "esp",
+            "di", "si", "dx", "cx", "ax", "bp", "sp",
+            "dl", "dh", "cl", "ch", "al", "ah", "bl", "bh"
+        ]
+        
+        def_content = []
+        def_content.append("EXPORTS")
+        for reg in assembly_registers:
+            def_content.append(f"_{reg}")
+        def_content.append("force_register_retention")
+        def_content.append("__init_assembly_stubs")
+        
+        return "\n".join(def_content)
     
     def _detect_vs2003_availability(self):
         """Check if Visual Studio 2003 is available for MFC 7.1 compilation."""
@@ -5437,7 +5456,14 @@ BEGIN
                 f.write(assembly_stubs_content)
             with open(assembly_stubs_src, 'w', encoding='utf-8') as f:
                 f.write(assembly_stubs_content)
-            self.logger.info(f"✅ Generated assembly_stubs.c for VS2003 Rule #57 compliance: resolves _edi, _ebx linker errors")
+            
+            # CRITICAL RULE #57 FIX: Generate assembly_stubs.def for proper symbol export
+            assembly_stubs_def_content = self._generate_assembly_stubs_def_file()
+            assembly_stubs_def = os.path.join(compilation_dir, 'assembly_stubs.def')
+            with open(assembly_stubs_def, 'w', encoding='utf-8') as f:
+                f.write(assembly_stubs_def_content)
+            
+            self.logger.info(f"✅ Generated assembly_stubs.c and .def for VS2003 Rule #57 compliance: resolves _edi, _ebx linker errors")
             
             # CRITICAL RULE #57 FIX: Generate decompiler_overrides.h for VS2003 compilation
             override_header = self._generate_decompiler_overrides_header(source_files)
@@ -5612,6 +5638,7 @@ BEGIN
                 vs2003_link.append('embedded_strings.obj')
                 vs2003_link.extend([
                     '/link',         # CRITICAL FIX: Link flag separator for VS2003 (Rule #57)
+                    '/DEF:assembly_stubs.def',  # CRITICAL FIX: Use .def file for proper symbol export (Rule #57)
                     '/FORCE:MULTIPLE',  # Rule #57: Fix linker, not source - allow duplicate symbols
                     '/IGNORE:4006',     # Ignore symbol redefinition warnings
                     '/IGNORE:4088',     # Ignore section attribute warnings
@@ -5625,6 +5652,7 @@ BEGIN
             else:
                 vs2003_link.extend([
                     '/link',         # CRITICAL FIX: Link flag separator for VS2003 (Rule #57)
+                    '/DEF:assembly_stubs.def',  # CRITICAL FIX: Use .def file for proper symbol export (Rule #57)
                     '/FORCE:MULTIPLE',  # Rule #57: Fix linker, not source - allow duplicate symbols
                     '/IGNORE:4006',     # Ignore symbol redefinition warnings
                     '/IGNORE:4088',     # Ignore section attribute warnings
