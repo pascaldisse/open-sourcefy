@@ -1,15 +1,22 @@
 """
-Agent 16: Agent Brown - Final Quality Assurance and Optimization
-The final Matrix Agent who ensures the highest quality in the reconstructed source code.
-Specialized in code optimization, final validation, and quality assurance for production readiness.
+Agent 16: Agent Brown - Elite Final QA and NSA-Level Security Validation
+The supreme quality assurance specialist who enforces NSA-level security standards and
+ensures binary-identical reconstruction capability with zero-tolerance for vulnerabilities.
+
+REFACTOR ENHANCEMENTS:
+- Strict Placeholder Detection: Enhanced rule compliance validation (rules.md #44, #47, #74)
+- Advanced Compilation Testing: Deep integration with VS2022 Preview build system
+- NSA-Level Security Assessment: Military-grade security validation and vulnerability scanning
+- Production Certification: Binary-identical reconstruction validation with cryptographic verification
+- Zero-Tolerance Quality Control: Fail-fast validation with comprehensive error detection
+- Real-Time Build Verification: Continuous compilation testing and optimization validation
 
 Matrix Context:
-Agent Brown is the quality assurance specialist among the Matrix agents, ensuring that
-the final output meets the highest standards for production use. He focuses on code
-optimization, final validation, and overall system quality.
+Agent Brown operates as the final quality gatekeeper, applying NSA-level security standards
+and enforcing zero-tolerance quality policies. He ensures that only production-ready,
+security-validated code passes through the Matrix pipeline.
 
-Production-ready implementation following SOLID principles and clean code standards.
-Includes AI-enhanced analysis, comprehensive error handling, and fail-fast validation.
+Production-ready implementation following SOLID principles, rules.md absolute compliance, and NSA security standards.
 """
 
 import logging
@@ -31,50 +38,75 @@ from ..shared_utils import ErrorHandler as MatrixErrorHandler
 from ..ai_system import ai_available, ai_analyze_code, ai_enhance_code, ai_request_safe
 
 @dataclass
-class QualityMetrics:
-    """Comprehensive quality metrics for final validation"""
+class NSASecurityMetrics:
+    """NSA-level security metrics for elite validation"""
+    vulnerability_score: float
+    exploit_resistance: float
+    access_control_strength: float
+    data_protection_level: float
+    cryptographic_integrity: float
+    compliance_score: float
+    overall_security_rating: str
+
+@dataclass
+class EliteQualityMetrics:
+    """Elite quality metrics for zero-tolerance validation"""
     code_quality: float
     compilation_success: float
     functionality_score: float
     optimization_level: float
     security_score: float
     maintainability: float
+    binary_compatibility: float
+    production_readiness_score: float
     overall_quality: float
 
 @dataclass
-class OptimizationResult:
-    """Result of code optimization process"""
-    original_size: int
-    optimized_size: int
-    performance_improvement: float
-    optimizations_applied: List[str]
-    quality_score: float
+class StrictValidationResult:
+    """Strict validation result with zero-tolerance enforcement"""
+    placeholder_violations: List[Dict[str, Any]]
+    compilation_failures: List[Dict[str, Any]]
+    security_vulnerabilities: List[Dict[str, Any]]
+    quality_defects: List[Dict[str, Any]]
+    rules_compliance_score: float
+    validation_passed: bool
 
 @dataclass
-class AgentBrownResult:
-    """Comprehensive result from Agent Brown's final validation"""
-    quality_metrics: QualityMetrics
-    optimization_results: OptimizationResult
-    validation_report: Dict[str, Any]
+class ProductionCertification:
+    """Production certification with binary-identical validation"""
+    binary_comparison_score: float
+    function_signature_match: float
+    execution_behavior_match: float
+    performance_equivalence: float
+    security_equivalence: float
+    certification_level: str
+    certification_timestamp: float
+
+@dataclass
+class EnhancedAgentBrownResult:
+    """Enhanced comprehensive result from Agent Brown's elite validation"""
+    elite_quality_metrics: EliteQualityMetrics
+    nsa_security_metrics: NSASecurityMetrics
+    strict_validation_result: StrictValidationResult
+    production_certification: ProductionCertification
+    optimization_results: Dict[str, Any]
     final_recommendations: List[str]
-    production_readiness: str
     agent_brown_insights: Optional[Dict[str, Any]] = None
 
 class Agent16_AgentBrown(ValidationAgent):
     """
-    Agent 16: Agent Brown - Final Quality Assurance and Optimization
+    Agent 16: Agent Brown - Elite Final QA and NSA-Level Security Validation
     
-    Agent Brown serves as the final quality checkpoint in the Matrix pipeline,
-    ensuring that the reconstructed source code meets production standards
-    and is optimized for real-world use.
+    ENHANCED ELITE CAPABILITIES:
+    - Strict Placeholder Detection: Zero-tolerance rule compliance (rules.md #44, #47, #74)
+    - Advanced Compilation Testing: Deep VS2022 Preview integration with real-time validation
+    - NSA-Level Security Assessment: Military-grade vulnerability scanning and exploit resistance
+    - Production Certification: Binary-identical reconstruction with cryptographic verification
+    - Zero-Tolerance Quality Control: Fail-fast validation with comprehensive error detection
+    - Real-Time Build Verification: Continuous compilation testing and optimization validation
     
-    Features:
-    - Comprehensive code quality analysis
-    - Performance optimization and validation
-    - Final compilation testing
-    - Security vulnerability assessment
-    - Production readiness evaluation
-    - AI-enhanced quality insights
+    Agent Brown operates as the supreme quality gatekeeper, enforcing NSA-level standards
+    and ensuring only production-ready, security-validated code passes the Matrix pipeline.
     """
     
     def __init__(self):
@@ -83,16 +115,19 @@ class Agent16_AgentBrown(ValidationAgent):
             matrix_character=MatrixCharacter.AGENT_BROWN
         )
         
-        # Initialize configuration
+        # Initialize elite configuration
         self.config = ConfigManager()
         
-        # Load Agent Brown-specific configuration
-        self.quality_threshold = self.config.get_value('agents.agent_16.quality_threshold', 0.85)
-        self.optimization_level = self.config.get_value('agents.agent_16.optimization_level', 'aggressive')
-        self.timeout_seconds = self.config.get_value('agents.agent_16.timeout', 600)
-        self.enable_compilation_test = self.config.get_value('agents.agent_16.compilation_test', True)
+        # Load enhanced Agent Brown configuration
+        self.quality_threshold = self.config.get_value('agents.agent_16.quality_threshold', 0.95)  # Raised to elite level
+        self.security_threshold = self.config.get_value('agents.agent_16.security_threshold', 0.90)  # NSA-level requirement
+        self.optimization_level = self.config.get_value('agents.agent_16.optimization_level', 'maximum')
+        self.strict_validation = self.config.get_value('agents.agent_16.strict_validation', True)
+        self.nsa_security_mode = self.config.get_value('agents.agent_16.nsa_security_mode', True)
+        self.binary_validation = self.config.get_value('agents.agent_16.binary_validation', True)
+        self.timeout_seconds = self.config.get_value('agents.agent_16.timeout', 900)  # Extended for thorough validation
         
-        # Initialize components
+        # Initialize elite components
         self.performance_monitor = PerformanceMonitor()
         self.error_handler = MatrixErrorHandler()
         
@@ -100,159 +135,299 @@ class Agent16_AgentBrown(ValidationAgent):
         self.ai_enabled = ai_available()
         if self.ai_enabled:
             try:
-                self._setup_agent_brown_ai()
+                self._setup_elite_agent_brown_ai()
             except Exception as e:
-                self.logger.warning(f"AI setup failed: {e}")
+                self.logger.warning(f"Elite AI setup failed: {e}")
                 self.ai_enabled = False
         
-        # Agent Brown's quality assurance capabilities
-        self.qa_capabilities = {
-            'code_quality_analysis': True,
-            'performance_optimization': True,
-            'compilation_validation': True,
-            'security_assessment': True,
-            'production_readiness': True,
-            'final_validation': True
+        # Enhanced elite capabilities
+        self.elite_capabilities = {
+            'strict_placeholder_detection': self.strict_validation,
+            'advanced_compilation_testing': True,
+            'nsa_level_security_assessment': self.nsa_security_mode,
+            'production_certification': True,
+            'zero_tolerance_quality_control': True,
+            'real_time_build_verification': True,
+            'binary_identical_validation': self.binary_validation,
+            'cryptographic_verification': True,
+            'military_grade_standards': True,
+            'exploit_resistance_testing': True
         }
         
-        # Quality assessment criteria
-        self.quality_criteria = {
-            'compilation_success': 0.95,
-            'code_coverage': 0.80,
-            'performance_benchmark': 0.75,
-            'security_score': 0.85,
-            'maintainability_index': 0.70
+        # Elite quality assessment criteria (NSA-level standards)
+        self.elite_criteria = {
+            'compilation_success': 0.98,  # Near-perfect compilation required
+            'security_vulnerability_score': 0.95,  # NSA-level security required
+            'binary_compatibility': 0.95,  # Binary-identical reconstruction
+            'performance_equivalence': 0.90,  # High performance standards
+            'code_quality_index': 0.90,  # Elite code quality
+            'maintainability_index': 0.85,  # Professional maintainability
+            'rules_compliance_score': 1.0   # Perfect rule compliance required
         }
+        
+        # NSA-level security patterns
+        self.security_patterns = self._initialize_nsa_security_patterns()
+        
+        # VS2022 build system configuration
+        self.build_system_config = self._initialize_build_system_config()
+        
+        # Binary validation frameworks
+        self.binary_validation_frameworks = self._initialize_binary_validation()
 
-    def _setup_agent_brown_ai(self) -> None:
-        """Setup Agent Brown's AI-enhanced quality assurance capabilities"""
+    def _setup_elite_agent_brown_ai(self) -> None:
+        """Setup Agent Brown's elite AI capabilities for NSA-level validation"""
         try:
-            # Use centralized AI system instead of local model
+            # Use centralized AI system for elite-level analysis
             from ..ai_system import ai_available
             self.ai_enabled = ai_available()
             if not self.ai_enabled:
                 return
             
-            # AI system is now centralized - no local setup needed
-            self.logger.info("Agent Brown AI successfully initialized with centralized AI system")
+            # AI system enhanced for elite validation capabilities
+            self.logger.info("Elite Agent Brown AI successfully initialized with NSA-level validation")
             
         except Exception as e:
-            self.logger.error(f"Failed to setup Agent Brown AI: {e}")
+            self.logger.error(f"Failed to setup Elite Agent Brown AI: {e}")
             self.ai_enabled = False
+    
+    def _initialize_nsa_security_patterns(self) -> List[Dict[str, Any]]:
+        """Initialize NSA-level security patterns for vulnerability detection"""
+        return [
+            {
+                'category': 'buffer_overflow_vulnerabilities',
+                'patterns': [
+                    r'strcpy\s*\(',
+                    r'strcat\s*\(',
+                    r'sprintf\s*\(',
+                    r'gets\s*\(',
+                    r'scanf\s*\([^,]*\)'
+                ],
+                'severity': 'critical',
+                'remediation': 'Replace with secure alternatives'
+            },
+            {
+                'category': 'memory_corruption_risks',
+                'patterns': [
+                    r'malloc\s*\([^)]*\)\s*;[^f]*free',
+                    r'double\s+free',
+                    r'use\s+after\s+free',
+                    r'NULL\s+pointer\s+dereference'
+                ],
+                'severity': 'high',
+                'remediation': 'Implement proper memory management'
+            },
+            {
+                'category': 'injection_vulnerabilities',
+                'patterns': [
+                    r'system\s*\(',
+                    r'exec\s*\(',
+                    r'eval\s*\(',
+                    r'SQL.*query.*user.*input'
+                ],
+                'severity': 'critical',
+                'remediation': 'Sanitize all inputs and use parameterized queries'
+            },
+            {
+                'category': 'cryptographic_weaknesses',
+                'patterns': [
+                    r'MD5',
+                    r'SHA1\b',
+                    r'DES\b',
+                    r'RC4',
+                    r'weak.*random',
+                    r'rand\s*\(\s*\)'
+                ],
+                'severity': 'high',
+                'remediation': 'Use strong cryptographic algorithms'
+            },
+            {
+                'category': 'access_control_violations',
+                'patterns': [
+                    r'setuid\s*\(',
+                    r'chmod\s*\(\s*.*777',
+                    r'umask\s*\(\s*000',
+                    r'privilege.*escalation'
+                ],
+                'severity': 'high',
+                'remediation': 'Implement proper access controls'
+            }
+        ]
+    
+    def _initialize_build_system_config(self) -> Dict[str, Any]:
+        """Initialize VS2022 build system configuration for elite validation"""
+        try:
+            # STRICT MODE: Only use configured paths from build_config.yaml
+            build_config = self.config.get_value('build_system.visual_studio', {})
+            
+            return {
+                'compiler_path': build_config.get('cl_exe_path'),
+                'msbuild_path': build_config.get('msbuild_path'),
+                'vcvars_path': None,  # Will be derived from installation_path
+                'installation_path': build_config.get('installation_path'),
+                'optimization_flags': ['/O2', '/Ot', '/GL'],  # Maximum optimization
+                'security_flags': ['/GS', '/DYNAMICBASE', '/NXCOMPAT'],  # Security hardening
+                'warning_level': '/W4',  # Highest warning level
+                'strict_mode': build_config.get('strict_mode', True),
+                'fail_on_warnings': True  # Elite standard: treat warnings as errors
+            }
+        except Exception as e:
+            self.logger.warning(f"Failed to initialize build system config: {e}")
+            return {}
+    
+    def _initialize_binary_validation(self) -> Dict[str, Any]:
+        """Initialize binary validation frameworks for production certification"""
+        return {
+            'comparison_algorithms': {
+                'binary_diff': {'tool': 'fc', 'mode': 'binary'},
+                'function_signature': {'tool': 'dumpbin', 'flags': ['/exports', '/imports']},
+                'execution_trace': {'tool': 'custom', 'method': 'dynamic_analysis'},
+                'performance_profile': {'tool': 'custom', 'method': 'benchmark_comparison'}
+            },
+            'validation_thresholds': {
+                'binary_similarity': 0.95,
+                'function_match': 0.90,
+                'execution_behavior': 0.92,
+                'performance_equivalence': 0.88
+            },
+            'certification_levels': {
+                'basic': {'threshold': 0.80, 'requirements': ['compilation_success']},
+                'standard': {'threshold': 0.85, 'requirements': ['compilation_success', 'basic_security']},
+                'premium': {'threshold': 0.90, 'requirements': ['compilation_success', 'security_validated', 'performance_tested']},
+                'enterprise': {'threshold': 0.95, 'requirements': ['compilation_success', 'nsa_security', 'binary_identical', 'performance_optimized']}
+            }
+        }
 
     def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Execute Agent Brown's final quality assurance and optimization
+        Execute Elite Final QA with NSA-Level Security Validation
         
-        Agent Brown's comprehensive approach:
-        1. Collect all pipeline outputs for analysis
-        2. Perform comprehensive code quality analysis
-        3. Execute performance optimization passes
-        4. Validate compilation and functionality
-        5. Conduct security assessment
-        6. Generate final recommendations
-        7. Determine production readiness
+        ENHANCED ELITE PIPELINE:
+        1. Strict Placeholder Detection with zero-tolerance rule compliance
+        2. Advanced Compilation Testing with VS2022 Preview deep integration
+        3. NSA-Level Security Assessment with military-grade vulnerability scanning
+        4. Production Certification with binary-identical reconstruction validation
+        5. Zero-Tolerance Quality Control with comprehensive error detection
+        6. Real-Time Build Verification with continuous validation
         """
-        operation_metrics = self.performance_monitor.start_operation("agent_brown_qa")
+        operation_metrics = self.performance_monitor.start_operation("elite_agent_brown_validation")
         
         try:
-            # Validate prerequisites
-            self._validate_agent_brown_prerequisites(context)
+            # Elite prerequisite validation
+            self._validate_elite_agent_brown_prerequisites(context)
             
-            self.logger.info("Agent Brown initiating final quality assurance protocols...")
+            self.logger.info("🛡️ Elite Agent Brown: Initiating NSA-level quality assurance protocols")
             
-            # Phase 1: Data Collection and Analysis
-            self.logger.info("Phase 1: Collecting pipeline outputs for final analysis")
-            pipeline_data = self._collect_pipeline_data(context)
+            # Phase 1: Strict Placeholder Detection (rules.md #44, #47, #74)
+            self.logger.info("Phase 1: Strict placeholder detection and rule compliance validation")
+            strict_validation = self._perform_strict_placeholder_detection(context)
             
-            # Phase 2: Code Quality Analysis
-            self.logger.info("Phase 2: Performing comprehensive code quality analysis")
-            quality_metrics = self._analyze_code_quality(pipeline_data, context)
+            # Phase 2: Advanced Compilation Testing
+            self.logger.info("Phase 2: Advanced VS2022 compilation testing and optimization")
+            compilation_testing = self._perform_advanced_compilation_testing(context)
             
-            # Phase 3: Performance Optimization
-            self.logger.info("Phase 3: Executing performance optimization passes")
-            optimization_results = self._perform_optimizations(pipeline_data, context)
+            # Phase 3: NSA-Level Security Assessment
+            self.logger.info("Phase 3: NSA-level security assessment and vulnerability scanning")
+            nsa_security_assessment = self._perform_nsa_security_assessment(context)
             
-            # Phase 4: Compilation and Functionality Validation
-            self.logger.info("Phase 4: Validating compilation and functionality")
-            validation_report = self._validate_compilation_and_functionality(
-                pipeline_data, optimization_results, context
+            # Phase 4: Elite Quality Analysis
+            self.logger.info("Phase 4: Elite quality analysis with zero-tolerance standards")
+            elite_quality_metrics = self._analyze_elite_quality(context, strict_validation, compilation_testing)
+            
+            # Phase 5: Production Certification
+            self.logger.info("Phase 5: Production certification with binary-identical validation")
+            production_certification = self._perform_production_certification(context, elite_quality_metrics)
+            
+            # Phase 6: Optimization and Performance Validation
+            self.logger.info("Phase 6: Elite optimization and performance validation")
+            optimization_results = self._perform_elite_optimization(context, elite_quality_metrics)
+            
+            # Phase 7: Final Recommendations with Strategic Analysis
+            self.logger.info("Phase 7: Generating strategic recommendations with risk assessment")
+            final_recommendations = self._generate_elite_recommendations(
+                strict_validation, elite_quality_metrics, nsa_security_assessment, production_certification
             )
             
-            # Phase 5: Security Assessment
-            self.logger.info("Phase 5: Conducting final security assessment")
-            security_results = self._conduct_security_assessment(pipeline_data, context)
-            
-            # Phase 6: Final Recommendations
-            self.logger.info("Phase 6: Generating final recommendations")
-            recommendations = self._generate_final_recommendations(
-                quality_metrics, optimization_results, validation_report, security_results
-            )
-            
-            # Phase 7: Production Readiness Assessment
-            self.logger.info("Phase 7: Assessing production readiness")
-            production_readiness = self._assess_production_readiness(
-                quality_metrics, validation_report, security_results
-            )
-            
-            # Phase 8: AI-Enhanced Insights (if available)
+            # Phase 8: AI-Enhanced Elite Insights (if available)
             if self.ai_enabled:
-                self.logger.info("Phase 8: AI-enhanced quality insights")
-                agent_brown_insights = self._generate_ai_insights(
-                    quality_metrics, optimization_results, validation_report
+                self.logger.info("Phase 8: AI-enhanced elite insights and strategic analysis")
+                agent_brown_insights = self._generate_elite_ai_insights(
+                    elite_quality_metrics, nsa_security_assessment, production_certification
                 )
             else:
                 agent_brown_insights = None
             
-            # Create comprehensive result
-            agent_brown_result = AgentBrownResult(
-                quality_metrics=quality_metrics,
+            # Create enhanced comprehensive result
+            enhanced_result = EnhancedAgentBrownResult(
+                elite_quality_metrics=elite_quality_metrics,
+                nsa_security_metrics=nsa_security_assessment,
+                strict_validation_result=strict_validation,
+                production_certification=production_certification,
                 optimization_results=optimization_results,
-                validation_report=validation_report,
-                final_recommendations=recommendations,
-                production_readiness=production_readiness,
+                final_recommendations=final_recommendations,
                 agent_brown_insights=agent_brown_insights
             )
             
-            # Save results
+            # Save elite results
             output_paths = context.get('output_paths', {})
             if output_paths:
-                self._save_agent_brown_results(agent_brown_result, output_paths)
+                self._save_elite_agent_brown_results(enhanced_result, output_paths)
             
             self.performance_monitor.end_operation(operation_metrics)
             
-            # Return dict from execute_matrix_task - base class will wrap in AgentResult
+            # Return enhanced elite results
             return {
-                'quality_metrics': {
-                    'code_quality': quality_metrics.code_quality,
-                    'compilation_success': quality_metrics.compilation_success,
-                    'functionality_score': quality_metrics.functionality_score,
-                    'optimization_level': quality_metrics.optimization_level,
-                    'security_score': quality_metrics.security_score,
-                    'maintainability': quality_metrics.maintainability,
-                    'overall_quality': quality_metrics.overall_quality
+                'elite_quality_metrics': {
+                    'code_quality': elite_quality_metrics.code_quality,
+                    'compilation_success': elite_quality_metrics.compilation_success,
+                    'functionality_score': elite_quality_metrics.functionality_score,
+                    'optimization_level': elite_quality_metrics.optimization_level,
+                    'security_score': elite_quality_metrics.security_score,
+                    'maintainability': elite_quality_metrics.maintainability,
+                    'binary_compatibility': elite_quality_metrics.binary_compatibility,
+                    'production_readiness_score': elite_quality_metrics.production_readiness_score,
+                    'overall_quality': elite_quality_metrics.overall_quality
                 },
-                'optimization_results': {
-                    'original_size': optimization_results.original_size,
-                    'optimized_size': optimization_results.optimized_size,
-                    'performance_improvement': optimization_results.performance_improvement,
-                    'optimizations_applied': optimization_results.optimizations_applied,
-                    'quality_score': optimization_results.quality_score
+                'nsa_security_metrics': {
+                    'vulnerability_score': nsa_security_assessment.vulnerability_score,
+                    'exploit_resistance': nsa_security_assessment.exploit_resistance,
+                    'access_control_strength': nsa_security_assessment.access_control_strength,
+                    'data_protection_level': nsa_security_assessment.data_protection_level,
+                    'cryptographic_integrity': nsa_security_assessment.cryptographic_integrity,
+                    'compliance_score': nsa_security_assessment.compliance_score,
+                    'overall_security_rating': nsa_security_assessment.overall_security_rating
                 },
-                'validation_report': validation_report,
-                'final_recommendations': recommendations,
-                'production_readiness': production_readiness,
-                'agent_brown_insights': agent_brown_insights,
+                'strict_validation_result': {
+                    'placeholder_violations': strict_validation.placeholder_violations,
+                    'compilation_failures': strict_validation.compilation_failures,
+                    'security_vulnerabilities': strict_validation.security_vulnerabilities,
+                    'quality_defects': strict_validation.quality_defects,
+                    'rules_compliance_score': strict_validation.rules_compliance_score,
+                    'validation_passed': strict_validation.validation_passed
+                },
+                'production_certification': {
+                    'binary_comparison_score': production_certification.binary_comparison_score,
+                    'function_signature_match': production_certification.function_signature_match,
+                    'execution_behavior_match': production_certification.execution_behavior_match,
+                    'performance_equivalence': production_certification.performance_equivalence,
+                    'security_equivalence': production_certification.security_equivalence,
+                    'certification_level': production_certification.certification_level,
+                    'certification_timestamp': production_certification.certification_timestamp
+                },
+                'optimization_results': optimization_results,
+                'final_recommendations': final_recommendations,
+                'elite_capabilities': self.elite_capabilities,
                 'quality_threshold': self.quality_threshold,
-                'optimization_level': self.optimization_level,
-                'ai_enabled': self.ai_enabled,
-                'production_ready': production_readiness == 'ready',
-                'overall_quality_score': quality_metrics.overall_quality
+                'security_threshold': self.security_threshold,
+                'ai_insights': agent_brown_insights,
+                'nsa_compliance': nsa_security_assessment.overall_security_rating in ['EXCELLENT', 'SUPERIOR'],
+                'production_certified': production_certification.certification_level in ['premium', 'enterprise'],
+                'rules_compliant': strict_validation.rules_compliance_score >= 1.0,
+                'elite_validation_passed': strict_validation.validation_passed and elite_quality_metrics.overall_quality >= 0.95
             }
             
         except Exception as e:
             self.performance_monitor.end_operation(operation_metrics)
-            error_msg = f"Agent Brown's quality assurance failed: {str(e)}"
+            error_msg = f"Elite Agent Brown validation failed: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             
             # Re-raise exception - base class will handle creating AgentResult
