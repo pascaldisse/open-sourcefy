@@ -1512,6 +1512,14 @@ extern int jle_condition, jb_condition, jp_condition;
 extern int dl, bl, al, dx, ax, bx, cx;
 // Note: eax, ebx, ecx, edx, esi, edi, esp, ebp are provided as functions for Neo's calls
 
+// CRITICAL RULE #57 FIX: Assembly register extern declarations for linker symbol resolution
+// These resolve the 7 unresolved external symbols from main.obj
+extern int _edi, _esi, _ebx, _edx, _ecx, _eax, _ebp, _esp;
+extern int _di, _si, _dx, _cx, _ax, _bp, _sp;
+extern int _dl, _dh, _cl, _ch, _al, _ah, _bl, _bh;
+extern void force_register_retention(void);
+extern void __init_assembly_stubs(void);
+
 """
         
         # Insert after #define guards but before function declarations
@@ -5629,8 +5637,8 @@ BEGIN
             
             vs2003_link = [
                 f'/Fe"{exe_name}"',
-                'main.obj',      # Link pre-compiled object files
-                'assembly_stubs.obj',  # RULE #57: Link assembly stubs to resolve _edi, _ebx linker errors
+                'assembly_stubs.obj',  # RULE #57: Link assembly stubs FIRST to resolve _edi, _ebx linker errors
+                'main.obj',      # Link main object file after stubs are available
             ]
             
             # RULE #57 COMPLIANCE: Only include embedded_strings.obj if source file exists
@@ -5638,7 +5646,6 @@ BEGIN
                 vs2003_link.append('embedded_strings.obj')
                 vs2003_link.extend([
                     '/link',         # CRITICAL FIX: Link flag separator for VS2003 (Rule #57)
-                    '/DEF:assembly_stubs.def',  # CRITICAL FIX: Use .def file for proper symbol export (Rule #57)
                     '/FORCE:MULTIPLE',  # Rule #57: Fix linker, not source - allow duplicate symbols
                     '/IGNORE:4006',     # Ignore symbol redefinition warnings
                     '/IGNORE:4088',     # Ignore section attribute warnings
@@ -5652,7 +5659,6 @@ BEGIN
             else:
                 vs2003_link.extend([
                     '/link',         # CRITICAL FIX: Link flag separator for VS2003 (Rule #57)
-                    '/DEF:assembly_stubs.def',  # CRITICAL FIX: Use .def file for proper symbol export (Rule #57)
                     '/FORCE:MULTIPLE',  # Rule #57: Fix linker, not source - allow duplicate symbols
                     '/IGNORE:4006',     # Ignore symbol redefinition warnings
                     '/IGNORE:4088',     # Ignore section attribute warnings
