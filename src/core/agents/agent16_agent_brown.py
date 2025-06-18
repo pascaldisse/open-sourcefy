@@ -468,7 +468,7 @@ class Agent16_AgentBrown(ValidationAgent):
         
         return pipeline_data
 
-    def _analyze_code_quality(self, pipeline_data: Dict[str, Any], context: Dict[str, Any]) -> QualityMetrics:
+    def _analyze_code_quality(self, pipeline_data: Dict[str, Any], context: Dict[str, Any]) -> EliteQualityMetrics:
         """Perform comprehensive code quality analysis"""
         
         # Initialize quality scores
@@ -516,7 +516,7 @@ class Agent16_AgentBrown(ValidationAgent):
             maintainability * 0.20
         )
         
-        return QualityMetrics(
+        return EliteQualityMetrics(
             code_quality=code_quality,
             compilation_success=compilation_success,
             functionality_score=functionality_score,
@@ -526,7 +526,7 @@ class Agent16_AgentBrown(ValidationAgent):
             overall_quality=overall_quality
         )
 
-    def _perform_optimizations(self, pipeline_data: Dict[str, Any], context: Dict[str, Any]) -> OptimizationResult:
+    def _perform_optimizations(self, pipeline_data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Perform performance optimizations on the code"""
         
         original_size = 0
@@ -566,18 +566,18 @@ class Agent16_AgentBrown(ValidationAgent):
         # Calculate quality score based on optimizations
         quality_score = min(len(optimizations_applied) / 5.0, 1.0)
         
-        return OptimizationResult(
-            original_size=original_size,
-            optimized_size=optimized_size,
-            performance_improvement=performance_improvement,
-            optimizations_applied=optimizations_applied,
-            quality_score=quality_score
-        )
+        return {
+            'original_size': original_size,
+            'optimized_size': optimized_size,
+            'performance_improvement': performance_improvement,
+            'optimizations_applied': optimizations_applied,
+            'quality_score': quality_score
+        }
 
     def _validate_compilation_and_functionality(
         self, 
         pipeline_data: Dict[str, Any], 
-        optimization_results: OptimizationResult, 
+        optimization_results: Dict[str, Any], 
         context: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Validate compilation and functionality of the generated code"""
@@ -713,8 +713,8 @@ class Agent16_AgentBrown(ValidationAgent):
 
     def _generate_final_recommendations(
         self, 
-        quality_metrics: QualityMetrics, 
-        optimization_results: OptimizationResult,
+        quality_metrics: EliteQualityMetrics, 
+        optimization_results: Dict[str, Any],
         validation_report: Dict[str, Any], 
         security_results: Dict[str, Any]
     ) -> List[str]:
@@ -766,7 +766,7 @@ class Agent16_AgentBrown(ValidationAgent):
 
     def _assess_production_readiness(
         self, 
-        quality_metrics: QualityMetrics, 
+        quality_metrics: EliteQualityMetrics, 
         validation_report: Dict[str, Any], 
         security_results: Dict[str, Any]
     ) -> str:
@@ -864,8 +864,8 @@ class Agent16_AgentBrown(ValidationAgent):
 
     def _generate_ai_insights(
         self, 
-        quality_metrics: QualityMetrics, 
-        optimization_results: OptimizationResult, 
+        quality_metrics: EliteQualityMetrics, 
+        optimization_results: Dict[str, Any], 
         validation_report: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Generate AI-enhanced insights about code quality"""
@@ -891,7 +891,7 @@ class Agent16_AgentBrown(ValidationAgent):
             self.logger.warning(f"AI insight generation failed: {e}")
             return {}
 
-    def _save_agent_brown_results(self, result: AgentBrownResult, output_paths: Dict[str, Path]) -> None:
+    def _save_agent_brown_results(self, result: EnhancedAgentBrownResult, output_paths: Dict[str, Path]) -> None:
         """Save Agent Brown's comprehensive QA results"""
         
         agent_output_dir = output_paths.get('agents', Path()) / f"agent_{self.agent_id:02d}_agent_brown"
