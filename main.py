@@ -64,6 +64,9 @@ class MatrixCLIConfig:
     output_dir: Optional[str] = None
     update_mode: bool = False
     clean_mode: bool = False
+    clear_mode: bool = False
+    clear_all_mode: bool = False
+    no_agents_mode: bool = False
     
     # Pipeline configuration
     pipeline_mode: str = "full_pipeline" if not MATRIX_AVAILABLE else PipelineMode.FULL_PIPELINE
@@ -138,7 +141,22 @@ class MatrixCLI:
         parser.add_argument(
             "--clean", 
             action="store_true",
-            help="Clean mode: delete output/{binary-name} folder and perform a clean build"
+            help="Clean mode: delete output/{binary-name}/latest folder only and perform a clean build"
+        )
+        parser.add_argument(
+            "--clear", 
+            action="store_true",
+            help="Clear mode: delete entire output/{binary-name} folder"
+        )
+        parser.add_argument(
+            "--clear-all", 
+            action="store_true",
+            help="Clear all mode: delete all folders inside output/ directory"
+        )
+        parser.add_argument(
+            "--no-agents", 
+            action="store_true",
+            help="Skip agent execution (useful for clear commands only)"
         )
         
         # Pipeline mode arguments
@@ -331,6 +349,9 @@ class MatrixCLI:
         config.output_dir = args.output_dir
         config.update_mode = args.update
         config.clean_mode = args.clean
+        config.clear_mode = args.clear
+        config.clear_all_mode = args.clear_all
+        config.no_agents_mode = args.no_agents
         
         # Pipeline mode
         config.pipeline_mode = getattr(args, 'pipeline_mode', None) or PipelineMode.FULL_PIPELINE
@@ -370,6 +391,17 @@ class MatrixCLI:
         # Development options
         config.dry_run = args.dry_run
         config.profile_performance = args.profile_performance
+        
+        # Handle clear operations first (before other validations)
+        if args.clear_all:
+            self._handle_clear_all_mode()
+            if args.no_agents:
+                sys.exit(0)
+        elif args.clear:
+            binary_path = args.binary
+            self._handle_clear_mode(binary_path)
+            if args.no_agents:
+                sys.exit(0)
         
         # Handle special actions
         if args.verify_env:
@@ -629,7 +661,11 @@ Usage Examples:
   %(prog)s                                    # Full pipeline on default binary
   %(prog)s launcher.exe                       # Full pipeline on specific binary
   %(prog)s --update                           # Update mode: use cache and incremental builds
-  %(prog)s --clean                            # Clean mode: delete output and rebuild from scratch
+  %(prog)s --clean                            # Clean mode: delete latest folder only
+  %(prog)s --clear                            # Clear mode: delete entire binary output folder
+  %(prog)s --clear-all                        # Clear all: delete all folders in output/
+  %(prog)s --clear --no-agents                # Clear binary folder without running agents
+  %(prog)s --clear-all --no-agents            # Clear all folders without running agents
   %(prog)s --decompile-only                  # Decompilation only
   %(prog)s --agents 1,3,7                    # Run specific agents
   %(prog)s --agents 1-5                      # Run agent range
@@ -748,9 +784,14 @@ Usage Examples:
                 self.logger.error(f"Binary file not found: {binary_path}")
                 return False
             
-            # Handle clean mode
+            # Handle clean mode (only latest folder)
             if config.clean_mode:
                 self._handle_clean_mode(binary_path)
+            
+            # Skip agent execution if no-agents mode is enabled
+            if config.no_agents_mode:
+                self.logger.info("🚫 No-agents mode: Skipping agent execution")
+                return True
             
             # Setup output directory
             output_dir = self._setup_output_directory(config.output_dir, binary_path, config.update_mode)
@@ -899,14 +940,39 @@ Usage Examples:
             return None
     
     def _handle_clean_mode(self, binary_path: Path):
-        """Handle clean mode by deleting the binary output folder"""
+        """Handle clean mode by deleting only the 'latest' folder"""
         import shutil
         
         binary_name = binary_path.stem if binary_path else 'unknown_binary'
+        latest_folder = project_root / "output" / binary_name / "latest"
+        
+        if latest_folder.exists():
+            self.logger.info(f"🧹 Clean mode: Removing {latest_folder}")
+            try:
+                shutil.rmtree(latest_folder)
+                self.logger.info(f"✅ Successfully removed {latest_folder}")
+            except Exception as e:
+                self.logger.error(f"❌ Failed to remove {latest_folder}: {e}")
+                raise
+        else:
+            self.logger.info(f"🧹 Clean mode: {latest_folder} does not exist, nothing to clean")
+    
+    def _handle_clear_mode(self, binary_path: str = None):
+        """Handle clear mode by deleting the entire binary output folder"""
+        import shutil
+        
+        if binary_path:
+            # Resolve binary path to get name
+            resolved_path = self._resolve_binary_path(binary_path)
+            binary_name = resolved_path.stem if resolved_path else Path(binary_path).stem
+        else:
+            # Default binary name
+            binary_name = 'launcher'
+        
         output_base = project_root / "output" / binary_name
         
         if output_base.exists():
-            self.logger.info(f"🧹 Clean mode: Removing {output_base}")
+            self.logger.info(f"🗑️ Clear mode: Removing {output_base}")
             try:
                 shutil.rmtree(output_base)
                 self.logger.info(f"✅ Successfully removed {output_base}")
@@ -914,7 +980,46 @@ Usage Examples:
                 self.logger.error(f"❌ Failed to remove {output_base}: {e}")
                 raise
         else:
-            self.logger.info(f"🧹 Clean mode: {output_base} does not exist, nothing to clean")
+            self.logger.info(f"🗑️ Clear mode: {output_base} does not exist, nothing to clear")
+    
+    def _handle_clear_all_mode(self):
+        """Handle clear-all mode by deleting all folders inside output/ directory"""
+        import shutil
+        
+        output_dir = project_root / "output"
+        
+        if not output_dir.exists():
+            self.logger.info(f"🗑️ Clear-all mode: {output_dir} does not exist, nothing to clear")
+            return
+        
+        folders_removed = 0
+        folders_failed = 0
+        
+        self.logger.info(f"🗑️ Clear-all mode: Removing all folders in {output_dir}")
+        
+        try:
+            for item in output_dir.iterdir():
+                if item.is_dir():
+                    try:
+                        self.logger.info(f"  Removing {item.name}...")
+                        shutil.rmtree(item)
+                        folders_removed += 1
+                    except Exception as e:
+                        self.logger.error(f"  ❌ Failed to remove {item.name}: {e}")
+                        folders_failed += 1
+                else:
+                    self.logger.info(f"  Skipping file: {item.name}")
+            
+            if folders_removed > 0:
+                self.logger.info(f"✅ Successfully removed {folders_removed} folders")
+            if folders_failed > 0:
+                self.logger.error(f"❌ Failed to remove {folders_failed} folders")
+            if folders_removed == 0 and folders_failed == 0:
+                self.logger.info(f"🗑️ No folders found in {output_dir}")
+                
+        except Exception as e:
+            self.logger.error(f"❌ Failed to clear output directory: {e}")
+            raise
     
     def _setup_output_directory(self, output_dir: Optional[str], binary_path: Optional[Path] = None, update_mode: bool = False) -> Path:
         """Setup output directory securely."""
