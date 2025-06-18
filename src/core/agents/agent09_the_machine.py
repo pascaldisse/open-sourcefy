@@ -5623,6 +5623,28 @@ BEGIN
             else:
                 self.logger.warning("⚠️ PHASE 4 WinMain wrapper files missing - compilation may have entry point issues")
             
+            # PHASE 5: Include exception_handling.h and exception_handling.c for SEH framework
+            exception_handling_h_path = os.path.join(src_dir, 'exception_handling.h')
+            exception_handling_c_path = os.path.join(src_dir, 'exception_handling.c')
+            
+            # Copy exception handling files to compilation directory if they exist
+            if os.path.exists(exception_handling_h_path) and os.path.exists(exception_handling_c_path):
+                self.logger.info("✅ PHASE 5 exception handling files found - including in VS2003 compilation")
+                with open(exception_handling_h_path, 'r', encoding='utf-8') as f:
+                    exception_handling_h_content = f.read()
+                with open(exception_handling_c_path, 'r', encoding='utf-8') as f:
+                    exception_handling_c_content = f.read()
+                
+                # Copy to compilation directory
+                with open(os.path.join(compilation_dir, 'exception_handling.h'), 'w', encoding='utf-8') as f:
+                    f.write(exception_handling_h_content)
+                with open(os.path.join(compilation_dir, 'exception_handling.c'), 'w', encoding='utf-8') as f:
+                    f.write(exception_handling_c_content)
+                
+                self.logger.info("✅ PHASE 5 exception handling files copied to compilation directory")
+            else:
+                self.logger.warning("⚠️ PHASE 5 exception handling files missing - compilation may have access violations and crashes")
+            
             # CRITICAL RULE #57 FIX: Generate assembly_stubs.lib from .obj for proper linking
             # Use relative paths since command runs from compilation directory
             lib_create_cmd = 'lib.exe /OUT:assembly_stubs.lib assembly_stubs.obj'
@@ -5763,7 +5785,8 @@ BEGIN
                 'src\\assembly_globals.c',  # PHASE 1: Compile TIB simulation for fs:[0] access compatibility
                 'src\\memory_layout.c',  # PHASE 3: Compile memory layout for hardcoded address resolution
                 'src\\control_flow.c',  # PHASE 4: Compile control flow for assembly code semantics and int3 fixes
-                'src\\winmain_wrapper.c'  # PHASE 4: Compile WinMain wrapper for proper Windows entry point
+                'src\\winmain_wrapper.c',  # PHASE 4: Compile WinMain wrapper for proper Windows entry point
+                'src\\exception_handling.c'  # PHASE 5: Compile exception handling for SEH framework and exit code 0
             ]
             
             # RULE #57 COMPLIANCE: Check if embedded_strings.c exists before including in build
