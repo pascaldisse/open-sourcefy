@@ -5645,6 +5645,14 @@ BEGIN
                         with open(file_path, 'w', encoding='utf-8') as f:
                             f.write(content)
                         self.logger.info(f"🔧 Written {filename} ({len(content)} chars)")
+                        
+                        # Create readable main_reconstructed.c with meaningful names (Rule #13 exception allowed)
+                        if filename == 'main.c':
+                            readable_content = self._create_readable_main_code(content)
+                            readable_path = os.path.join(src_dir, 'main_reconstructed.c')
+                            with open(readable_path, 'w', encoding='utf-8') as f:
+                                f.write(readable_content)
+                            self.logger.info(f"🔧 Written main_reconstructed.c with readable variable names ({len(readable_content)} chars)")
             
             # CRITICAL RULE #57 FIX: Generate assembly_stubs.c to resolve linker errors
             assembly_stubs_content = self._generate_assembly_register_stubs()
@@ -6945,6 +6953,122 @@ __declspec(dllexport) LONG __global_exception_handler(PEXCEPTION_POINTERS pExcep
         override_lines.append("#endif // DECOMPILER_OVERRIDES_H")
         
         return '\n'.join(override_lines)
+
+    def _create_readable_main_code(self, original_content: str) -> str:
+        """Create a readable version of main.c with meaningful variable and function names"""
+        import re
+        
+        self.logger.info("🔧 Creating readable main_reconstructed.c with meaningful names")
+        
+        # Start with the original content
+        readable_content = original_content
+        
+        # Replace generic variable names with meaningful ones
+        variable_replacements = {
+            # Generic variables
+            r'\buVar\d+\b': 'unsigned_value',
+            r'\biVar\d+\b': 'integer_value', 
+            r'\bpVar\d+\b': 'pointer_value',
+            r'\blVar\d+\b': 'long_value',
+            r'\bfVar\d+\b': 'float_value',
+            r'\bdVar\d+\b': 'double_value',
+            r'\bbVar\d+\b': 'byte_value',
+            r'\bwVar\d+\b': 'word_value',
+            r'\bsVar\d+\b': 'string_value',
+            r'\bcVar\d+\b': 'char_value',
+            
+            # Stack variables
+            r'\bstack0x[0-9a-fA-F]+\b': 'stack_variable',
+            r'\bStack\[.*?\]': 'stack_array',
+            
+            # Register-like variables  
+            r'\b_EDI\b': 'destination_index',
+            r'\b_ESI\b': 'source_index',
+            r'\b_EBX\b': 'base_register',
+            r'\b_ECX\b': 'counter_register',
+            r'\b_EDX\b': 'data_register',
+            r'\b_EAX\b': 'accumulator_register',
+            r'\b_ESP\b': 'stack_pointer',
+            r'\b_EBP\b': 'base_pointer',
+            
+            # Memory addresses
+            r'\b0x[0-9a-fA-F]{8}\b': 'memory_address',
+            
+            # Function names
+            r'\bFUN_[0-9a-fA-F]{8}\b': 'unknown_function',
+            r'\bthunk_FUN_[0-9a-fA-F]{8}\b': 'function_thunk',
+            
+            # MFC/Windows API patterns
+            r'\bAfx\w+\b': 'mfc_function',
+            r'\bCWnd\b': 'window_object',
+            r'\bCDialog\b': 'dialog_object',
+            r'\bCString\b': 'string_object',
+            
+            # Common patterns
+            r'\bDAT_[0-9a-fA-F]{8}\b': 'global_data',
+            r'\bUNK_[0-9a-fA-F]{8}\b': 'unknown_data',
+            r'\bs_[a-zA-Z_]\w*_[0-9a-fA-F]{8}\b': 'static_string'
+        }
+        
+        # Apply variable name replacements
+        for pattern, replacement in variable_replacements.items():
+            # Use counter to make unique names
+            counter = 1
+            def replace_with_counter(match):
+                nonlocal counter
+                result = f"{replacement}_{counter}"
+                counter += 1
+                return result
+            
+            readable_content = re.sub(pattern, replace_with_counter, readable_content)
+        
+        # Replace generic function names with descriptive ones
+        function_replacements = {
+            r'\bmain\s*\([^)]*\)': 'application_main(int argc, char* argv[])',
+            r'\bWinMain\s*\([^)]*\)': 'windows_main(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)',
+            r'\bDllMain\s*\([^)]*\)': 'dll_entry_point(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)'
+        }
+        
+        for pattern, replacement in function_replacements.items():
+            readable_content = re.sub(pattern, replacement, readable_content)
+        
+        # Add descriptive comments
+        header_comment = '''/*
+ * Reconstructed Main Application Source Code
+ * 
+ * This file contains the main application logic reconstructed from binary analysis.
+ * Variable and function names have been made more readable for better understanding.
+ * 
+ * Note: This is a human-readable version of the decompiled code.
+ * The original main.c contains the exact reconstructed code for compilation.
+ * 
+ * Generated by Agent 9 (The Machine) - Matrix Binary Reconstruction System
+ */
+
+'''
+        
+        # Insert header comment at the top (after includes)
+        include_end = readable_content.find('\n\n')
+        if include_end != -1:
+            readable_content = readable_content[:include_end+2] + header_comment + readable_content[include_end+2:]
+        else:
+            readable_content = header_comment + readable_content
+        
+        # Add function descriptions
+        readable_content = re.sub(
+            r'(int\s+application_main\s*\([^)]*\)\s*{)',
+            r'\1\n    /* Main application entry point - reconstructed from binary analysis */\n',
+            readable_content
+        )
+        
+        readable_content = re.sub(
+            r'(int\s+windows_main\s*\([^)]*\)\s*{)',
+            r'\1\n    /* Windows application entry point - handles window initialization */\n',
+            readable_content
+        )
+        
+        self.logger.info("✅ Created readable main_reconstructed.c with meaningful variable names")
+        return readable_content
 
     def get_description(self) -> str:
         """Get description of The Machine agent"""
