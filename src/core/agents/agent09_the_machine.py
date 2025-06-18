@@ -6164,7 +6164,7 @@ __declspec(dllexport) void __init_all_tib_systems(void) {
     g_SimulatedTIB.StackLimit = (PVOID)0x00030000;
     g_SimulatedTIB.Self = &g_SimulatedTIB;
     
-    printf("✅ PHASE 1: TIB simulation initialized\\n");
+    printf("PHASE 1: TIB simulation initialized\\n");
 }
 
 __declspec(dllexport) void __init_tib_simulation(void) {
@@ -6228,12 +6228,14 @@ static const MEMORY_LAYOUT_ENTRY g_DataSectionLayout[] = {
 };
 
 __declspec(dllexport) void __init_memory_layout(void) {
-    printf("✅ PHASE 3: Memory layout initialized with %d entries\\n", 
-           sizeof(g_DataSectionLayout) / sizeof(MEMORY_LAYOUT_ENTRY));
+    int entry_count = sizeof(g_DataSectionLayout) / sizeof(MEMORY_LAYOUT_ENTRY);
+    printf("PHASE 3: Memory layout initialized with %d entries\\n", entry_count);
 }
 
 __declspec(dllexport) PVOID __resolve_virtual_address(DWORD virtualAddr) {
-    for (int i = 0; i < sizeof(g_DataSectionLayout) / sizeof(MEMORY_LAYOUT_ENTRY); i++) {
+    int i;
+    int entry_count = sizeof(g_DataSectionLayout) / sizeof(MEMORY_LAYOUT_ENTRY);
+    for (i = 0; i < entry_count; i++) {
         if (g_DataSectionLayout[i].virtualAddress == virtualAddr) {
             return (PVOID)(virtualAddr);  // Simplified mapping
         }
@@ -6291,12 +6293,12 @@ static const TEXT_X86_FUNCTION g_TextX86Functions[] = {
 };
 
 __declspec(dllexport) void __init_all_control_flow_systems(void) {
-    printf("✅ PHASE 4: Control flow initialized with %d functions\\n", 
-           sizeof(g_TextX86Functions) / sizeof(TEXT_X86_FUNCTION));
+    int function_count = sizeof(g_TextX86Functions) / sizeof(TEXT_X86_FUNCTION);
+    printf("PHASE 4: Control flow initialized with %d functions\\n", function_count);
 }
 
 __declspec(dllexport) int __enhanced_main_entry(void) {
-    printf("✅ PHASE 4: Enhanced main entry called\\n");
+    printf("PHASE 4: Enhanced main entry called\\n");
     return 0;
 }
 
@@ -6329,12 +6331,12 @@ __declspec(dllexport) int __winmain_entry_point(HINSTANCE hInstance, HINSTANCE h
 extern int main(void);
 
 __declspec(dllexport) int __init_winmain_wrapper(void) {
-    printf("✅ PHASE 4: WinMain wrapper initialized\\n");
+    printf("PHASE 4: WinMain wrapper initialized\\n");
     return 0;
 }
 
 __declspec(dllexport) int __winmain_entry_point(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    printf("✅ PHASE 4: WinMain entry point called\\n");
+    printf("PHASE 4: WinMain entry point called\\n");
     return main();
 }
 
@@ -6378,11 +6380,11 @@ static EXCEPTION_CONTEXT g_ExceptionContext = {0};
 __declspec(dllexport) void __init_all_exception_handling_systems(void) {
     // Initialize exception handling
     g_ExceptionContext.ContextFlags = CONTEXT_FULL;
-    printf("✅ PHASE 5: Exception handling initialized\\n");
+    printf("PHASE 5: Exception handling initialized\\n");
 }
 
 __declspec(dllexport) BOOL __ensure_functional_identity(void) {
-    printf("✅ PHASE 5: Functional identity ensured\\n");
+    printf("PHASE 5: Functional identity ensured\\n");
     return TRUE;
 }
 
@@ -6390,8 +6392,7 @@ __declspec(dllexport) LONG __global_exception_handler(PEXCEPTION_POINTERS pExcep
     if (pExceptionInfo && pExceptionInfo->ExceptionRecord) {
         g_ExceptionContext.ExceptionCode = pExceptionInfo->ExceptionRecord->ExceptionCode;
         g_ExceptionContext.ExceptionAddress = pExceptionInfo->ExceptionRecord->ExceptionAddress;
-        printf("✅ PHASE 5: Exception handled: 0x%08X at 0x%p\\n", 
-               g_ExceptionContext.ExceptionCode, g_ExceptionContext.ExceptionAddress);
+        printf("PHASE 5: Exception handled: 0x%08X\\n", g_ExceptionContext.ExceptionCode);
     }
     return EXCEPTION_EXECUTE_HANDLER;
 }
