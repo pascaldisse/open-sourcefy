@@ -4508,16 +4508,27 @@ BEGIN
             "dl", "dh", "cl", "ch", "al", "ah", "bl", "bh"
         ]
         
+        # CRITICAL FIX: Use extern "C" linkage and __declspec(dllexport) for VS2003 compatibility
+        content.append("#ifdef __cplusplus")
+        content.append("extern \"C\" {")
+        content.append("#endif")
+        content.append("")
+        
         for reg in assembly_registers:
-            content.append(f"int _{reg} = 0;  // {reg.upper()} register stub")
+            content.append(f"__declspec(dllexport) int _{reg} = 0;  // {reg.upper()} register stub")
         
         content.append("")
         content.append("// Function to prevent linker optimization of register stubs")
-        content.append("void force_register_retention() {")
+        content.append("__declspec(dllexport) void force_register_retention() {")
         content.append("    // Reference all register stubs to prevent optimization")
         for reg in assembly_registers:
             content.append(f"    (void)_{reg};")
         content.append("}")
+        
+        content.append("")
+        content.append("#ifdef __cplusplus")
+        content.append("}")
+        content.append("#endif")
         content.append("")
         
         return "\n".join(content)
