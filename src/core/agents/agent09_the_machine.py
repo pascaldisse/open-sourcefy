@@ -5848,6 +5848,8 @@ BEGIN
             else:
                 vs2003_link.extend([
                     '/link',         # CRITICAL FIX: Link flag separator for VS2003 (Rule #57)
+                    '/ENTRY:WinMainCRTStartup',   # CRITICAL FIX: Proper Windows application entry point
+                    '/SUBSYSTEM:WINDOWS',         # CRITICAL FIX: Windows subsystem for GUI app
                     '/FORCE:MULTIPLE',  # Rule #57: Fix linker, not source - allow duplicate symbols
                     '/IGNORE:4006',     # Ignore symbol redefinition warnings
                     '/IGNORE:4088',     # Ignore section attribute warnings
@@ -5885,7 +5887,9 @@ BEGIN
                     'dbghelp.lib',    # Debug help (size scaling)
                     'imagehlp.lib',   # Image help (size scaling)
                     'rpcrt4.lib',     # RPC runtime (size scaling)
-                    'setupapi.lib'    # Setup API (size scaling)
+                    'setupapi.lib',   # Setup API (size scaling)
+                    'msvcrt.lib',     # CRITICAL FIX: C runtime library
+                    'oldnames.lib'    # CRITICAL FIX: Old name compatibility
                 ])
             compile_main_cmd = 'cl.exe ' + ' '.join(vs2003_compile_main)
             compile_strings_cmd = 'cl.exe ' + ' '.join(vs2003_compile_strings) if has_embedded_strings else None
