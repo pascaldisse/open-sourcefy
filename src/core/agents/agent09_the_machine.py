@@ -6006,15 +6006,33 @@ BEGIN
             res_files_for_linking = []
             resources_rc_content = resource_files.get('resources.rc', '') if resource_files else ''
             
-            if resources_rc_content and len(resources_rc_content) > 100000:  # Large resource file threshold
-                self.logger.info(f"🔥 VS2003 CHUNKED APPROACH: Processing massive resources.rc ({len(resources_rc_content)} chars) with chunked RC compilation")
-                self.logger.info(f"🔧 Rule #57 compliance: Using chunked RC compilation to achieve 4.2MB .rsrc section instead of minimal fallback")
+            # ENHANCED FIX: Also check for existing chunked RC files in compilation directory (Rule #57)
+            existing_rc_chunks = []
+            if os.path.exists(compilation_dir):
+                existing_rc_chunks = [f for f in os.listdir(compilation_dir) if f.startswith('resources_part') and f.endswith('.rc')]
+            
+            # Trigger chunked compilation if EITHER condition is met:
+            # 1. Large resource content (>100K chars), OR 
+            # 2. Existing RC chunks found (from previous agent runs)
+            should_use_chunked = (resources_rc_content and len(resources_rc_content) > 100000) or len(existing_rc_chunks) > 0
+            
+            if should_use_chunked:
+                if len(existing_rc_chunks) > 0:
+                    self.logger.info(f"🔥 VS2003 CHUNKED APPROACH: Found {len(existing_rc_chunks)} existing RC chunks - compiling them directly")
+                    self.logger.info(f"🔧 Rule #57 compliance: Using existing chunked RC files to achieve 4.2MB .rsrc section")
+                    
+                    # Use existing chunked RC files
+                    rc_files_to_compile = [os.path.join(compilation_dir, f) for f in existing_rc_chunks]
+                    chunk_results = {'success': True, 'rc_files': rc_files_to_compile, 'resource_count': len(existing_rc_chunks)}
+                else:
+                    self.logger.info(f"🔥 VS2003 CHUNKED APPROACH: Processing massive resources.rc ({len(resources_rc_content)} chars) with chunked RC compilation")
+                    self.logger.info(f"🔧 Rule #57 compliance: Using chunked RC compilation to achieve 4.2MB .rsrc section instead of minimal fallback")
+                    
+                    # Generate new chunked RC files
+                    resources_dir = os.path.join(compilation_dir, 'resources')
+                    os.makedirs(resources_dir, exist_ok=True)
+                    chunk_results = self._generate_chunked_resource_files(resources_rc_content, compilation_dir, resources_dir)
                 
-                # CRITICAL FIX: Use chunked compilation for VS2003 instead of minimal fallback
-                resources_dir = os.path.join(compilation_dir, 'resources')
-                os.makedirs(resources_dir, exist_ok=True)
-                
-                chunk_results = self._generate_chunked_resource_files(resources_rc_content, compilation_dir, resources_dir)
                 if chunk_results['success'] and chunk_results['rc_files']:
                     # Compile all chunks with VS2003 RC.EXE - STRICT VALIDATION per Rule #21
                     vs2003_rc_exe = r"C:\Program Files (x86)\Microsoft Visual Studio .NET 2003\Vc7\bin\rc.exe"
