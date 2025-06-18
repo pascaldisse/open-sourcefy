@@ -4560,6 +4560,76 @@ BEGIN
         
         return "\n".join(def_content)
     
+    def _generate_tib_simulation_header(self) -> str:
+        """Generate assembly_globals.h with comprehensive TIB simulation
+        
+        Rule #57: Fix build system by implementing TIB simulation through header generation
+        Creates Thread Information Block simulation to eliminate fs:[0] access violations
+        """
+        content = []
+        content.append("// ASSEMBLY GLOBALS HEADER - TIB Simulation")
+        content.append("// RULE #57 COMPLIANCE: Build system TIB simulation, not source modification")
+        content.append("// Generated to eliminate fs:[0] access violations in decompiled assembly code")
+        content.append("")
+        content.append("#ifndef ASSEMBLY_GLOBALS_H")
+        content.append("#define ASSEMBLY_GLOBALS_H")
+        content.append("")
+        content.append("#include <windows.h>")
+        content.append("")
+        content.append("// Thread Information Block (TIB) Simulation")
+        content.append("// Simulates Windows Thread Information Block structure for fs:[0] compatibility")
+        content.append("typedef struct _TIB_SIMULATION {")
+        content.append("    struct _EXCEPTION_REGISTRATION_RECORD* ExceptionList;    // fs:[0x00] - SEH chain")
+        content.append("    void*                               StackBase;           // fs:[0x04] - Stack base")
+        content.append("    void*                               StackLimit;          // fs:[0x08] - Stack limit")
+        content.append("    void*                               SubSystemTib;        // fs:[0x0C] - Subsystem TIB")
+        content.append("    union {")
+        content.append("        void*                           FiberData;           // fs:[0x10] - Fiber data")
+        content.append("        DWORD                           Version;             // Version number")
+        content.append("    };")
+        content.append("    void*                               ArbitraryUserPointer; // fs:[0x14] - Arbitrary user pointer")
+        content.append("    struct _TIB_SIMULATION*             Self;               // fs:[0x18] - Self reference")
+        content.append("    DWORD                               EnvironmentPointer;  // fs:[0x1C] - Environment pointer")
+        content.append("    DWORD                               ClientId[2];         // fs:[0x20] - Process/Thread ID")
+        content.append("    void*                               ActiveRpcHandle;     // fs:[0x28] - RPC handle")
+        content.append("    void*                               ThreadLocalStoragePointer; // fs:[0x2C] - TLS pointer")
+        content.append("    struct _PEB*                        ProcessEnvironmentBlock; // fs:[0x30] - PEB pointer")
+        content.append("    DWORD                               LastErrorValue;      // fs:[0x34] - GetLastError()")
+        content.append("    DWORD                               CountOfOwnedCriticalSections; // fs:[0x38]")
+        content.append("    void*                               CsrClientThread;     // fs:[0x3C] - CSR thread")
+        content.append("    void*                               Win32ThreadInfo;     // fs:[0x40] - Win32 thread info")
+        content.append("    DWORD                               Win32ClientInfo[31]; // fs:[0x44] - Win32 client info")
+        content.append("    void*                               WOW32Reserved;       // fs:[0xC0] - WOW32 reserved")
+        content.append("    DWORD                               CurrentLocale;       // fs:[0xC4] - Current locale")
+        content.append("    DWORD                               FpSoftwareStatusRegister; // fs:[0xC8] - FP status")
+        content.append("    void*                               SystemReserved1[54]; // fs:[0xCC] - System reserved")
+        content.append("    void*                               ExceptionCode;       // fs:[0x1A4] - Exception code")
+        content.append("    DWORD                               SpareBytes1[43];     // fs:[0x1A8] - Spare bytes")
+        content.append("    DWORD                               GdiClientPID;        // fs:[0x254] - GDI client PID")
+        content.append("    DWORD                               GdiClientTID;        // fs:[0x258] - GDI client TID")
+        content.append("    void*                               GdiThreadLocalInfo; // fs:[0x25C] - GDI thread local")
+        content.append("    void*                               UserReserved[5];     // fs:[0x260] - User reserved")
+        content.append("    void*                               glDispatchTable[233]; // fs:[0x274] - OpenGL dispatch")
+        content.append("    DWORD                               glReserved1[29];     // fs:[0x644] - OpenGL reserved")
+        content.append("    void*                               glReserved2;         // fs:[0x6B0] - OpenGL reserved")
+        content.append("    void*                               glSectionInfo;       // fs:[0x6B4] - OpenGL section")
+        content.append("    void*                               glSection;           // fs:[0x6B8] - OpenGL section")
+        content.append("    void*                               glTable;             // fs:[0x6BC] - OpenGL table")
+        content.append("    void*                               glCurrentRC;         // fs:[0x6C0] - OpenGL current RC")
+        content.append("    void*                               glContext;           // fs:[0x6C4] - OpenGL context")
+        content.append("    DWORD                               LastStatusValue;     // fs:[0x6C8] - NTSTATUS")
+        content.append("    char                                StaticUnicodeString[532]; // fs:[0x6CC] - Unicode buffer")
+        content.append("    void*                               DeallocationStack;   // fs:[0x8D8] - Deallocation stack")
+        content.append("    void*                               TlsSlots[64];        // fs:[0x8DC] - TLS slots")
+        content.append("    void*                               TlsLinks[2];         // fs:[0x9DC] - TLS links")
+        content.append("    void*                               Vdm;                 // fs:[0x9E4] - VDM")
+        content.append("    void*                               ReservedForNtRpc;    // fs:[0x9E8] - NT RPC")
+        content.append("    void*                               DbgSsReserved[2];    // fs:[0x9EC] - Debug SS")
+        content.append("} TIB_SIMULATION, *PTIB_SIMULATION;")
+        content.append("")
+        
+        return "\n".join(content)
+    
     def _detect_vs2003_availability(self):
         """Check if Visual Studio 2003 is available for MFC 7.1 compilation."""
         vs2003_paths = [
@@ -5465,6 +5535,28 @@ BEGIN
             with open(assembly_stubs_src, 'w', encoding='utf-8') as f:
                 f.write(assembly_stubs_content)
             
+            # PHASE 1: Include assembly_globals.h and assembly_globals.c for TIB simulation
+            assembly_globals_h_path = os.path.join(src_dir, 'assembly_globals.h')
+            assembly_globals_c_path = os.path.join(src_dir, 'assembly_globals.c')
+            
+            # Copy TIB simulation files to compilation directory if they exist
+            if os.path.exists(assembly_globals_h_path) and os.path.exists(assembly_globals_c_path):
+                self.logger.info("✅ PHASE 1 TIB simulation files found - including in VS2003 compilation")
+                with open(assembly_globals_h_path, 'r', encoding='utf-8') as f:
+                    assembly_globals_h_content = f.read()
+                with open(assembly_globals_c_path, 'r', encoding='utf-8') as f:
+                    assembly_globals_c_content = f.read()
+                
+                # Copy to compilation directory
+                with open(os.path.join(compilation_dir, 'assembly_globals.h'), 'w', encoding='utf-8') as f:
+                    f.write(assembly_globals_h_content)
+                with open(os.path.join(compilation_dir, 'assembly_globals.c'), 'w', encoding='utf-8') as f:
+                    f.write(assembly_globals_c_content)
+                
+                self.logger.info("✅ PHASE 1 TIB simulation files copied to compilation directory")
+            else:
+                self.logger.warning("⚠️ PHASE 1 TIB simulation files missing - compilation may have fs:[0] access violations")
+            
             # CRITICAL RULE #57 FIX: Generate assembly_stubs.lib from .obj for proper linking
             # Use relative paths since command runs from compilation directory
             lib_create_cmd = 'lib.exe /OUT:assembly_stubs.lib assembly_stubs.obj'
@@ -5601,7 +5693,8 @@ BEGIN
                 '/D__IGNORE_REDEFINITION_ERRORS__', # Rule #57: Ignore redefinition errors
                 '/c',            # CRITICAL: Compile only (create .obj files)
                 'src\\main.c',   # Compile main.c to main.obj
-                'src\\assembly_stubs.c'  # RULE #57: Compile assembly stubs to resolve _edi, _ebx linker errors
+                'src\\assembly_stubs.c',  # RULE #57: Compile assembly stubs to resolve _edi, _ebx linker errors
+                'src\\assembly_globals.c'  # PHASE 1: Compile TIB simulation for fs:[0] access compatibility
             ]
             
             # RULE #57 COMPLIANCE: Check if embedded_strings.c exists before including in build
