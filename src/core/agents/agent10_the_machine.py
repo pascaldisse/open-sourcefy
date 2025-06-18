@@ -97,9 +97,6 @@ class Agent9_TheMachine(ReconstructionAgent):
             if 'output_paths' in context:
                 self.file_manager = MatrixFileManager(context['output_paths'])
             
-            # CRITICAL FIX: Remove dependency on Agent 8 to break circular dependency
-            # Agent 9 should be independent and only depend on Agents 1, 5, 6, 7
-            
             # PHASE 1: CRITICAL - Extract import table data from Agent 1 (Sentinel)
             self.logger.info("Phase 1: CRITICAL - Extracting import table from Sentinel...")
             import_table_data = self._extract_import_table_from_sentinel(context)

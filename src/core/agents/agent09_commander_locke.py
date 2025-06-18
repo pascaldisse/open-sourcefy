@@ -162,22 +162,22 @@ class Agent8_CommanderLocke(ReconstructionAgent):
             else:
                 integration_data['functions'] = functions
         
-        # Extract import data directly from Agent 1 (Sentinel)
-        # Agent 8 should not depend on Agent 9 - this was causing circular dependency
-        if 1 in agent_results:
+        # Extract import data from Agent 1 (Sentinel) via Agent 9 (Machine)
+        if 9 in agent_results:
+            agent9_data = agent_results[9].data if hasattr(agent_results[9], 'data') else {}
+            imports = agent9_data.get('import_table_reconstruction', {})
+            integration_data['imports'] = imports
+            integration_data['machine_data'] = agent9_data
+        
+        # Fallback: Extract imports directly from Agent 1 if needed
+        if not integration_data['imports'] and 1 in agent_results:
             agent1_data = agent_results[1].data if hasattr(agent_results[1], 'data') else {}
-            
-            # Try format_analysis first, then binary_analysis
             format_analysis = agent1_data.get('format_analysis', {})
-            binary_analysis = agent1_data.get('binary_analysis', {})
-            
             raw_imports = format_analysis.get('imports', [])
-            if not raw_imports:
-                raw_imports = binary_analysis.get('imports', [])
             
             imports_dict = {}
             for import_entry in raw_imports:
-                dll_name = import_entry.get('dll', import_entry.get('library', 'unknown.dll'))
+                dll_name = import_entry.get('dll', 'unknown.dll')
                 functions = import_entry.get('functions', [])
                 imports_dict[dll_name] = functions
             integration_data['imports'] = imports_dict

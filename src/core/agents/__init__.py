@@ -9,6 +9,13 @@ from typing import Dict, Type, Any
 MATRIX_AGENTS = {}
 failed_imports = []
 
+# Agent 0: Deus Ex Machina (Master Orchestrator)
+try:
+    from .agent00_deus_ex_machina import Agent00_DeusExMachina
+    MATRIX_AGENTS[0] = Agent00_DeusExMachina
+except ImportError as e:
+    failed_imports.append(f"Agent 0 (Deus Ex Machina): {e}")
+
 # Agent 1: Sentinel
 try:
     from .agent01_sentinel import SentinelAgent
@@ -131,6 +138,14 @@ if failed_imports:
 AGENT_METADATA = {}
 
 # Only add metadata for successfully imported agents
+if 0 in MATRIX_AGENTS:
+    AGENT_METADATA[0] = {
+        'name': 'DeusExMachina',
+        'character': 'deus_ex_machina',
+        'description': 'Master orchestrator and coordination engine',
+        'dependencies': []
+    }
+
 if 1 in MATRIX_AGENTS:
     AGENT_METADATA[1] = {
         'name': 'Sentinel',
@@ -200,7 +215,7 @@ if 9 in MATRIX_AGENTS:
         'name': 'TheMachine',
         'character': 'the_machine',
         'description': 'Compilation orchestration and build systems',
-        'dependencies': [8]
+        'dependencies': [1, 5, 6, 7]  # CRITICAL FIX: Remove Agent 8 dependency to break circular dependency
     }
 
 if 10 in MATRIX_AGENTS:
@@ -275,7 +290,7 @@ def get_agent_by_id(agent_id: int):
 
 def get_implementation_status() -> Dict[int, bool]:
     """Get implementation status of all Matrix agents"""
-    return {agent_id: agent_id in MATRIX_AGENTS for agent_id in range(1, 21)}
+    return {agent_id: agent_id in MATRIX_AGENTS for agent_id in range(0, 21)}
 
 
 def create_all_agents():
@@ -308,6 +323,8 @@ __all__ = [
 ]
 
 # Add successfully imported agent classes to __all__
+if 0 in MATRIX_AGENTS:
+    __all__.append('Agent00_DeusExMachina')
 if 1 in MATRIX_AGENTS:
     __all__.append('SentinelAgent')
 if 2 in MATRIX_AGENTS:

@@ -99,6 +99,23 @@ class PerformanceMonitor:
             if metrics is None:
                 raise ValueError("No operation to end")
             
+            # CRITICAL FIX: Ensure metrics is PerformanceMetrics object, not string
+            if isinstance(metrics, str):
+                # If string passed, find the operation by name or use current operation
+                if self._current_operation and self._current_operation.operation_name == metrics:
+                    metrics = self._current_operation
+                else:
+                    # Find by operation name in stored metrics
+                    found_metrics = None
+                    for stored_metric in reversed(self.metrics):
+                        if stored_metric.operation_name == metrics and stored_metric.end_time is None:
+                            found_metrics = stored_metric
+                            break
+                    if found_metrics:
+                        metrics = found_metrics
+                    else:
+                        raise ValueError(f"No active operation found with name: {metrics}")
+            
             metrics.finish()
             
             if metrics == self._current_operation:

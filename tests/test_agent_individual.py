@@ -273,9 +273,9 @@ class TestAgent10Twins(unittest.TestCase):
         agent = Agent10_Twins_BinaryDiff()
         
         # Test binary diff analysis methods exist
-        self.assertTrue(hasattr(agent, '_analyze_binary_differences'))
-        self.assertTrue(hasattr(agent, '_validate_import_tables'))
-        self.assertTrue(hasattr(agent, '_detect_mfc_compatibility_issues'))
+        self.assertTrue(hasattr(agent, '_perform_multilevel_comparison'))
+        self.assertTrue(hasattr(agent, '_compare_binary_level'))
+        self.assertTrue(hasattr(agent, '_compare_assembly_level'))
 
 
 class TestAgentErrorHandling(unittest.TestCase):

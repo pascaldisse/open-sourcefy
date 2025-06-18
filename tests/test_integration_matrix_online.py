@@ -416,12 +416,20 @@ class TestMatrixOnlineSpecific(unittest.TestCase):
         
         # Should be a Windows PE executable
         with open(self.matrix_binary, 'rb') as f:
-            header = f.read(64)
+            header = f.read(1024)  # Read more to include PE signature
             self.assertTrue(header.startswith(b'MZ'), "Should be PE executable")
             
-            # Check for PE signature
-            dos_header = header[:64]
-            self.assertIn(b'PE', header[:1024] if len(header) >= 1024 else header)
+            # Check for PE signature at correct offset
+            if len(header) >= 64:
+                # Get PE header offset from DOS header
+                pe_offset = int.from_bytes(header[60:64], byteorder='little')
+                if pe_offset < len(header) - 4:
+                    pe_signature = header[pe_offset:pe_offset+4]
+                    self.assertEqual(pe_signature, b'PE\x00\x00', "Should have proper PE signature")
+                else:
+                    self.skipTest("PE signature offset beyond available data")
+            else:
+                self.skipTest("Binary header too small for PE analysis")
     
     def test_matrix_decompilation_expectations(self):
         """Test expected outcomes for Matrix Online decompilation"""
