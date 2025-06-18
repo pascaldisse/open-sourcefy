@@ -5557,6 +5557,28 @@ BEGIN
             else:
                 self.logger.warning("⚠️ PHASE 1 TIB simulation files missing - compilation may have fs:[0] access violations")
             
+            # PHASE 3: Include memory_layout.h and memory_layout.c for virtual address mapping
+            memory_layout_h_path = os.path.join(src_dir, 'memory_layout.h')
+            memory_layout_c_path = os.path.join(src_dir, 'memory_layout.c')
+            
+            # Copy memory layout files to compilation directory if they exist
+            if os.path.exists(memory_layout_h_path) and os.path.exists(memory_layout_c_path):
+                self.logger.info("✅ PHASE 3 memory layout files found - including in VS2003 compilation")
+                with open(memory_layout_h_path, 'r', encoding='utf-8') as f:
+                    memory_layout_h_content = f.read()
+                with open(memory_layout_c_path, 'r', encoding='utf-8') as f:
+                    memory_layout_c_content = f.read()
+                
+                # Copy to compilation directory
+                with open(os.path.join(compilation_dir, 'memory_layout.h'), 'w', encoding='utf-8') as f:
+                    f.write(memory_layout_h_content)
+                with open(os.path.join(compilation_dir, 'memory_layout.c'), 'w', encoding='utf-8') as f:
+                    f.write(memory_layout_c_content)
+                
+                self.logger.info("✅ PHASE 3 memory layout files copied to compilation directory")
+            else:
+                self.logger.warning("⚠️ PHASE 3 memory layout files missing - compilation may have hardcoded address failures")
+            
             # CRITICAL RULE #57 FIX: Generate assembly_stubs.lib from .obj for proper linking
             # Use relative paths since command runs from compilation directory
             lib_create_cmd = 'lib.exe /OUT:assembly_stubs.lib assembly_stubs.obj'
@@ -5694,7 +5716,8 @@ BEGIN
                 '/c',            # CRITICAL: Compile only (create .obj files)
                 'src\\main.c',   # Compile main.c to main.obj
                 'src\\assembly_stubs.c',  # RULE #57: Compile assembly stubs to resolve _edi, _ebx linker errors
-                'src\\assembly_globals.c'  # PHASE 1: Compile TIB simulation for fs:[0] access compatibility
+                'src\\assembly_globals.c',  # PHASE 1: Compile TIB simulation for fs:[0] access compatibility
+                'src\\memory_layout.c'  # PHASE 3: Compile memory layout for hardcoded address resolution
             ]
             
             # RULE #57 COMPLIANCE: Check if embedded_strings.c exists before including in build
@@ -5740,6 +5763,9 @@ BEGIN
                     '/IGNORE:4006',     # Ignore symbol redefinition warnings
                     '/IGNORE:4088',     # Ignore section attribute warnings
                     '/IGNORE:4217',     # Ignore unresolved external symbol warnings
+                    '/SECTION:.data,RW',          # PHASE 3: Data section with read/write access
+                    '/SECTION:.idata,R',          # PHASE 3: Import section with read access
+                    '/ALIGN:0x1000',              # PHASE 3: Page alignment for virtual memory
                     'assembly_stubs.lib',  # CRITICAL FIX: Link assembly register symbols via library (Rule #57)
                     'user32.lib',    # Basic working version first
                     'kernel32.lib',  # Add more dependencies for size
@@ -5754,6 +5780,9 @@ BEGIN
                     '/IGNORE:4006',     # Ignore symbol redefinition warnings
                     '/IGNORE:4088',     # Ignore section attribute warnings
                     '/IGNORE:4217',     # Ignore unresolved external symbol warnings
+                    '/SECTION:.data,RW',          # PHASE 3: Data section with read/write access
+                    '/SECTION:.idata,R',          # PHASE 3: Import section with read access
+                    '/ALIGN:0x1000',              # PHASE 3: Page alignment for virtual memory
                     'assembly_stubs.lib',  # CRITICAL FIX: Link assembly register symbols via library (Rule #57)
                     'user32.lib',    # Basic working version first
                     'kernel32.lib',  # Add more dependencies for size
