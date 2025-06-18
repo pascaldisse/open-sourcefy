@@ -1,0 +1,8 @@
+{
+  "agent_id": 8,
+  "status": "failed",
+  "data": {},
+  "error_message": "Prerequisites validation failed: Agent 1 provided no data for integration",
+  "execution_time": 9.298324584960938e-05,
+  "timestamp": 1750283817.9466941
+}

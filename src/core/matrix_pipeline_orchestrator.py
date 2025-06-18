@@ -389,7 +389,7 @@ class MatrixPipelineOrchestrator:
         
         try:
             # Import master agent
-            from .agents.agent00_deus_ex_machina import DeusExMachinaAgent
+            from core.agents.agent00_deus_ex_machina import DeusExMachinaAgent
             
             master_agent = DeusExMachinaAgent()
             

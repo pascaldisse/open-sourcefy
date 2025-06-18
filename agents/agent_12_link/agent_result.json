@@ -1,0 +1,12 @@
+{
+  "agent_id": 12,
+  "status": "failed",
+  "data": {
+    "integration_result": "IntegrationResult(success=False, data_integrity_score=0.0, communication_quality=0.0, integration_completeness=0.0, bridge_status={}, data_flows={}, validation_results={}, communication_logs=[], error_messages=[], warnings=[], metrics={})",
+    "phase": "initialization",
+    "failure_point": "initialization"
+  },
+  "error_message": "Prerequisites not satisfied",
+  "execution_time": 0.0003764629364013672,
+  "timestamp": 1750283817.9612753
+}

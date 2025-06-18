@@ -23,8 +23,8 @@ try:
     from core.agents.agent02_architect import ArchitectAgent
     from core.agents.agent03_merovingian import MerovingianAgent
     from core.agents.agent04_agent_smith import AgentSmithAgent
-    from core.agents.agent05_neo_advanced_decompiler import Agent5_Neo_AdvancedDecompiler
-    from core.agents.agent10_the_machine import Agent10_TheMachine
+    from core.agents.agent05_neo_advanced_decompiler import NeoAgent
+    from core.agents.agent10_twins_binary_diff import Agent10_Twins_BinaryDiff
     IMPORTS_AVAILABLE = True
 except ImportError as e:
     IMPORTS_AVAILABLE = False
@@ -228,23 +228,24 @@ class TestAgent5Neo(unittest.TestCase):
     
     def test_agent5_initialization(self):
         """Test Agent 5 initializes correctly"""
-        agent = Agent5_Neo_AdvancedDecompiler()
+        agent = NeoAgent()
         
         self.assertEqual(agent.agent_id, 5)
         self.assertEqual(agent.matrix_character, MatrixCharacter.NEO)
-        self.assertEqual(agent.dependencies, [1, 2])  # Depends on Sentinel and Architect
+        self.assertEqual(agent.dependencies, [1, 2, 3])  # Depends on Sentinel, Architect, and Merovingian
         
-    def test_agent5_ghidra_integration_check(self):
-        """Test Agent 5 checks for Ghidra availability"""
-        agent = Agent5_Neo_AdvancedDecompiler()
+    def test_agent5_matrix_description(self):
+        """Test Agent 5 has proper Matrix description"""
+        agent = NeoAgent()
+        description = agent.get_matrix_description()
         
-        # Should have ghidra_available attribute
-        self.assertTrue(hasattr(agent, 'ghidra_available'))
-        self.assertIsInstance(agent.ghidra_available, bool)
+        self.assertIsInstance(description, str)
+        self.assertGreater(len(description), 10)
+        self.assertIn("Neo", description)
 
 
-class TestAgent10Machine(unittest.TestCase):
-    """Test Agent 10 - The Machine (Compilation Orchestration)"""
+class TestAgent10Twins(unittest.TestCase):
+    """Test Agent 10 - The Twins (Binary Diff Analysis)"""
     
     def setUp(self):
         """Set up test environment"""
@@ -261,20 +262,20 @@ class TestAgent10Machine(unittest.TestCase):
     
     def test_agent10_initialization(self):
         """Test Agent 10 initializes correctly"""
-        agent = Agent10_TheMachine()
+        agent = Agent10_Twins_BinaryDiff()
         
         self.assertEqual(agent.agent_id, 10)
-        self.assertEqual(agent.matrix_character, MatrixCharacter.MACHINE)
-        self.assertEqual(agent.dependencies, [9])  # Depends on Commander Locke
+        self.assertEqual(agent.matrix_character, MatrixCharacter.TWINS)
+        self.assertEqual(agent.dependencies, [9])  # Depends on Agent 9
         
-    def test_agent10_build_system_generation(self):
-        """Test Agent 10 can generate build systems"""
-        agent = Agent10_TheMachine()
+    def test_agent10_binary_diff_analysis(self):
+        """Test Agent 10 can perform binary diff analysis"""
+        agent = Agent10_Twins_BinaryDiff()
         
-        # Test build analysis method exists
-        self.assertTrue(hasattr(agent, '_analyze_build_requirements'))
-        self.assertTrue(hasattr(agent, '_generate_build_system'))
-        self.assertTrue(hasattr(agent, '_orchestrate_compilation'))
+        # Test binary diff analysis methods exist
+        self.assertTrue(hasattr(agent, '_analyze_binary_differences'))
+        self.assertTrue(hasattr(agent, '_validate_import_tables'))
+        self.assertTrue(hasattr(agent, '_detect_mfc_compatibility_issues'))
 
 
 class TestAgentErrorHandling(unittest.TestCase):
@@ -361,12 +362,12 @@ class TestAgentDependencyChain(unittest.TestCase):
         agent4 = AgentSmithAgent()
         self.assertEqual(agent4.dependencies, [1])
         
-        # Agent 5 - depends on Agents 1,2
-        agent5 = Agent5_Neo_AdvancedDecompiler()
-        self.assertEqual(agent5.dependencies, [1, 2])
+        # Agent 5 - depends on Agents 1,2,3
+        agent5 = NeoAgent()
+        self.assertEqual(agent5.dependencies, [1, 2, 3])
         
         # Agent 10 - depends on Agent 9
-        agent10 = Agent10_TheMachine()
+        agent10 = Agent10_Twins_BinaryDiff()
         self.assertEqual(agent10.dependencies, [9])
     
     def test_circular_dependency_check(self):
@@ -376,8 +377,8 @@ class TestAgentDependencyChain(unittest.TestCase):
             ArchitectAgent(),
             MerovingianAgent(),
             AgentSmithAgent(),
-            Agent5_Neo_AdvancedDecompiler(),
-            Agent10_TheMachine()
+            NeoAgent(),
+            Agent10_Twins_BinaryDiff()
         ]
         
         # Build dependency graph

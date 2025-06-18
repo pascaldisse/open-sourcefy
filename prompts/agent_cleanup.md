@@ -1,7 +1,8 @@
 # Project-Wide Cleanup and Refactoring Prompt
+## Rules.md Compliant System Cleanup
 
 ## Objective
-Clean up the entire open-sourcefy project by removing dummy code, refactoring implementations, removing obsolete code/scripts, fixing inconsistencies, and optimizing the overall codebase structure.
+Clean up the entire open-sourcefy project according to STRICT rules.md compliance by removing ALL verbose, mock, and overly complex code. Refactor, rename, and merge where needed to create a clean, production-ready system that follows NSA-level security standards.
 
 ## CRITICAL OUTPUT REQUIREMENT
 ⚠️ **ALL OUTPUT MUST GO TO `/output` DIRECTORY ONLY** ⚠️
@@ -11,9 +12,36 @@ Clean up the entire open-sourcefy project by removing dummy code, refactoring im
 - Use structured subdirectories under `/output/` as defined in CLAUDE.md
 - Ensure all file paths are relative to `/output/` base directory
 
+## RULES.MD COMPLIANCE REQUIREMENTS
+
+🚨 **ABSOLUTE REQUIREMENTS FROM RULES.MD** 🚨
+
+### NO MOCK IMPLEMENTATIONS
+- **ZERO TOLERANCE**: No mock agents, mock AI engines, or mock implementations
+- **Real AI Only**: Use actual Claude AI system from ai_system.py 
+- **No Fallbacks**: Remove all mock fallback systems and dummy engines
+- **Production Only**: All code must be production-ready or properly raise NotImplementedError
+
+### NSA-LEVEL SECURITY STANDARDS
+- **Zero Vulnerabilities**: No security holes, exposed secrets, or unsafe operations
+- **Input Validation**: All inputs must be validated and sanitized
+- **Error Handling**: Comprehensive error handling with fail-fast validation
+- **No Debug Code**: Remove all debug prints, temporary files outside /output/, insecure logging
+
+### VS2022 PREVIEW ONLY
+- **No Fallbacks**: Remove all VS2019, VS2017, or other compiler fallbacks
+- **Centralized Paths**: Only use build_config.yaml configured paths
+- **MSBuild Only**: No alternative build systems (remove CMake, Make, etc.)
+
+### PRODUCTION-READY CODE ONLY
+- **No Placeholders**: Remove all TODO comments, placeholder functions, dummy returns
+- **Real Implementation**: All functions must either work or raise NotImplementedError with detailed explanation
+- **Quality Metrics**: All code must meet production quality standards
+- **Clean Architecture**: Follow SOLID principles, proper error handling, comprehensive logging
+
 ## Tasks to Complete
 
-### 1. Project-Wide Dummy Code Removal
+### 1. MANDATORY: Remove ALL Mock/Verbose/Complex Code
 **Target Areas**:
 - **Agents**: `src/core/agents/` - Remove placeholder implementations
 - **Core Modules**: `src/core/` - Fix incomplete functionality  
@@ -22,12 +50,14 @@ Clean up the entire open-sourcefy project by removing dummy code, refactoring im
 - **Configuration**: Root level config files with dummy values
 - **Utils**: Any utility modules with placeholder functionality
 
-**Search Patterns**: Look for functions that return:
-- Hardcoded placeholder values (`confidence: 0.75`)
-- Empty dictionaries/lists (`return {}`, `return []`)
-- Dummy data structures with fake information
-- TODO comments without implementation plans
-- Placeholder strings (`'placeholder'`, `'not implemented'`)
+**RULES.MD VIOLATIONS TO REMOVE**:
+- **Mock Implementations**: Any class/function containing "Mock", "Dummy", "Fake", "Stub"
+- **Verbose Code**: Overly complex implementations when simple ones suffice
+- **Debug Code**: Print statements, debug flags, development-only features  
+- **Fallback Systems**: Alternative implementations for missing dependencies
+- **Complex Test Mocks**: Overly elaborate test fixtures and mock systems
+- **Placeholder Values**: Hardcoded confidence scores, fake data structures
+- **TODO Comments**: Unimplemented features without clear implementation plans
 
 **Replacement Strategy**: Replace with `NotImplementedError` exceptions that clearly explain:
 - What functionality is missing
@@ -53,7 +83,28 @@ def _analyze_control_flow(self, data):
     )
 ```
 
-### 2. Project-Wide Obsolete Code Removal
+### 2. CRITICAL: Test Suite Rules.md Compliance
+**IMMEDIATE PRIORITY**: Fix test suite to align with rules.md
+
+**Test Violations to Fix**:
+- **❌ Mock AI Engines**: Remove all `test_mock_ai_engine_available()` and mock AI components
+- **❌ Fallback Testing**: Remove tests that validate fallback systems
+- **❌ Complex Mock Systems**: Simplify overly elaborate test mocking
+- **❌ Verbose Test Code**: Reduce overly complex test implementations
+
+**Required Test Updates**:
+- **✅ Real AI Testing**: Update tests to use actual `ai_system.py` Claude integration
+- **✅ Production Testing**: Test actual agent implementations, not mocks
+- **✅ Clean Validation**: Test real output validation using AI-enhanced analysis
+- **✅ Simple Mocking**: Use minimal, necessary mocking only
+
+**Test File Priority Order**:
+1. `tests/test_agent_output_validation.py` - ✅ ALREADY FIXED 
+2. `tests/test_missing_agent_validation.py` - ✅ ALREADY FIXED
+3. `tests/test_phase4_comprehensive.py` - ✅ ALREADY FIXED
+4. All other test files - NEEDS REVIEW
+
+### 3. Project-Wide Obsolete Code Removal
 **Target Areas**:
 - **Unused Import Statements**: Across all Python files
 - **Dead Code Paths**: Functions/classes that are never called
@@ -182,27 +233,24 @@ class ClassName:
 
 ## Specific Areas to Focus On
 
-### Core Project Areas (Priority Order)
+### PRIORITY 1: Rules.md Compliance Enforcement
 
-#### 1. **Agent System** (`src/core/agents/`)
-**Status Overview**:
-- ✅ **Agent 7 (AdvancedDecompiler)**: Recently cleaned up (but may need further work)
-- ✅ **Agent 11 (GlobalReconstructor)**: Recently cleaned up (but may need further work)
-- ✅ **Agent 14 (AdvancedGhidra)**: Recently cleaned up
-- ✅ **Agent 15 (MetadataAnalysis)**: Recently cleaned up
+#### 1. **Elite Refactored Agents** (`src/core/agents/`)
+**✅ PRODUCTION-READY AGENTS** (Rules.md Compliant):
+- **Agent 0**: Deus Ex Machina (Master Orchestrator) - ✅ ELITE REFACTOR
+- **Agent 14**: The Cleaner (Security & Cleanup) - ✅ ELITE REFACTOR  
+- **Agent 15**: Analyst (Intelligence Synthesis) - ✅ ELITE REFACTOR
+- **Agent 16**: Agent Brown (QA Validation) - ✅ ELITE REFACTOR
 
-**Remaining Agents to Review**:
-- Agent 1 (BinaryDiscovery)
-- Agent 2 (ArchitectureAnalysis) 
-- Agent 3 (SmartErrorPatternMatching)
-- Agent 4 (BasicDecompiler)
-- Agent 5 (BinaryStructureAnalyzer)
-- Agent 6 (OptimizationMatcher)
-- Agent 8 (BinaryDiffAnalyzer)
-- Agent 9 (AdvancedAssemblyAnalyzer)
-- Agent 10 (ResourceReconstructor)
-- Agent 12 (CompilationOrchestrator)
-- Agent 13 (FinalValidator)
+**🚧 NEEDS RULES.MD COMPLIANCE REVIEW**:
+- **Agent 1**: Sentinel (Binary Discovery) - Contains some verbose code
+- **Agent 2**: Architect (Architecture Analysis) - Some complex implementations
+- **Agent 3**: Merovingian (Function Detection) - Has placeholder patterns
+- **Agent 4**: Agent Smith (Structure Analysis) - Contains mock elements
+- **Agent 5**: Neo (Advanced Decompilation) - Needs Ghidra integration cleanup
+
+**❌ MISSING IMPLEMENTATIONS** (Need Agent Framework):
+- Agents 6-13: Need complete implementation using production framework
 
 #### 2. **Core Infrastructure** (`src/core/`)
 - **agent_base.py**: Base agent framework
@@ -308,29 +356,29 @@ if file_size > 10 * 1024 * 1024:  # Arbitrary threshold
 
 ## Implementation Strategy
 
-### Phase 1: Assessment and Planning (Day 1)
-1. **Full Project Scan**: Use automated tools to identify all dummy code patterns
-2. **Dependency Analysis**: Map out all module dependencies and potential circular imports
-3. **Duplication Detection**: Identify all duplicate functionality across the project
-4. **Documentation Audit**: Catalog all documentation files and identify consolidation opportunities
+### Phase 1: IMMEDIATE Rules.md Compliance (Priority 1)
+1. **Mock Code Elimination**: Remove ALL mock implementations system-wide
+2. **Test Suite Compliance**: Update tests to use real AI system only
+3. **Verbose Code Reduction**: Simplify overly complex implementations
+4. **Debug Code Removal**: Remove debug prints, temp files outside /output/
 
-### Phase 2: Core Infrastructure Cleanup (Days 2-3)
-1. **Base Framework**: Clean up agent_base.py and core infrastructure
-2. **Shared Utilities**: Consolidate common functionality in src/utils/
-3. **Configuration**: Centralize all configuration management
-4. **Error Handling**: Implement consistent error handling patterns
+### Phase 2: Agent System Cleanup (Priority 2)  
+1. **Elite Agent Validation**: Verify Agents 0,14,15,16 meet NSA-level standards
+2. **Production Agent Fixes**: Clean up Agents 1-5 to production standards
+3. **Missing Agent Framework**: Implement Agents 6-13 using production patterns
+4. **Integration Testing**: Validate cleaned agents work with pipeline
 
-### Phase 3: Agent System Cleanup (Days 4-6)
-1. **Work Through Agents 1-15**: Systematic cleanup of each agent
-2. **Agent Communication**: Standardize agent result formats and context passing
-3. **Dependencies**: Optimize agent dependency chains
-4. **Testing**: Ensure cleaned agents still integrate with pipeline
+### Phase 3: Infrastructure Compliance (Priority 3)
+1. **AI System Cleanup**: Ensure only real Claude AI integration exists
+2. **Build System Cleanup**: Remove non-VS2022 Preview fallbacks  
+3. **Configuration Cleanup**: Centralize all paths in build_config.yaml
+4. **Security Validation**: NSA-level security review of all components
 
-### Phase 4: Documentation and Structure (Days 7-8)
-1. **Documentation Consolidation**: Merge and organize all documentation
-2. **Directory Reorganization**: Optimize project structure
-3. **Final Validation**: Comprehensive testing of cleaned codebase
-4. **Quality Assurance**: Code quality metrics and standards compliance
+### Phase 4: Final Production Readiness (Priority 4)
+1. **Quality Assurance**: Comprehensive quality metrics validation
+2. **Documentation Update**: Update all docs to reflect clean architecture
+3. **Performance Testing**: Validate cleaned system performance
+4. **Deployment Readiness**: Final production deployment validation
 
 ## Automated Tools and Commands
 

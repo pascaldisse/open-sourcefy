@@ -1,0 +1,133 @@
+{
+  "agent_id": 13,
+  "status": "success",
+  "data": {
+    "pipeline_quality": {
+      "overall_pipeline_score": 0.3,
+      "agent_quality_scores": {
+        "agent_1": 0.3,
+        "agent_2": 0.3,
+        "agent_3": 0.3,
+        "agent_4": 0.3,
+        "agent_5": 0.3,
+        "agent_6": 0.3,
+        "agent_7": 0.3
+      },
+      "pipeline_health_metrics": {},
+      "critical_bottlenecks": [],
+      "performance_issues": [],
+      "data_flow_integrity": {},
+      "quality_threshold_violations": [
+        "Agent 1 below quality threshold: 0.30 < 0.75",
+        "Agent 2 below quality threshold: 0.30 < 0.75",
+        "Agent 3 below quality threshold: 0.30 < 0.75",
+        "Agent 4 below quality threshold: 0.30 < 0.75",
+        "Agent 5 below quality threshold: 0.30 < 0.75",
+        "Agent 6 below quality threshold: 0.30 < 0.75",
+        "Agent 7 below quality threshold: 0.30 < 0.75"
+      ],
+      "pipeline_optimization_recommendations": [
+        "Address quality threshold violations in underperforming agents"
+      ]
+    },
+    "reconstruction_quality": {
+      "overall_quality_score": 0.02,
+      "source_code_quality": 0.0,
+      "compilation_success": false,
+      "binary_similarity": 0.0,
+      "semantic_equivalence": 0.0,
+      "import_table_accuracy": 0.1,
+      "critical_failures": [],
+      "quality_metrics": {},
+      "fail_fast_triggers": [
+        "Overall quality below threshold (0.6)",
+        "Import table accuracy critically low",
+        "Compilation failed - reconstruction unusable"
+      ]
+    },
+    "security_analysis": {
+      "vulnerability_count": 0,
+      "critical_vulnerabilities": [],
+      "security_patterns": {
+        "input_validation_patterns": [],
+        "output_encoding_patterns": [],
+        "authentication_patterns": [],
+        "authorization_patterns": [],
+        "encryption_patterns": [],
+        "secure_coding_patterns": [],
+        "insecure_patterns": [],
+        "pattern_analysis": {
+          "total_secure_patterns": 0,
+          "total_insecure_patterns": 0,
+          "security_pattern_ratio": 0.0
+        }
+      },
+      "exploit_risks": [],
+      "security_recommendations": [],
+      "nsa_compliance_score": 1.0,
+      "security_validation_passed": true
+    },
+    "performance_analysis": {
+      "pipeline_execution_time": 0.0,
+      "memory_usage_peak": 0.0,
+      "agent_performance_scores": {
+        "agent_1": 0.0,
+        "agent_2": 0.0,
+        "agent_3": 0.0,
+        "agent_4": 0.0,
+        "agent_5": 0.0,
+        "agent_6": 0.0,
+        "agent_7": 0.0
+      },
+      "bottleneck_agents": [],
+      "optimization_opportunities": [],
+      "performance_grade": "A"
+    },
+    "interdependency_validation": {
+      "dependency_matrix": {},
+      "missing_dependencies": [],
+      "circular_dependencies": [],
+      "data_flow_integrity": {},
+      "critical_dataflow_failures": [],
+      "interdependency_health_score": 0.0
+    },
+    "qa_report": {
+      "overall_quality_score": 0.431,
+      "critical_issues_count": 3,
+      "quality_validation_passed": false,
+      "johnson_enforcement_summary": {
+        "enforcement_level": "MAXIMUM",
+        "tolerance_policy": "ZERO_TOLERANCE",
+        "compliance_enforced": false,
+        "critical_violations": 3,
+        "enforcement_actions": [
+          "ENFORCE: Quality validation failed - block pipeline progression",
+          "ENFORCE: 3 critical issues must be resolved immediately",
+          "ENFORCE: Overall quality score 0.43 below minimum threshold (0.75)"
+        ]
+      },
+      "quality_breakdown": {
+        "pipeline_quality": 0.3,
+        "reconstruction_quality": 0.02,
+        "security_compliance": 1.0,
+        "performance_grade": "A",
+        "interdependency_health": 0.0
+      },
+      "critical_failures": [],
+      "recommendations": [],
+      "matrix_compliance_status": "NON_COMPLIANT"
+    },
+    "overall_quality_score": 0.431,
+    "critical_issues_count": 3,
+    "quality_validation_passed": false,
+    "johnson_enforcement_metrics": {
+      "enforcement_level": "MAXIMUM",
+      "compliance_enforced": false,
+      "violations_detected": 3,
+      "enforcement_success": false
+    }
+  },
+  "error_message": null,
+  "execution_time": 0.0008106231689453125,
+  "timestamp": 1750283817.9701385
+}

@@ -1,0 +1,115 @@
+{
+  "agent_id": 11,
+  "status": "success",
+  "data": {
+    "semantic_analysis": {
+      "control_flow_equivalence": {
+        "basic_blocks_preserved": true,
+        "loop_structures_preserved": true,
+        "branch_patterns_preserved": true,
+        "control_flow_score": 0.85
+      },
+      "data_structure_equivalence": {
+        "struct_layouts_preserved": true,
+        "class_hierarchies_preserved": true,
+        "member_alignments_preserved": true,
+        "data_structure_score": 0.8
+      },
+      "api_usage_equivalence": {
+        "import_patterns_preserved": true,
+        "function_signatures_preserved": true,
+        "calling_conventions_preserved": true,
+        "api_usage_score": 0.75
+      },
+      "memory_layout_equivalence": {
+        "stack_layout_preserved": true,
+        "heap_usage_patterns_preserved": true,
+        "memory_alignment_preserved": true,
+        "memory_layout_score": 0.7
+      },
+      "instruction_semantics": {
+        "arithmetic_operations_preserved": true,
+        "memory_operations_preserved": true,
+        "control_instructions_preserved": true,
+        "instruction_semantics_score": 0.85
+      },
+      "semantic_score": 0.79,
+      "equivalence_issues": [],
+      "semantic_patterns": []
+    },
+    "template_analysis": {
+      "rtti_available": false,
+      "template_instances": [],
+      "type_descriptors": [],
+      "vtable_analysis": {},
+      "template_semantics": {},
+      "instantiation_patterns": [],
+      "template_score": 0.5
+    },
+    "behavioral_analysis": {
+      "execution_flow_match": true,
+      "side_effects_preserved": true,
+      "exception_handling_preserved": true,
+      "resource_usage_equivalent": true,
+      "behavioral_score": 1.0,
+      "behavioral_differences": [],
+      "critical_behavior_issues": []
+    },
+    "ai_semantic_analysis": null,
+    "truth_verification": {
+      "semantic_truth_score": 0.766,
+      "prophetic_confidence": 0.7633333333333333,
+      "truth_factors": {
+        "semantic_equivalence": 0.79,
+        "template_preservation": 0.5,
+        "behavioral_preservation": 1.0
+      },
+      "oracle_insights": [
+        "The Oracle perceives strong semantic alignment - reconstruction preserves essential truth"
+      ],
+      "truth_proclamation": "The Oracle proclaims: Semantic truth is preserved - the reconstruction maintains the essence of the original.",
+      "semantic_equivalence_verified": true
+    },
+    "oracle_report": {
+      "executive_summary": {
+        "semantic_truth_score": 0.766,
+        "semantic_equivalence_verified": true,
+        "template_analysis_available": false,
+        "oracle_confidence": 0.7633333333333333
+      },
+      "detailed_analysis": {
+        "semantic_patterns": [],
+        "template_patterns": [],
+        "behavioral_preservation": 1.0
+      },
+      "oracle_insights": [
+        "The Oracle perceives strong semantic alignment - reconstruction preserves essential truth"
+      ],
+      "truth_proclamation": "The Oracle proclaims: Semantic truth is preserved - the reconstruction maintains the essence of the original."
+    },
+    "final_verdict": {
+      "decision": "SEMANTIC_TRUTH_VERIFIED",
+      "confidence": 0.7633333333333333,
+      "truth_score": 0.766,
+      "oracle_proclamation": "The Oracle proclaims: Semantic truth is preserved - the reconstruction maintains the essence of the original.",
+      "prophetic_assessment": "The Oracle has spoken - the semantic truth is revealed.",
+      "recommended_actions": [
+        "Proceed with deployment - semantic truth is preserved",
+        "Document successful semantic reconstruction",
+        "Use as reference for future reconstructions"
+      ]
+    },
+    "oracle_metrics": {
+      "semantic_analysis_depth": 0,
+      "oracle_prophetic_accuracy": 0.7633333333333333,
+      "semantic_truth_certainty": 0.766,
+      "oracle_insight_quality": 0.2
+    },
+    "semantic_recommendations": [
+      "Enable RTTI analysis for better template instantiation understanding"
+    ]
+  },
+  "error_message": null,
+  "execution_time": 0.00048732757568359375,
+  "timestamp": 1750283818.5092285
+}
