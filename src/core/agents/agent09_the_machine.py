@@ -564,52 +564,38 @@ class Agent9_TheMachine(ReconstructionAgent):
                                 string_id += 1
                             used_ids.add(string_id)
                         
-                            # Complete RC syntax escaping for all special characters
-                            escaped_content = (string_content
-                                             .replace('\\', '\\\\')    # Escape backslashes first
-                                             .replace('"', '\\"')      # Escape quotes
-                                             .replace('\n', '\\n')     # Escape newlines
-                                             .replace('\r', '\\r')     # Escape carriage returns
-                                             .replace('\t', '\\t')     # Escape tabs
-                                             .replace('`', '\\`')      # Escape backticks
-                                             .replace('$', '\\$')      # Escape dollar signs
-                                             .replace('%', '\\%')      # Escape percent signs
-                                             .replace('^', '\\^')      # Escape caret symbols
-                                             .replace('[', '\\[')      # Escape square brackets
-                                             .replace(']', '\\]')      # Escape square brackets
-                                             .replace('{', '\\{')      # Escape braces
-                                             .replace('}', '\\}'))     # Escape braces
-                            
                             # Comprehensive RC compiler compatibility validation
                             # Check for binary/control characters (except printable ones)
                             has_binary_data = any(ord(c) < 32 and c not in ['\n', '\r', '\t'] for c in string_content)
                             has_high_ascii = any(ord(c) > 126 for c in string_content)
                             
-                            # Check for RC syntax conflicts in the original string
+                            # Check for RC syntax conflicts that RC.EXE cannot handle
                             problematic_patterns = [
-                                '^[', '_^[]', ']+', '{}[]', '\\x', '\x00', '\x01', '\x02', '\x03', '\x04', '\x05',
-                                '\\\\', '\\"', '\\n', '\\r', '\\t', '\\`', '\\$', '\\%', '\\^', '\\[', '\\]', '\\{', '\\}'
+                                '_^[]', '^[', ']+', '{}[]', '\\x', '\x00', '\x01', '\x02', '\x03', '\x04', '\x05',
+                                'QSVW', 'VWt[', 'PSh', 'jKSS', 'SSSj'  # Specific RC.EXE problem strings
                             ]
                             has_rc_conflicts = any(pattern in string_content for pattern in problematic_patterns)
                             
-                            # CRITICAL FIX: More permissive string validation for 5.27MB target (Rule #83)
-                            # Only exclude strings with severe RC.EXE incompatibility issues
+                            # CRITICAL FIX: Strict string validation for RC.EXE compatibility (Rule #57)
+                            # Exclude strings that cause RC2151 and RC2104 errors
                             is_valid_string = (
                                 not has_binary_data and 
+                                not has_rc_conflicts and  # Exclude RC syntax conflicts
                                 len(string_content.strip()) > 0 and
                                 len(string_content) < 2000 and  # Increased limit for larger payload
                                 not string_content.startswith('\\x') and  # Exclude hex sequences
-                                '\x00' not in string_content  # Exclude null bytes
+                                '\x00' not in string_content and  # Exclude null bytes
+                                string_content.isprintable()  # Only printable characters
                             )
                             
                             if is_valid_string:
-                                # COMPREHENSIVE escaping for RC.EXE compatibility (Rule #83)
+                                # FIXED RC escaping - only escape what RC.EXE actually needs (Rule #57)
                                 clean_content = (string_content
-                                               .replace('\\', '\\\\')   # Escape backslashes first
-                                               .replace('"', '\\"')     # Escape quotes
-                                               .replace('\n', '\\n')    # Escape newlines  
-                                               .replace('\r', '\\r')    # Escape carriage returns
-                                               .replace('\t', '\\t'))   # Escape tabs
+                                               .replace('\\', '\\\\')    # Escape backslashes first
+                                               .replace('"', '\\"')      # Escape quotes
+                                               .replace('\n', ' ')       # Replace newlines with spaces
+                                               .replace('\r', ' ')       # Replace carriage returns with spaces  
+                                               .replace('\t', ' '))      # Replace tabs with spaces
                                 rc_content.append(f'    {string_id}, "{clean_content}"')
                                 processed_strings += 1
                             else:
@@ -737,10 +723,10 @@ class Agent9_TheMachine(ReconstructionAgent):
                     with open(analysis_file, 'r', encoding='utf-8') as f:
                         keymaker_data = json.load(f)
                     
-                    # Extract resource statistics
-                    resources = keymaker_data.get('resources', {})
-                    string_count = resources.get('string', {}).get('count', 0)
-                    image_count = resources.get('embedded_file', {}).get('count', 0)
+                    # Extract resource statistics from resource_categories
+                    resource_categories = keymaker_data.get('resource_categories', [])
+                    string_count = sum(cat.get('item_count', 0) for cat in resource_categories if cat.get('name') == 'string')
+                    image_count = sum(cat.get('item_count', 0) for cat in resource_categories if cat.get('name') in ['image', 'embedded_file'])
                     
                     self.logger.info(f"🔧 Found Keymaker resources: {string_count} strings, {image_count} images")
                     
@@ -774,9 +760,9 @@ class Agent9_TheMachine(ReconstructionAgent):
             rc_content.append("")
             
             # Add string table with FULL resource integration (proven approach)
-            resources = keymaker_data.get('resources', {})
-            string_info = resources.get('string', {})
-            total_strings = string_info.get('count', 0)
+            resource_categories = keymaker_data.get('resource_categories', [])
+            string_category = next((cat for cat in resource_categories if cat.get('name') == 'string'), {})
+            total_strings = string_category.get('item_count', 0)
             
             if total_strings > 0:
                 self.logger.info(f"🔧 Generating FULL string table with {total_strings} strings (segmented approach)")
@@ -812,8 +798,8 @@ class Agent9_TheMachine(ReconstructionAgent):
                 self.logger.info(f"✅ Processed {processed_count} strings successfully")
             
             # Add bitmap resources with FULL integration (all 21 BMPs)
-            image_info = resources.get('embedded_file', {})
-            total_images = image_info.get('count', 0)
+            embedded_category = next((cat for cat in resource_categories if cat.get('name') == 'embedded_file'), {})
+            total_images = embedded_category.get('item_count', 0)
             
             if total_images > 0:
                 self.logger.info(f"🔧 Generating bitmap resources for {total_images} images")
@@ -3416,13 +3402,18 @@ Write-Host "Build complete!" -ForegroundColor Green
                 # Build chunk content
                 chunk_lines = []
                 
-                # Add common header to each chunk (EXCLUDING massive resource.h to prevent 1GB+ memory allocation)
+                # Add common header to each chunk (EXCLUDING massive resource.h and windows.h to prevent RC.EXE issues)
                 for header_line in header_lines:
                     # CRITICAL FIX: Skip resource.h include - it contains 22,338 definitions causing RC.EXE memory exhaustion
                     if '#include "resource.h"' in header_line or '#include "src/resource.h"' in header_line:
                         if chunk_idx == 0:  # Log only once for first chunk
                             self.logger.info("🔧 CRITICAL FIX: Skipping massive resource.h include to prevent RC.EXE 1GB+ memory allocation")
                         continue  # Skip including the massive resource.h file
+                    # CRITICAL FIX: Skip windows.h include - RC.EXE has trouble finding it and basic resources don't need it (Rule #57)
+                    elif '#include <windows.h>' in header_line:
+                        if chunk_idx == 0:  # Log only once for first chunk
+                            self.logger.info("🔧 CRITICAL FIX: Skipping windows.h include - basic resource chunks don't need it for RC.EXE compilation")
+                        continue  # Skip windows.h include
                     elif '#include "strings_resource.h"' in header_line:
                         fixed_line = header_line.replace('#include "strings_resource.h"', '#include "src/strings_resource.h"')
                         chunk_lines.append(fixed_line)
@@ -3432,9 +3423,61 @@ Write-Host "Build complete!" -ForegroundColor Green
                         chunk_lines.append(header_line)
                 chunk_lines.append('')
                 
-                # Add STRINGTABLE sections for this chunk
+                # Add STRINGTABLE sections for this chunk with CRITICAL string validation (Rule #57)
                 for section in chunk_sections:
-                    chunk_lines.extend(section)
+                    # Apply same string validation as main RC generation to fix RC.EXE compilation errors
+                    validated_section = []
+                    for line in section:
+                        # Apply string escaping fixes to chunk lines that contain string values
+                        # Handle RC STRINGTABLE format: ID, "string content"
+                        if ', "' in line and line.strip().endswith('"'):
+                            # This is a STRINGTABLE line - extract the string content
+                            parts = line.split(', "', 1)
+                            if len(parts) == 2:
+                                string_id = parts[0].strip()
+                                string_content = parts[1].rstrip('"')  # Remove trailing quote
+                                
+                                # Check for RC syntax conflicts that RC.EXE cannot handle
+                                problematic_patterns = [
+                                    '_^[]', '^[', ']+', '{}[]', '\\x', '\x00', '\x01', '\x02', '\x03', '\x04', '\x05',
+                                    'QSVW', 'VWt[', 'PSh', 'jKSS', 'SSSj', 't"9~tu', '9~tu',  # Known RC.EXE problem strings
+                                    '[t\\', '\\t[', '[\\', '\\[', '\\"', 'W"', '"W',  # Additional RC syntax conflicts
+                                    'SSSSS', 'QRWS', 'VRWP', 'WVR', 'RWP'  # More problematic assembly patterns
+                                ]
+                                has_rc_conflicts = any(pattern in string_content for pattern in problematic_patterns)
+                                
+                                # CRITICAL FIX: Strict string validation for RC.EXE compatibility (Rule #57)
+                                has_binary_data = any(ord(c) < 32 and c not in ['\n', '\r', '\t'] for c in string_content)
+                                is_valid_string = (
+                                    not has_binary_data and 
+                                    not has_rc_conflicts and  # Exclude RC syntax conflicts
+                                    len(string_content.strip()) > 0 and
+                                    len(string_content) < 2000 and
+                                    not string_content.startswith('\\x') and
+                                    '\x00' not in string_content and
+                                    string_content.isprintable()
+                                )
+                                
+                                if is_valid_string:
+                                    # Apply proper escaping for RC.EXE compatibility
+                                    clean_content = (string_content
+                                                   .replace('\\', '\\\\')    # Escape backslashes first
+                                                   .replace('"', '\\"')      # Escape quotes
+                                                   .replace('\n', ' ')       # Replace newlines with spaces
+                                                   .replace('\r', ' ')       # Replace carriage returns with spaces  
+                                                   .replace('\t', ' '))      # Replace tabs with spaces
+                                    validated_section.append(f'    {string_id}, "{clean_content}"')
+                                else:
+                                    # Skip problematic strings that would break RC.EXE compilation
+                                    validated_section.append(f'    // SKIPPED: {string_id} - Problematic string for RC.EXE')
+                            else:
+                                # Malformed line, add as-is
+                                validated_section.append(line)
+                        else:
+                            # Non-string line, add as-is
+                            validated_section.append(line)
+                    
+                    chunk_lines.extend(validated_section)
                     chunk_lines.append('')
                 
                 # Distribute bitmaps across chunks to prevent RC.EXE memory exhaustion (Rule #83)
@@ -5925,15 +5968,21 @@ BEGIN
                 
                 chunk_results = self._generate_chunked_resource_files(resources_rc_content, compilation_dir, resources_dir)
                 if chunk_results['success'] and chunk_results['rc_files']:
-                    # Compile all chunks with VS2003 RC.EXE
-                    compilation_result = self._compile_resource_chunks(chunk_results['rc_files'], compilation_dir)
-                    if compilation_result['success']:
-                        res_files_for_linking = compilation_result['res_files']
-                        self.logger.info(f"✅ VS2003 CHUNKED SUCCESS: {len(compilation_result['res_files'])} .res files compiled for 4.2MB target")
-                        self.logger.info(f"✅ Rule #57: Chunked RC compilation achieved 4.2MB .rsrc section")
-                    else:
-                        self.logger.error(f"❌ VS2003 chunked compilation failed: {compilation_result.get('error', 'Unknown error')}")
+                    # Compile all chunks with VS2003 RC.EXE - STRICT VALIDATION per Rule #21
+                    vs2003_rc_exe = r"C:\Program Files (x86)\Microsoft Visual Studio .NET 2003\Vc7\bin\rc.exe"
+                    vs2003_rc_wsl = vs2003_rc_exe.replace("C:\\", "/mnt/c/").replace("\\", "/")
+                    if not os.path.exists(vs2003_rc_wsl):
+                        self.logger.error(f"❌ VS2003 RC.EXE not found at {vs2003_rc_wsl} - Rule #21 STRICT VALIDATION failed")
                         res_files_for_linking = []
+                    else:
+                        compilation_result = self._compile_resource_chunks_vs2003(chunk_results['rc_files'], compilation_dir, vs2003_rc_exe)
+                        if compilation_result['success']:
+                            res_files_for_linking = compilation_result['res_files']
+                            self.logger.info(f"✅ VS2003 CHUNKED SUCCESS: {len(compilation_result['res_files'])} .res files compiled for 4.2MB target")
+                            self.logger.info(f"✅ Rule #57: Chunked RC compilation achieved 4.2MB .rsrc section")
+                        else:
+                            self.logger.error(f"❌ VS2003 chunked compilation failed: {compilation_result.get('error', 'Unknown error')}")
+                            res_files_for_linking = []
                 else:
                     self.logger.error(f"❌ VS2003 chunked resource generation failed: {chunk_results.get('error', 'Unknown error')}")
                     res_files_for_linking = []
