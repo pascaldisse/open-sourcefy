@@ -5579,6 +5579,50 @@ BEGIN
             else:
                 self.logger.warning("⚠️ PHASE 3 memory layout files missing - compilation may have hardcoded address failures")
             
+            # PHASE 4: Include control_flow.h and control_flow.c for assembly code semantics
+            control_flow_h_path = os.path.join(src_dir, 'control_flow.h')
+            control_flow_c_path = os.path.join(src_dir, 'control_flow.c')
+            
+            # Copy control flow files to compilation directory if they exist
+            if os.path.exists(control_flow_h_path) and os.path.exists(control_flow_c_path):
+                self.logger.info("✅ PHASE 4 control flow files found - including in VS2003 compilation")
+                with open(control_flow_h_path, 'r', encoding='utf-8') as f:
+                    control_flow_h_content = f.read()
+                with open(control_flow_c_path, 'r', encoding='utf-8') as f:
+                    control_flow_c_content = f.read()
+                
+                # Copy to compilation directory
+                with open(os.path.join(compilation_dir, 'control_flow.h'), 'w', encoding='utf-8') as f:
+                    f.write(control_flow_h_content)
+                with open(os.path.join(compilation_dir, 'control_flow.c'), 'w', encoding='utf-8') as f:
+                    f.write(control_flow_c_content)
+                
+                self.logger.info("✅ PHASE 4 control flow files copied to compilation directory")
+            else:
+                self.logger.warning("⚠️ PHASE 4 control flow files missing - compilation may have int3 crashes and assembly errors")
+            
+            # PHASE 4: Include winmain_wrapper.h and winmain_wrapper.c for proper Windows entry point
+            winmain_wrapper_h_path = os.path.join(src_dir, 'winmain_wrapper.h')
+            winmain_wrapper_c_path = os.path.join(src_dir, 'winmain_wrapper.c')
+            
+            # Copy WinMain wrapper files to compilation directory if they exist
+            if os.path.exists(winmain_wrapper_h_path) and os.path.exists(winmain_wrapper_c_path):
+                self.logger.info("✅ PHASE 4 WinMain wrapper files found - including in VS2003 compilation")
+                with open(winmain_wrapper_h_path, 'r', encoding='utf-8') as f:
+                    winmain_wrapper_h_content = f.read()
+                with open(winmain_wrapper_c_path, 'r', encoding='utf-8') as f:
+                    winmain_wrapper_c_content = f.read()
+                
+                # Copy to compilation directory
+                with open(os.path.join(compilation_dir, 'winmain_wrapper.h'), 'w', encoding='utf-8') as f:
+                    f.write(winmain_wrapper_h_content)
+                with open(os.path.join(compilation_dir, 'winmain_wrapper.c'), 'w', encoding='utf-8') as f:
+                    f.write(winmain_wrapper_c_content)
+                
+                self.logger.info("✅ PHASE 4 WinMain wrapper files copied to compilation directory")
+            else:
+                self.logger.warning("⚠️ PHASE 4 WinMain wrapper files missing - compilation may have entry point issues")
+            
             # CRITICAL RULE #57 FIX: Generate assembly_stubs.lib from .obj for proper linking
             # Use relative paths since command runs from compilation directory
             lib_create_cmd = 'lib.exe /OUT:assembly_stubs.lib assembly_stubs.obj'
@@ -5717,7 +5761,9 @@ BEGIN
                 'src\\main.c',   # Compile main.c to main.obj
                 'src\\assembly_stubs.c',  # RULE #57: Compile assembly stubs to resolve _edi, _ebx linker errors
                 'src\\assembly_globals.c',  # PHASE 1: Compile TIB simulation for fs:[0] access compatibility
-                'src\\memory_layout.c'  # PHASE 3: Compile memory layout for hardcoded address resolution
+                'src\\memory_layout.c',  # PHASE 3: Compile memory layout for hardcoded address resolution
+                'src\\control_flow.c',  # PHASE 4: Compile control flow for assembly code semantics and int3 fixes
+                'src\\winmain_wrapper.c'  # PHASE 4: Compile WinMain wrapper for proper Windows entry point
             ]
             
             # RULE #57 COMPLIANCE: Check if embedded_strings.c exists before including in build
