@@ -5465,11 +5465,9 @@ BEGIN
             with open(assembly_stubs_src, 'w', encoding='utf-8') as f:
                 f.write(assembly_stubs_content)
             
-            # CRITICAL RULE #57 FIX: Generate assembly_stubs.def for proper symbol export
-            assembly_stubs_def_content = self._generate_assembly_stubs_def_file()
-            assembly_stubs_def = os.path.join(compilation_dir, 'assembly_stubs.def')
-            with open(assembly_stubs_def, 'w', encoding='utf-8') as f:
-                f.write(assembly_stubs_def_content)
+            # CRITICAL RULE #57 FIX: Generate assembly_stubs.lib from .obj for proper linking
+            # Use relative paths since command runs from compilation directory
+            lib_create_cmd = 'lib.exe /OUT:assembly_stubs.lib assembly_stubs.obj'
             
             self.logger.info(f"✅ Generated assembly_stubs.c and .def for VS2003 Rule #57 compliance: resolves _edi, _ebx linker errors")
             
@@ -5637,8 +5635,7 @@ BEGIN
             
             vs2003_link = [
                 f'/Fe"{exe_name}"',
-                'assembly_stubs.obj',  # RULE #57: Link assembly stubs FIRST to resolve _edi, _ebx linker errors
-                'main.obj',      # Link main object file after stubs are available
+                'main.obj',      # Link main object file
             ]
             
             # RULE #57 COMPLIANCE: Only include embedded_strings.obj if source file exists
@@ -5650,6 +5647,7 @@ BEGIN
                     '/IGNORE:4006',     # Ignore symbol redefinition warnings
                     '/IGNORE:4088',     # Ignore section attribute warnings
                     '/IGNORE:4217',     # Ignore unresolved external symbol warnings
+                    'assembly_stubs.lib',  # CRITICAL FIX: Link assembly register symbols via library (Rule #57)
                     'user32.lib',    # Basic working version first
                     'kernel32.lib',  # Add more dependencies for size
                     'gdi32.lib',
@@ -5663,6 +5661,7 @@ BEGIN
                     '/IGNORE:4006',     # Ignore symbol redefinition warnings
                     '/IGNORE:4088',     # Ignore section attribute warnings
                     '/IGNORE:4217',     # Ignore unresolved external symbol warnings
+                    'assembly_stubs.lib',  # CRITICAL FIX: Link assembly register symbols via library (Rule #57)
                     'user32.lib',    # Basic working version first
                     'kernel32.lib',  # Add more dependencies for size
                     'gdi32.lib',
@@ -5776,18 +5775,24 @@ echo Step 3: Linking object files with chunked resources for 5.27MB target...
 {link_cmd.replace('embedded_strings.obj', 'embedded_strings.obj ' + res_link_args)}
 '''
                 else:
-                    # Two-step compilation (no embedded_strings.c) with pre-compiled chunked .res files
+                    # Three-step compilation (no embedded_strings.c) with pre-compiled chunked .res files
                     batch_content = f'''@echo off
 call "C:\\Program Files (x86)\\Microsoft Visual Studio .NET 2003\\Common7\\Tools\\vsvars32.bat"
 cd /d "{compilation_dir_windows}"
-echo RULE #57 TWO-STEP COMPILATION: embedded_strings.c not found...
+echo RULE #57 THREE-STEP COMPILATION: embedded_strings.c not found...
 echo Step 1: Compiling main.c to main.obj...
 {compile_main_cmd}
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Failed to compile main.c
     exit /b %ERRORLEVEL%
 )
-echo Step 2: Linking object files with chunked resources for 5.27MB target...
+echo Step 2: Creating assembly_stubs.lib for symbol resolution...
+{lib_create_cmd}
+if %ERRORLEVEL% neq 0 (
+    echo ERROR: Failed to create assembly_stubs.lib
+    exit /b %ERRORLEVEL%
+)
+echo Step 3: Linking object files with chunked resources for 5.27MB target...
 {link_cmd} {res_link_args}
 '''
             else:
@@ -5813,18 +5818,24 @@ echo Step 3: Linking object files for maximum size...
 {link_cmd}
 '''
                 else:
-                    # Two-step compilation (no embedded_strings.c, no resources)
+                    # Three-step compilation (no embedded_strings.c, no resources)
                     batch_content = f'''@echo off
 call "C:\\Program Files (x86)\\Microsoft Visual Studio .NET 2003\\Common7\\Tools\\vsvars32.bat"
 cd /d "{compilation_dir_windows}"
-echo RULE #57 TWO-STEP COMPILATION: embedded_strings.c not found...
+echo RULE #57 THREE-STEP COMPILATION: embedded_strings.c not found...
 echo Step 1: Compiling main.c to main.obj...
 {compile_main_cmd}
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Failed to compile main.c
     exit /b %ERRORLEVEL%
 )
-echo Step 2: Linking object files for maximum size...
+echo Step 2: Creating assembly_stubs.lib for symbol resolution...
+{lib_create_cmd}
+if %ERRORLEVEL% neq 0 (
+    echo ERROR: Failed to create assembly_stubs.lib
+    exit /b %ERRORLEVEL%
+)
+echo Step 3: Linking object files for maximum size...
 {link_cmd}
 '''
             batch_file = os.path.join(compilation_dir, "vs2003_compile.bat")
