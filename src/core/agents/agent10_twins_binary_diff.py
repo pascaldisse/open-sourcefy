@@ -1,19 +1,22 @@
 """
-Agent 6: The Twins - Binary Diff Analysis and Comparison Engine
+Agent 10: The Twins - Binary Diff Analysis and Import Table Validation
 
 In the Matrix, The Twins are identical but opposite - perfect for binary comparison.
 They possess the unique ability to phase between states, making them ideal for
 analyzing differences between binary versions, original vs decompiled comparisons,
-and detecting changes in code structure.
+and detecting critical import table mismatches that threaten pipeline success.
 
 Matrix Context:
 The Twins can exist in multiple states simultaneously, allowing them to compare
-different versions of the same binary, detect compiler optimizations, and identify
-structural changes. Their ghosting ability translates to advanced binary diffing
-that can see through surface-level changes to identify fundamental differences.
+different versions of the same binary, detect import table discrepancies, and identify
+MFC 7.1 compatibility issues. Their ghosting ability translates to advanced binary diffing
+that can see through surface-level changes to identify fundamental reconstruction failures.
 
-Production-ready implementation following SOLID principles and clean code standards.
-Includes AI-enhanced analysis, comprehensive error handling, and fail-fast validation.
+CRITICAL MISSION: Detect import table mismatches that cause 64.3% discrepancy (538→5 DLLs)
+and trigger pipeline failure when reconstruction quality is insufficient.
+
+Production-ready implementation following SOLID principles and NSA-level security standards.
+Includes fail-fast validation, comprehensive error handling, and import table analysis.
 """
 
 import logging
@@ -69,19 +72,19 @@ class TwinsAnalysisResult:
 
 class Agent10_Twins_BinaryDiff(AnalysisAgent):
     """
-    Agent 6: The Twins - Binary Diff Analysis and Comparison Engine
+    Agent 10: The Twins - Binary Diff Analysis and Import Table Validation
     
     The Twins possess the unique ability to exist in multiple states simultaneously,
     making them perfect for comparing different versions of binaries, detecting
-    compiler optimizations, and identifying structural changes in code.
+    import table discrepancies, and identifying critical reconstruction failures.
     
     Features:
+    - Critical import table mismatch detection (538→5 DLL discrepancy)
+    - MFC 7.1 compatibility analysis for Agent 1/9 data flow
+    - Pipeline failure triggering for insufficient reconstruction quality
     - Advanced binary diffing with structural analysis
-    - Compiler optimization pattern detection
-    - Multi-level comparison (binary, assembly, source)
-    - AI-enhanced difference interpretation
-    - Twins synchronization for parallel analysis
-    - Significance ranking of detected differences
+    - Parallel processing optimization for performance
+    - Fail-fast validation following rules.md compliance
     """
     
     def __init__(self):
@@ -91,14 +94,19 @@ class Agent10_Twins_BinaryDiff(AnalysisAgent):
         )
         
         # Load Twins-specific configuration
-        self.similarity_threshold = self.config.get_value('agents.agent_06.similarity_threshold', 0.7)
-        self.max_diff_entries = self.config.get_value('agents.agent_06.max_diff_entries', 1000)
-        self.timeout_seconds = self.config.get_value('agents.agent_06.timeout', 300)
-        self.enable_deep_analysis = self.config.get_value('agents.agent_06.deep_analysis', True)
+        self.similarity_threshold = self.config.get_value('agents.agent_10.similarity_threshold', 0.7)
+        self.max_diff_entries = self.config.get_value('agents.agent_10.max_diff_entries', 1000)
+        self.timeout_seconds = self.config.get_value('agents.agent_10.timeout', 300)
+        self.enable_deep_analysis = self.config.get_value('agents.agent_10.deep_analysis', True)
         
         # CRITICAL: Binary size comparison thresholds for pipeline failure
-        self.size_similarity_threshold = self.config.get_value('agents.agent_06.size_similarity_threshold', 0.2)  # 20% minimum
-        self.fail_pipeline_on_size_mismatch = self.config.get_value('agents.agent_06.fail_on_size_mismatch', True)
+        self.size_similarity_threshold = self.config.get_value('agents.agent_10.size_similarity_threshold', 0.2)  # 20% minimum
+        self.fail_pipeline_on_size_mismatch = self.config.get_value('agents.agent_10.fail_on_size_mismatch', True)
+        
+        # CRITICAL: Import table analysis thresholds (addressing 64.3% discrepancy issue)
+        self.import_table_threshold = self.config.get_value('agents.agent_10.import_table_threshold', 0.5)  # 50% minimum match
+        self.mfc_compatibility_check = self.config.get_value('agents.agent_10.mfc_compatibility_check', True)
+        self.fail_on_import_mismatch = self.config.get_value('agents.agent_10.fail_on_import_mismatch', True)
         
         # Initialize components
         self.error_handler = MatrixErrorHandler("Twins", max_retries=2)
@@ -165,12 +173,29 @@ class Agent10_Twins_BinaryDiff(AnalysisAgent):
                 self.logger.error(error_msg)
                 raise Exception(error_msg)
             
+            # Phase 0.5: CRITICAL Import Table Analysis (Primary Bottleneck Fix)
+            self.logger.info("Phase 0.5: Critical import table mismatch analysis")
+            import_analysis = self._perform_critical_import_analysis(
+                binary_path, agent1_data, context
+            )
+            
+            # FAIL FAST: If import table mismatch exceeds threshold, fail the entire pipeline
+            if import_analysis['should_fail_pipeline']:
+                error_msg = (f"PIPELINE FAILURE: Import table mismatch exceeds threshold. "
+                           f"Original: {import_analysis['original_imports']:,} imports, "
+                           f"Reconstructed: {import_analysis['reconstructed_imports']:,} imports, "
+                           f"Match Rate: {import_analysis['import_match_rate']:.2%} "
+                           f"(threshold: {self.import_table_threshold:.1%})")
+                self.logger.error(error_msg)
+                raise Exception(error_msg)
+            
             # Phase 1: Multi-Level Binary Comparison
             self.logger.info("Phase 1: Multi-level binary comparison")
             comparison_results = self._perform_multilevel_comparison(
                 binary_path, agent1_data, agent2_data, agent5_data
             )
             comparison_results['size_comparison'] = size_comparison
+            comparison_results['import_analysis'] = import_analysis
             
             # Phase 2: Optimization Pattern Detection
             self.logger.info("Phase 2: Compiler optimization pattern detection")
@@ -1750,3 +1775,267 @@ class Agent10_Twins_BinaryDiff(AnalysisAgent):
         self.logger.info(f"Size comparison: Original={original_size:,} bytes, Generated={generated_size:,} bytes, Similarity={size_similarity:.2%}")
         
         return size_comparison
+    
+    def _perform_critical_import_analysis(self, binary_path: str, agent1_data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        CRITICAL: Perform import table analysis to detect the primary bottleneck (64.3% discrepancy)
+        
+        This addresses the core issue where original binary imports 538 functions from 14 DLLs
+        but reconstruction only includes 5 basic DLLs, causing massive import table mismatch.
+        """
+        import os
+        from pathlib import Path
+        
+        # Get original binary import data from Agent 1 (Sentinel)
+        original_imports = self._extract_original_imports(agent1_data)
+        
+        # Get reconstructed import data from Agent 9 results (if available)
+        reconstructed_imports = self._extract_reconstructed_imports(context)
+        
+        # Analyze MFC 7.1 compatibility (major contributor to import discrepancy)
+        mfc_analysis = self._analyze_mfc_compatibility(original_imports, agent1_data)
+        
+        # Calculate import table match rate
+        import_match_rate = self._calculate_import_match_rate(original_imports, reconstructed_imports)
+        
+        # Detect specific import discrepancies
+        discrepancies = self._detect_import_discrepancies(original_imports, reconstructed_imports)
+        
+        # Determine if pipeline should fail based on import mismatch
+        should_fail_pipeline = (
+            self.fail_on_import_mismatch and (
+                import_match_rate < self.import_table_threshold or
+                len(original_imports.get('dlls', [])) > len(reconstructed_imports.get('dlls', [])) * 2  # More than 2x DLL discrepancy
+            )
+        )
+        
+        import_analysis = {
+            'original_imports': len(original_imports.get('functions', [])),
+            'reconstructed_imports': len(reconstructed_imports.get('functions', [])),
+            'original_dlls': len(original_imports.get('dlls', [])),
+            'reconstructed_dlls': len(reconstructed_imports.get('dlls', [])),
+            'import_match_rate': import_match_rate,
+            'mfc_compatibility': mfc_analysis,
+            'discrepancies': discrepancies,
+            'should_fail_pipeline': should_fail_pipeline,
+            'threshold_used': self.import_table_threshold,
+            'failure_reason': None
+        }
+        
+        if should_fail_pipeline:
+            if import_match_rate < 0.1:  # Less than 10% match
+                import_analysis['failure_reason'] = f"Severe import table mismatch ({import_match_rate:.1%}) - indicates Agent 9 data flow failure from Agent 1"
+            elif len(original_imports.get('dlls', [])) > 10 and len(reconstructed_imports.get('dlls', [])) < 3:
+                import_analysis['failure_reason'] = f"Critical DLL count mismatch: {len(original_imports.get('dlls', []))} → {len(reconstructed_imports.get('dlls', []))} (indicates MFC 7.1 compatibility failure)"
+            else:
+                import_analysis['failure_reason'] = f"Import match rate {import_match_rate:.2%} below threshold {self.import_table_threshold:.1%}"
+        
+        self.logger.info(f"Import analysis: Original={len(original_imports.get('functions', []))} functions from {len(original_imports.get('dlls', []))} DLLs, "
+                        f"Reconstructed={len(reconstructed_imports.get('functions', []))} functions from {len(reconstructed_imports.get('dlls', []))} DLLs, "
+                        f"Match Rate={import_match_rate:.2%}")
+        
+        return import_analysis
+    
+    def _extract_original_imports(self, agent1_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract original binary import data from Agent 1 (Sentinel) results"""
+        imports = {
+            'functions': [],
+            'dlls': [],
+            'ordinals': {},
+            'mfc_signatures': []
+        }
+        
+        if not agent1_data:
+            return imports
+        
+        # Extract import table data from Agent 1
+        import_table = agent1_data.get('imports', {})
+        
+        if isinstance(import_table, dict):
+            # Extract DLL names
+            imports['dlls'] = list(import_table.keys())
+            
+            # Extract function names and ordinals
+            for dll_name, dll_functions in import_table.items():
+                if isinstance(dll_functions, list):
+                    for func_info in dll_functions:
+                        if isinstance(func_info, dict):
+                            func_name = func_info.get('name', func_info.get('function', ''))
+                            if func_name:
+                                imports['functions'].append(func_name)
+                                
+                                # Track ordinals for ordinal-based imports
+                                ordinal = func_info.get('ordinal')
+                                if ordinal:
+                                    imports['ordinals'][func_name] = ordinal
+                                
+                                # Detect MFC 7.1 signatures
+                                if dll_name.lower().startswith('mfc') and '71' in dll_name.lower():
+                                    imports['mfc_signatures'].append(func_name)
+                        elif isinstance(func_info, str):
+                            imports['functions'].append(func_info)
+        
+        return imports
+    
+    def _extract_reconstructed_imports(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract reconstructed import data from Agent 9 (The Machine) results"""
+        imports = {
+            'functions': [],
+            'dlls': [],
+            'ordinals': {},
+            'generated_declarations': []
+        }
+        
+        agent_results = context.get('agent_results', {})
+        
+        # Check Agent 9 (The Machine) results
+        if 9 in agent_results:
+            agent9_result = agent_results[9]
+            if hasattr(agent9_result, 'data') and isinstance(agent9_result.data, dict):
+                agent9_data = agent9_result.data
+                
+                # Extract from compilation results
+                compilation_results = agent9_data.get('compilation_results', {})
+                project_files = compilation_results.get('project_files', {})
+                
+                # Look for import declarations in generated files
+                for file_path, file_content in project_files.items():
+                    if isinstance(file_content, str):
+                        imports['generated_declarations'].extend(self._parse_import_declarations(file_content))
+                
+                # Extract from dependency analysis
+                dependency_analysis = agent9_data.get('dependency_analysis', {})
+                if isinstance(dependency_analysis, dict):
+                    resolved_deps = dependency_analysis.get('resolved_dependencies', [])
+                    for dep in resolved_deps:
+                        if isinstance(dep, str) and dep.endswith('.dll'):
+                            imports['dlls'].append(dep)
+        
+        # Also check Agent 7 (Advanced Decompilation) for function declarations
+        if 7 in agent_results:
+            agent7_result = agent_results[7]
+            if hasattr(agent7_result, 'data') and isinstance(agent7_result.data, dict):
+                enhanced_functions = agent7_result.data.get('enhanced_functions', {})
+                if isinstance(enhanced_functions, dict):
+                    imports['functions'].extend(enhanced_functions.keys())
+        
+        return imports
+    
+    def _parse_import_declarations(self, file_content: str) -> List[str]:
+        """Parse import function declarations from source files"""
+        import re
+        declarations = []
+        
+        # Look for extern declarations and function prototypes
+        extern_pattern = r'extern\s+[^;]+?(\w+)\s*\([^)]*\)\s*;'
+        for match in re.finditer(extern_pattern, file_content, re.MULTILINE):
+            func_name = match.group(1)
+            declarations.append(func_name)
+        
+        # Look for LoadLibrary and GetProcAddress calls
+        loadlib_pattern = r'LoadLibrary\w*\s*\(\s*["\']([^"\']+)["\']'
+        for match in re.finditer(loadlib_pattern, file_content):
+            dll_name = match.group(1)
+            if dll_name not in declarations:
+                declarations.append(dll_name)
+        
+        return declarations
+    
+    def _analyze_mfc_compatibility(self, original_imports: Dict[str, Any], agent1_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze MFC 7.1 compatibility issues that contribute to import discrepancy"""
+        mfc_analysis = {
+            'mfc_detected': False,
+            'mfc_version': 'unknown',
+            'mfc_functions_count': 0,
+            'ordinal_resolution_needed': False,
+            'vs2022_compatibility_issue': False,
+            'recommended_fixes': []
+        }
+        
+        # Check for MFC signatures in original imports
+        mfc_dlls = [dll for dll in original_imports.get('dlls', []) if 'mfc' in dll.lower()]
+        if mfc_dlls:
+            mfc_analysis['mfc_detected'] = True
+            
+            # Check for MFC 7.1 specifically
+            mfc71_dlls = [dll for dll in mfc_dlls if '71' in dll]
+            if mfc71_dlls:
+                mfc_analysis['mfc_version'] = '7.1'
+                mfc_analysis['vs2022_compatibility_issue'] = True  # VS2022 incompatible with MFC 7.1
+                mfc_analysis['recommended_fixes'].append('Implement MFC 7.1 compatibility layer in Agent 9')
+                mfc_analysis['recommended_fixes'].append('Use VS2003 build tools for MFC 7.1 compatibility')
+        
+        # Count MFC-related functions
+        mfc_functions = original_imports.get('mfc_signatures', [])
+        mfc_analysis['mfc_functions_count'] = len(mfc_functions)
+        
+        # Check if ordinal resolution is needed
+        ordinals = original_imports.get('ordinals', {})
+        if ordinals:
+            mfc_analysis['ordinal_resolution_needed'] = True
+            mfc_analysis['recommended_fixes'].append('Implement ordinal-to-function name mapping using dumpbin /exports')
+        
+        return mfc_analysis
+    
+    def _calculate_import_match_rate(self, original_imports: Dict[str, Any], reconstructed_imports: Dict[str, Any]) -> float:
+        """Calculate the match rate between original and reconstructed imports"""
+        original_functions = set(original_imports.get('functions', []))
+        reconstructed_functions = set(reconstructed_imports.get('functions', []))
+        
+        if not original_functions:
+            return 1.0 if not reconstructed_functions else 0.0
+        
+        # Calculate function-level match rate
+        function_matches = len(original_functions.intersection(reconstructed_functions))
+        function_match_rate = function_matches / len(original_functions)
+        
+        # Calculate DLL-level match rate  
+        original_dlls = set(original_imports.get('dlls', []))
+        reconstructed_dlls = set(reconstructed_imports.get('dlls', []))
+        
+        if original_dlls:
+            dll_matches = len(original_dlls.intersection(reconstructed_dlls))
+            dll_match_rate = dll_matches / len(original_dlls)
+        else:
+            dll_match_rate = 1.0 if not reconstructed_dlls else 0.0
+        
+        # Weighted average (functions are more important than DLL names)
+        overall_match_rate = (function_match_rate * 0.7) + (dll_match_rate * 0.3)
+        
+        return overall_match_rate
+    
+    def _detect_import_discrepancies(self, original_imports: Dict[str, Any], reconstructed_imports: Dict[str, Any]) -> Dict[str, Any]:
+        """Detect specific discrepancies between original and reconstructed imports"""
+        discrepancies = {
+            'missing_functions': [],
+            'missing_dlls': [],
+            'extra_functions': [],
+            'extra_dlls': [],
+            'ordinal_mismatches': [],
+            'critical_missing': []
+        }
+        
+        original_functions = set(original_imports.get('functions', []))
+        reconstructed_functions = set(reconstructed_imports.get('functions', []))
+        original_dlls = set(original_imports.get('dlls', []))
+        reconstructed_dlls = set(reconstructed_imports.get('dlls', []))
+        
+        # Find missing and extra functions
+        discrepancies['missing_functions'] = list(original_functions - reconstructed_functions)
+        discrepancies['extra_functions'] = list(reconstructed_functions - original_functions)
+        
+        # Find missing and extra DLLs
+        discrepancies['missing_dlls'] = list(original_dlls - reconstructed_dlls)
+        discrepancies['extra_dlls'] = list(reconstructed_dlls - original_dlls)
+        
+        # Identify critical missing functions (common API functions)
+        critical_functions = {
+            'CreateFile', 'ReadFile', 'WriteFile', 'GetProcAddress', 'LoadLibrary',
+            'VirtualAlloc', 'VirtualFree', 'CreateThread', 'WaitForSingleObject'
+        }
+        discrepancies['critical_missing'] = [
+            func for func in discrepancies['missing_functions'] 
+            if func in critical_functions
+        ]
+        
+        return discrepancies
