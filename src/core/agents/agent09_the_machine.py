@@ -5860,7 +5860,7 @@ BEGIN
                     '/STACK:0x200000',            # PHASE 1: Larger stack size for size scaling
                     '/HEAP:0x200000',             # PHASE 5: Larger heap size for size scaling
                     '/FILEALIGN:0x1000',          # Force larger file alignment for size
-                    '/DRIVER:NO',                 # Disable driver optimizations that reduce size
+                    # '/DRIVER:NO' removed - incompatible with VS2003 linker 7.10.3077 (LNK1117 error)
                     'assembly_stubs.obj',         # CRITICAL: Link object directly for register symbols
                     'assembly_globals.obj',       # PHASE 1: Link TIB simulation
                     'memory_layout.obj',          # PHASE 3: Link memory layout system
