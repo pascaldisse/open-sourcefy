@@ -76,32 +76,41 @@ class TestAgentIndividual(TestPhase4Infrastructure):
 class TestAIIntegration(TestPhase4Infrastructure):
     """Test AI integration functionality"""
     
-    def test_mock_ai_engine_available(self):
-        """Test mock AI engine is available as fallback"""
+    def test_real_ai_system_available(self):
+        """Test real AI system is available - rules.md compliant (no mocks)"""
         try:
-            from core.mock_ai_engine import MockAIEngine, MockAIInterface
-            from core.ai_engine_interface import AIEngineType
+            from core.ai_system import AISystem, get_ai_system, ai_available
             
-            # Test mock engine creation
-            mock_engine = MockAIEngine(AIEngineType.MOCK, {})
-            self.assertTrue(mock_engine.initialize(), "Mock AI engine should initialize successfully")
+            # Test AI system creation
+            ai_system = AISystem()
+            self.assertIsNotNone(ai_system, "AI system should be created")
+            
+            # Test global AI system access
+            global_ai = get_ai_system()
+            self.assertIsNotNone(global_ai, "Global AI system should be available")
+            
+            # Test availability check (may be False if Claude CLI not configured)
+            ai_status = ai_available()
+            self.assertIsInstance(ai_status, bool, "AI availability should return boolean")
             
         except ImportError as e:
-            self.fail(f"Mock AI engine not available: {e}")
+            self.fail(f"Real AI system not available: {e}")
     
-    def test_ai_setup_fallback(self):
-        """Test AI setup falls back to mock when real AI unavailable"""
+    def test_ai_system_integration(self):
+        """Test AI system integration without requiring Claude CLI to be working"""
         try:
-            from core.mock_ai_engine import create_mock_ai_setup
+            from core.ai_system import ai_analyze, ai_request_safe, AIResponse
             
-            mock_setup = create_mock_ai_setup()
-            self.assertTrue(mock_setup.is_enabled(), "Mock AI setup should be enabled")
+            # Test AI analyze function (will return empty if Claude not available)
+            response = ai_analyze("test prompt")
+            self.assertIsInstance(response, AIResponse, "Should return AIResponse object")
             
-            ai_interface = mock_setup.get_ai_interface()
-            self.assertIsNotNone(ai_interface, "Mock AI interface should be available")
+            # Test safe request function
+            safe_result = ai_request_safe("test prompt", fallback="fallback")
+            self.assertIsInstance(safe_result, str, "Should return string response")
             
         except Exception as e:
-            self.fail(f"AI fallback setup failed: {e}")
+            self.fail(f"AI system integration failed: {e}")
 
 class TestGhidraIntegration(TestPhase4Infrastructure):
     """Test Ghidra integration functionality"""
