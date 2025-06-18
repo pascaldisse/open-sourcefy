@@ -5852,8 +5852,10 @@ BEGIN
                     '/SECTION:.data,RW',          # PHASE 3: Data section with read/write access
                     '/SECTION:.idata,R',          # PHASE 3: Import section with read access
                     '/ALIGN:0x1000',              # PHASE 3: Page alignment for virtual memory
-                    '/STACK:0x100000',            # PHASE 1: Proper stack size for TIB simulation
-                    '/HEAP:0x100000',             # PHASE 5: Proper heap size for exception handling
+                    '/STACK:0x200000',            # PHASE 1: Larger stack size for size scaling
+                    '/HEAP:0x200000',             # PHASE 5: Larger heap size for size scaling
+                    '/FILEALIGN:0x1000',          # Force larger file alignment for size
+                    '/DRIVER:NO',                 # Disable driver optimizations that reduce size
                     'assembly_stubs.obj',         # CRITICAL: Link object directly for register symbols
                     'assembly_globals.obj',       # PHASE 1: Link TIB simulation
                     'memory_layout.obj',          # PHASE 3: Link memory layout system
@@ -5861,13 +5863,26 @@ BEGIN
                     'winmain_wrapper.obj',        # PHASE 4: Link WinMain wrapper
                     'exception_handling.obj',     # PHASE 5: Link exception handling
                     'assembly_stubs.lib',  # CRITICAL FIX: Link assembly register symbols via library (Rule #57)
-                    'user32.lib',    # Basic working version first
-                    'kernel32.lib',  # Add more dependencies for size
-                    'gdi32.lib',
-                    'advapi32.lib',
-                    'shell32.lib',    # Essential libraries for proper size
-                    'ole32.lib',      # PHASE 5: COM support for exception handling
-                    'comdlg32.lib'    # Additional size for full functionality
+                    'user32.lib',     # Basic Windows API
+                    'kernel32.lib',   # Core Windows kernel
+                    'gdi32.lib',      # Graphics device interface
+                    'advapi32.lib',   # Advanced Windows API
+                    'shell32.lib',    # Windows shell API
+                    'ole32.lib',      # COM support
+                    'comdlg32.lib',   # Common dialogs
+                    'wininet.lib',    # Internet functions (size scaling)
+                    'version.lib',    # Version information (size scaling)
+                    'comctl32.lib',   # Common controls (size scaling)
+                    'winspool.lib',   # Print spooler (size scaling)
+                    'ws2_32.lib',     # Winsock 2 (size scaling)
+                    'mpr.lib',        # Multiple provider router (size scaling)
+                    'netapi32.lib',   # Network API (size scaling)
+                    'userenv.lib',    # User environment (size scaling)
+                    'psapi.lib',      # Process status API (size scaling)
+                    'dbghelp.lib',    # Debug help (size scaling)
+                    'imagehlp.lib',   # Image help (size scaling)
+                    'rpcrt4.lib',     # RPC runtime (size scaling)
+                    'setupapi.lib'    # Setup API (size scaling)
                 ])
             compile_main_cmd = 'cl.exe ' + ' '.join(vs2003_compile_main)
             compile_strings_cmd = 'cl.exe ' + ' '.join(vs2003_compile_strings) if has_embedded_strings else None

@@ -23,11 +23,11 @@
 4. **PHASE 5**: Exception handling framework for exit code 0 achievement
 5. **INTEGRATION**: All phases linked into VS2003 compilation pipeline
 
-### CRITICAL BOTTLENECK (Rule #57 compliance required):
-- [ ] **Import Table Reconstruction**: Fix Agent 1→9 data flow - 538 functions from 14 DLLs missing
-- [ ] **Resource Integration Pipeline**: Chunked compilation exists but not reaching final binary
-- [ ] **MFC 7.1 Compatibility**: VS2022 incompatibility blocking proper dependency resolution
-- [ ] **Binary Validation Pipeline**: Achieve 95% match rate (currently 0.5-0.7%)
+### CRITICAL SIZE SCALING FIX (Rule #57 compliance required):
+- [ ] **Agent 9 Resource Integration**: Force chunked .res files into final linking step
+- [ ] **Build System Resource Routing**: Ensure 223 .res files reach final executable
+- [ ] **Library Dependency Expansion**: Add comprehensive Windows library dependencies
+- [ ] **Linker Size Optimization**: Remove size reduction flags that compress final binary
 
 ---
 
