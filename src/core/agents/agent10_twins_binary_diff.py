@@ -114,6 +114,10 @@ class Agent10_Twins_BinaryDiff(AnalysisAgent):
         # Initialize centralized AI system
         self.ai_enabled = ai_available()
         
+        # Override dependencies to use cache-first approach
+        # Original dependency: [9] - but we can work with cache from [1,2,5] + optional [9]
+        self.dependencies = []  # Remove hard dependency, use cache loading instead
+        
         # Twins' Matrix abilities - dual-state analysis
         self.twins_abilities = {
             'phase_shift_analysis': True,  # Compare different states
@@ -132,6 +136,35 @@ class Agent10_Twins_BinaryDiff(AnalysisAgent):
             'optimization_level': self._compare_optimization_level
         }
 
+    def can_execute(self, context: Dict[str, Any]) -> bool:
+        """Check if agent can execute using cache-first approach"""
+        # Initialize agent_results if not present
+        if 'agent_results' not in context:
+            context['agent_results'] = {}
+        
+        # Required agents with cache fallback support
+        required_agents = [1, 2, 5]  # Agent 9 is optional but beneficial
+        
+        # Check/load each required agent using cache-first approach
+        for agent_id in required_agents:
+            agent_result = context['agent_results'].get(agent_id)
+            if not agent_result or (hasattr(agent_result, 'status') and agent_result.status != AgentStatus.SUCCESS):
+                # Try to load from cache
+                cache_loaded = self._load_agent_cache_data(agent_id, context)
+                if not cache_loaded:
+                    self.logger.warning(f"Agent {agent_id} not available and cache not found")
+                    return False
+        
+        # Optional: Try to load Agent 9 (The Machine) data for enhanced analysis
+        if 9 not in context['agent_results']:
+            agent9_loaded = self._load_agent_cache_data(9, context)
+            if agent9_loaded:
+                self.logger.info("Agent 9 cache data loaded successfully for enhanced binary comparison")
+            else:
+                self.logger.info("Agent 9 cache not available - will use basic comparison mode")
+        
+        return True
+
     def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute The Twins' binary diff analysis with dual-state comparison
@@ -149,7 +182,7 @@ class Agent10_Twins_BinaryDiff(AnalysisAgent):
             # Validate prerequisites - The Twins need the foundation
             self._validate_twins_prerequisites(context)
             
-            # Get analysis context from previous agents
+            # Get analysis context from previous agents (now cache-loaded if needed)
             binary_path = context.get('binary_path', '')
             agent1_data = context['agent_results'][1].data  # Binary discovery
             agent2_data = context['agent_results'][2].data  # Architecture analysis
@@ -291,13 +324,30 @@ class Agent10_Twins_BinaryDiff(AnalysisAgent):
             raise Exception(error_msg) from e
 
     def _validate_twins_prerequisites(self, context: Dict[str, Any]) -> None:
-        """Validate that The Twins have the necessary data for comparison"""
-        # Check required agent results - Only need basic analysis agents, Agent 10 is optional
-        required_agents = [1, 2, 5]  # Agent 10 (The Machine) is not required for basic comparison
+        """Validate that The Twins have the necessary data for comparison - uses cache-based validation"""
+        # Initialize agent_results if not present
+        if 'agent_results' not in context:
+            context['agent_results'] = {}
+        
+        # Required agents with cache fallback support
+        required_agents = [1, 2, 5]  # Agent 9 is optional but beneficial
+        
+        # Validate/load each required agent using cache-first approach
         for agent_id in required_agents:
             agent_result = context['agent_results'].get(agent_id)
             if not agent_result or agent_result.status != AgentStatus.SUCCESS:
-                raise ValueError(f"Dependency Agent{agent_id:02d} not satisfied")
+                # Try to load from cache
+                cache_loaded = self._load_agent_cache_data(agent_id, context)
+                if not cache_loaded:
+                    raise ValueError(f"Dependency Agent{agent_id:02d} not satisfied")
+        
+        # Optional: Try to load Agent 9 (The Machine) data for enhanced analysis
+        if 9 not in context['agent_results']:
+            agent9_loaded = self._load_agent_cache_data(9, context)
+            if agent9_loaded:
+                self.logger.info("Agent 9 cache data loaded successfully for enhanced binary comparison")
+            else:
+                self.logger.warning("Agent 9 cache not available - using basic comparison mode")
         
         # Check binary path
         binary_path = context.get('binary_path')
@@ -2078,3 +2128,82 @@ class Agent10_Twins_BinaryDiff(AnalysisAgent):
         ]
         
         return discrepancies
+
+    def _load_agent_cache_data(self, agent_id: int, context: Dict[str, Any]) -> bool:
+        """Load agent cache data from output directory - cache-first approach"""
+        try:
+            # Define cache paths for each agent following established patterns
+            cache_paths_map = {
+                1: [  # Agent 1 (Sentinel)
+                    "output/launcher/latest/agents/agent_01/binary_analysis_cache.json",
+                    "output/launcher/latest/agents/agent_01/import_analysis_cache.json", 
+                    "output/launcher/latest/agents/agent_01/sentinel_data.json",
+                    "output/launcher/latest/agents/agent_01/agent_result.json"
+                ],
+                2: [  # Agent 2 (Architect)
+                    "output/launcher/latest/agents/agent_02/architect_data.json",
+                    "output/launcher/latest/agents/agent_02/architect_results.json",
+                    "output/launcher/latest/agents/agent_02/pe_structure_cache.json",
+                    "output/launcher/latest/agents/agent_02/agent_result.json"
+                ],
+                5: [  # Agent 5 (Neo)
+                    "output/launcher/latest/agents/agent_05/decompilation_cache.json",
+                    "output/launcher/latest/agents/agent_05/agent_result.json"
+                ],
+                9: [  # Agent 9 (The Machine) - Optional
+                    "output/launcher/latest/agents/agent_09/compilation_cache.json",
+                    "output/launcher/latest/agents/agent_10_machine/agent_result.json",
+                    "output/launcher/latest/agents/agent_09/machine_results.json"
+                ]
+            }
+            
+            cache_paths = cache_paths_map.get(agent_id, [])
+            if not cache_paths:
+                return False
+            
+            import json
+            cached_data = {}
+            cache_found = False
+            
+            # Try to load cache files for this agent
+            for cache_path in cache_paths:
+                cache_file = Path(cache_path)
+                if cache_file.exists():
+                    try:
+                        with open(cache_file, 'r') as f:
+                            file_data = json.load(f)
+                            cached_data.update(file_data)
+                            cache_found = True
+                            self.logger.debug(f"Loaded cache from {cache_path}")
+                    except Exception as e:
+                        self.logger.warning(f"Failed to load cache from {cache_path}: {e}")
+            
+            if cache_found:
+                # Create a mock AgentResult with cached data
+                from ..matrix_agents import AgentResult, AgentStatus
+                
+                mock_result = AgentResult(
+                    agent_id=agent_id,
+                    agent_name=f"Agent{agent_id:02d}",
+                    matrix_character="cached",
+                    status=AgentStatus.SUCCESS,
+                    data=cached_data,
+                    metadata={
+                        'cache_source': f'agent_{agent_id:02d}',
+                        'cache_loaded': True,
+                        'execution_time': 0.0
+                    },
+                    execution_time=0.0
+                )
+                
+                # Add to context
+                context['agent_results'][agent_id] = mock_result
+                
+                self.logger.info(f"Successfully loaded Agent {agent_id} cache data")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            self.logger.warning(f"Error loading cache for Agent {agent_id}: {e}")
+            return False

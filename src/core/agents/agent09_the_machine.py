@@ -68,8 +68,11 @@ class Agent9_TheMachine(ReconstructionAgent):
         # Load configuration
         self.config = get_config_manager()
         
+        # CRITICAL FIX: Load build configuration from build_config.yaml
+        self.build_config = self._load_build_config()
+        
         # STRICT MODE: RC.EXE path must be configured - NO FALLBACKS
-        rc_exe_path = self.config.get_value('build_tools.rc_exe_path')
+        rc_exe_path = self.build_config.get('build_tools', {}).get('rc_exe_path')
         if not rc_exe_path:
             raise MatrixAgentError(
                 "CRITICAL FAILURE: RC.EXE path not configured in build_config.yaml. "
@@ -103,6 +106,64 @@ class Agent9_TheMachine(ReconstructionAgent):
                 'AfxGetStaticModuleState', 'AfxInitRichEdit2', 'AfxOleInit'
             ]
         }
+
+    def _load_build_config(self) -> Dict[str, Any]:
+        """
+        CRITICAL FIX: Load build configuration from build_config.yaml
+        
+        This method properly loads the build_config.yaml file that contains
+        the RC.EXE path and other build tool configurations.
+        """
+        import yaml
+        from pathlib import Path
+        
+        try:
+            # Get project root directory
+            project_root = Path(__file__).parent.parent.parent.parent
+            build_config_path = project_root / 'build_config.yaml'
+            
+            if not build_config_path.exists():
+                # Try alternative paths
+                alternative_paths = [
+                    project_root / 'config' / 'build_config.yaml',
+                    Path('build_config.yaml'),  # Current directory
+                    Path('./build_config.yaml')
+                ]
+                
+                for alt_path in alternative_paths:
+                    if alt_path.exists():
+                        build_config_path = alt_path
+                        break
+                else:
+                    raise FileNotFoundError(f"build_config.yaml not found. Searched: {build_config_path}")
+            
+            self.logger.info(f"Loading build configuration from: {build_config_path}")
+            
+            with open(build_config_path, 'r', encoding='utf-8') as f:
+                build_config = yaml.safe_load(f)
+            
+            if not build_config:
+                raise ValueError("build_config.yaml is empty or invalid")
+            
+            # Validate that build_tools section exists
+            if 'build_tools' not in build_config:
+                raise ValueError("build_tools section not found in build_config.yaml")
+            
+            # Validate that rc_exe_path exists
+            if 'rc_exe_path' not in build_config['build_tools']:
+                raise ValueError("rc_exe_path not found in build_tools section of build_config.yaml")
+            
+            self.logger.info(f"✅ Build configuration loaded successfully")
+            self.logger.info(f"   RC.EXE path: {build_config['build_tools']['rc_exe_path']}")
+            
+            return build_config
+            
+        except Exception as e:
+            self.logger.error(f"CRITICAL: Failed to load build configuration: {e}")
+            raise MatrixAgentError(
+                f"Cannot load build_config.yaml: {e}. "
+                f"Agent 9 requires build_tools.rc_exe_path configuration."
+            )
 
     def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute The Machine's critical resource compilation with import table fix"""

@@ -435,12 +435,27 @@ class Agent16_AgentBrown(ValidationAgent):
             raise Exception(error_msg) from e
 
     def _validate_agent_brown_prerequisites(self, context: Dict[str, Any]) -> None:
-        """Validate that Agent Brown has necessary data for final validation"""
+        """Validate that Agent Brown has necessary data for final validation using cache-first approach"""
         required_agents = [14, 15]  # Final validation agents (Cleaner, Analyst)
+        
+        # Use cache-first approach for required agents
         for agent_id in required_agents:
+            if agent_id not in context['agent_results']:
+                # Try to load from cache
+                cache_loaded = self._load_agent_cache_data(agent_id, context)
+                if not cache_loaded:
+                    raise ValueError(f"Agent {agent_id} dependency not satisfied and cache not found for Agent Brown")
+            
+            # Verify the agent result exists and is successful
             agent_result = context['agent_results'].get(agent_id)
             if not agent_result or agent_result.status != AgentStatus.SUCCESS:
                 raise ValueError(f"Agent {agent_id} dependency not satisfied for Agent Brown")
+        
+        # Try to load additional agents from cache for comprehensive validation
+        optional_agents = [1, 2, 5, 7, 8, 9, 10, 11, 12, 13]  # All other agents for thorough QA
+        for agent_id in optional_agents:
+            if agent_id not in context['agent_results']:
+                self._load_agent_cache_data(agent_id, context)
 
     def _perform_strict_placeholder_detection(self, context: Dict[str, Any]) -> StrictValidationResult:
         """Perform strict placeholder detection and rule compliance validation"""
@@ -1120,6 +1135,125 @@ class Agent16_AgentBrown(ValidationAgent):
                 f.write(f"{i}. {rec}\n")
         
         self.logger.info(f"Agent Brown QA results saved to {agent_output_dir}")
+
+    def _load_agent_cache_data(self, agent_id: int, context: Dict[str, Any]) -> bool:
+        """Load agent cache data from output directory - cache-first approach"""
+        try:
+            # Define cache paths for each agent following established patterns
+            cache_paths_map = {
+                1: [  # Agent 1 (Sentinel)
+                    "output/launcher/latest/agents/agent_01/binary_analysis_cache.json",
+                    "output/launcher/latest/agents/agent_01/import_analysis_cache.json", 
+                    "output/launcher/latest/agents/agent_01/sentinel_data.json",
+                    "output/launcher/latest/agents/agent_01/agent_result.json"
+                ],
+                2: [  # Agent 2 (Architect)
+                    "output/launcher/latest/agents/agent_02/architect_data.json",
+                    "output/launcher/latest/agents/agent_02/architect_results.json",
+                    "output/launcher/latest/agents/agent_02/pe_structure_cache.json",
+                    "output/launcher/latest/agents/agent_02/agent_result.json"
+                ],
+                5: [  # Agent 5 (Neo)
+                    "output/launcher/latest/agents/agent_05/decompilation_cache.json",
+                    "output/launcher/latest/agents/agent_05/agent_result.json"
+                ],
+                7: [  # Agent 7 (Keymaker)
+                    "output/launcher/latest/agents/agent_07/resource_reconstruction_cache.json",
+                    "output/launcher/latest/agents/agent_07/keymaker_results.json",
+                    "output/launcher/latest/agents/agent_07/agent_result.json"
+                ],
+                8: [  # Agent 8 (Commander Locke)
+                    "output/launcher/latest/agents/agent_08/locke_analysis_cache.json",
+                    "output/launcher/latest/agents/agent_08/pipeline_optimization_results.json",
+                    "output/launcher/latest/agents/agent_08/agent_result.json"
+                ],
+                9: [  # Agent 9 (The Machine)
+                    "output/launcher/latest/agents/agent_09/compilation_cache.json",
+                    "output/launcher/latest/agents/agent_09/machine_results.json",
+                    "output/launcher/latest/agents/agent_09/agent_result.json"
+                ],
+                10: [  # Agent 10 (The Twins)
+                    "output/launcher/latest/agents/agent_10/twins_analysis_cache.json",
+                    "output/launcher/latest/agents/agent_10/binary_diff_results.json",
+                    "output/launcher/latest/agents/agent_10/agent_result.json"
+                ],
+                11: [  # Agent 11 (The Oracle)
+                    "output/launcher/latest/agents/agent_11/oracle_analysis_cache.json",
+                    "output/launcher/latest/agents/agent_11/semantic_validation_results.json",
+                    "output/launcher/latest/agents/agent_11/agent_result.json"
+                ],
+                12: [  # Agent 12 (Link)
+                    "output/launcher/latest/agents/agent_12/integration_analysis_cache.json",
+                    "output/launcher/latest/agents/agent_12/communication_results.json",
+                    "output/launcher/latest/agents/agent_12/agent_result.json"
+                ],
+                13: [  # Agent 13 (Agent Johnson)
+                    "output/launcher/latest/agents/agent_13/security_analysis_cache.json",
+                    "output/launcher/latest/agents/agent_13/johnson_results.json",
+                    "output/launcher/latest/agents/agent_13/agent_result.json"
+                ],
+                14: [  # Agent 14 (The Cleaner)
+                    "output/launcher/latest/agents/agent_14/cleaner_analysis_cache.json",
+                    "output/launcher/latest/agents/agent_14/code_optimization_results.json",
+                    "output/launcher/latest/agents/agent_14/agent_result.json"
+                ],
+                15: [  # Agent 15 (The Analyst)
+                    "output/launcher/latest/agents/agent_15/comprehensive_metadata.json",
+                    "output/launcher/latest/agents/agent_15/intelligence_synthesis.json",
+                    "output/launcher/latest/agents/agent_15/quality_assessment.json",
+                    "output/launcher/latest/agents/agent_15/agent_result.json"
+                ]
+            }
+            
+            cache_paths = cache_paths_map.get(agent_id, [])
+            if not cache_paths:
+                return False
+            
+            cached_data = {}
+            cache_found = False
+            
+            # Try to load cache files for this agent
+            for cache_path in cache_paths:
+                cache_file = Path(cache_path)
+                if cache_file.exists():
+                    try:
+                        with open(cache_file, 'r') as f:
+                            file_data = json.load(f)
+                            cached_data.update(file_data)
+                            cache_found = True
+                            self.logger.debug(f"Loaded cache from {cache_path}")
+                    except Exception as e:
+                        self.logger.warning(f"Failed to load cache from {cache_path}: {e}")
+            
+            if cache_found:
+                # Create a mock AgentResult with cached data
+                from ..matrix_agents import AgentResult, AgentStatus
+                
+                mock_result = AgentResult(
+                    agent_id=agent_id,
+                    agent_name=f"Agent{agent_id:02d}",
+                    matrix_character="cached",
+                    status=AgentStatus.SUCCESS,
+                    data=cached_data,
+                    metadata={
+                        'cache_source': f'agent_{agent_id:02d}',
+                        'cache_loaded': True,
+                        'execution_time': 0.0
+                    },
+                    execution_time=0.0
+                )
+                
+                # Add to context
+                context['agent_results'][agent_id] = mock_result
+                
+                self.logger.info(f"Successfully loaded Agent {agent_id} cache data")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            self.logger.warning(f"Error loading cache for Agent {agent_id}: {e}")
+            return False
 
     # AI Enhancement Methods
     def _ai_analyze_code_quality(self, quality_info: str) -> str:

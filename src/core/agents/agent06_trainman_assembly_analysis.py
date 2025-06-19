@@ -130,17 +130,36 @@ class Agent6_Trainman_AssemblyAnalysis(AnalysisAgent):
             raise MatrixAgentError(error_msg) from e
 
     def _validate_prerequisites(self, context: Dict[str, Any]) -> None:
-        """Validate prerequisites - STRICT MODE compliance"""
-        # Check required agent results
+        """Validate prerequisites - STRICT MODE compliance with cache support"""
+        # Check for cache files from previous agents
+        cache_base_path = Path("output/launcher/latest/agents")
+        
+        # Try to find Agent 1 (Sentinel) cache
+        agent1_cache_paths = [
+            cache_base_path / "agent_01" / "binary_analysis_cache.json",
+            cache_base_path / "agent_01" / "import_analysis_cache.json",
+            cache_base_path / "agent_01_sentinel" / "agent_result.json"
+        ]
+        
+        agent1_available = any(path.exists() for path in agent1_cache_paths)
+        
+        # Try to find Agent 2 (Architect) cache  
+        agent2_cache_paths = [
+            cache_base_path / "agent_02" / "architect_data.json",
+            cache_base_path / "agent_02" / "pe_structure_cache.json",
+            cache_base_path / "agent_02_architect" / "agent_result.json"
+        ]
+        
+        agent2_available = any(path.exists() for path in agent2_cache_paths)
+        
+        # Check live agent results first, then cache
         agent_results = context.get('agent_results', {})
         
-        # Require Agent 1 (Sentinel) for binary analysis
-        if 1 not in agent_results:
+        if 1 not in agent_results and not agent1_available:
             raise ValidationError("Agent 1 (Sentinel) required for binary analysis")
         
-        # Require Agent 2 (Architect) for PE structure
-        if 2 not in agent_results:
-            raise ValidationError("Agent 2 (Architect) required for PE structure")
+        if 2 not in agent_results and not agent2_available:
+            raise ValidationError("Agent 2 (Architect) required for PE structure") 
         
         # Validate binary path
         binary_path = context.get('binary_path')

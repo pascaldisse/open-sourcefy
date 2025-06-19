@@ -84,6 +84,7 @@ class DeusExMachinaAgent(MatrixAgent):
         
         # Agent class mapping for instantiation
         self.agent_classes = {
+            0: DeusExMachinaAgent,  # Add Agent 0 (self) to the mapping
             1: SentinelAgent,
             2: ArchitectAgent,
             3: MerovingianAgent,

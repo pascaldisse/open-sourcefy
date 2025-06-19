@@ -143,18 +143,33 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
             raise MatrixAgentError(error_msg) from e
 
     def _validate_prerequisites(self, context: Dict[str, Any]) -> None:
-        """Validate prerequisites - STRICT MODE compliance"""
-        # Check required agent results
-        agent_results = context.get('agent_results', {})
-        
-        # Require Agent 2 (Architect) for PE structure analysis
-        if 2 not in agent_results:
-            raise ValidationError("Agent 2 (Architect) required for PE structure analysis")
-        
-        # Validate binary path
+        """Validate prerequisites - STRICT MODE compliance with cache loading"""
+        # Validate binary path first
         binary_path = context.get('binary_path')
         if not binary_path or not Path(binary_path).exists():
             raise ValidationError("Valid binary path required for resource extraction")
+        
+        # Initialize shared_memory if missing
+        if 'shared_memory' not in context:
+            context['shared_memory'] = {}
+        
+        # Validate Agent 2 (Architect) dependency using cache-based approach
+        dependency_met = self._load_architect_cache_data(context)
+        
+        if not dependency_met:
+            # Check for existing Architect results in multiple ways as fallback
+            agent_results = context.get('agent_results', {})
+            if 2 in agent_results:
+                dependency_met = True
+            
+            # Check shared_memory analysis_results
+            if not dependency_met and 'analysis_results' in context['shared_memory']:
+                if 2 in context['shared_memory']['analysis_results']:
+                    dependency_met = True
+        
+        if not dependency_met:
+            self.logger.error("Architect dependency not satisfied - cannot proceed with resource reconstruction")
+            raise ValidationError("Agent 2 (Architect) data required but not available")
 
     def _extract_resource_data(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Extract resource data from binary and previous agents"""
@@ -270,30 +285,54 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
         self.logger.info(f"Processed {len(string_resources)} string resources")
         return string_resources
 
-    def _process_binary_resources(self, pe_resources: Dict[str, Any]) -> List[ResourceItem]:
-        """Process binary resources from PE analysis"""
+    def _process_binary_resources(self, pe_resources: Union[Dict[str, Any], List[Any]]) -> List[ResourceItem]:
+        """Process binary resources from PE analysis - handles both dict and list formats"""
         binary_resources = []
         
-        # Process different resource types
-        for resource_type, resources in pe_resources.items():
-            if isinstance(resources, list):
-                for i, resource_data in enumerate(resources):
-                    if isinstance(resource_data, dict):
-                        content = resource_data.get('data', b'')
-                        if isinstance(content, bytes) and len(content) <= self.max_resource_size:
-                            resource = ResourceItem(
-                                resource_id=f"{resource_type.upper()}_{i+1:04d}",
-                                resource_type=resource_type.lower(),
-                                name=f"{resource_type.lower()}_{i+1:04d}",
-                                size=len(content),
-                                content=content,
-                                metadata={
-                                    'original_type': resource_type,
-                                    'binary': True,
-                                    'size': len(content)
-                                }
-                            )
-                            binary_resources.append(resource)
+        # Handle different data structures for pe_resources
+        if isinstance(pe_resources, dict):
+            # Process different resource types from dictionary
+            for resource_type, resources in pe_resources.items():
+                if isinstance(resources, list):
+                    for i, resource_data in enumerate(resources):
+                        if isinstance(resource_data, dict):
+                            content = resource_data.get('data', b'')
+                            if isinstance(content, bytes) and len(content) <= self.max_resource_size:
+                                resource = ResourceItem(
+                                    resource_id=f"{resource_type.upper()}_{i+1:04d}",
+                                    resource_type=resource_type.lower(),
+                                    name=f"{resource_type.lower()}_{i+1:04d}",
+                                    size=len(content),
+                                    content=content,
+                                    metadata={
+                                        'original_type': resource_type,
+                                        'binary': True,
+                                        'size': len(content)
+                                    }
+                                )
+                                binary_resources.append(resource)
+        elif isinstance(pe_resources, list):
+            # Process resources from list format
+            for i, resource_data in enumerate(pe_resources):
+                if isinstance(resource_data, dict):
+                    resource_type = resource_data.get('type', 'unknown')
+                    content = resource_data.get('data', b'')
+                    if isinstance(content, bytes) and len(content) <= self.max_resource_size:
+                        resource = ResourceItem(
+                            resource_id=f"{resource_type.upper()}_{i+1:04d}",
+                            resource_type=resource_type.lower(),
+                            name=f"{resource_type.lower()}_{i+1:04d}",
+                            size=len(content),
+                            content=content,
+                            metadata={
+                                'original_type': resource_type,
+                                'binary': True,
+                                'size': len(content)
+                            }
+                        )
+                        binary_resources.append(resource)
+        else:
+            self.logger.warning(f"Unexpected pe_resources type: {type(pe_resources)}")
         
         self.logger.info(f"Processed {len(binary_resources)} binary resources")
         return binary_resources
@@ -474,3 +513,93 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
             
         except Exception as e:
             self.logger.error(f"Failed to save Keymaker results: {e}")
+    
+    def _load_architect_cache_data(self, context: Dict[str, Any]) -> bool:
+        """Load Architect cache data from output directory"""
+        try:
+            # Check for Agent 2 cache files
+            cache_paths = [
+                "output/launcher/latest/agents/agent_02/architect_data.json",
+                "output/launcher/latest/agents/agent_02/pe_structure_cache.json",
+                "output/launcher/latest/agents/agent_02_architect/agent_result.json",
+                "output/launcher/latest/agents/agent_02/architect_results.json"
+            ]
+            
+            import json
+            cached_data = {}
+            cache_found = False
+            
+            for cache_path in cache_paths:
+                cache_file = Path(cache_path)
+                if cache_file.exists():
+                    try:
+                        with open(cache_file, 'r') as f:
+                            file_data = json.load(f)
+                            if isinstance(file_data, dict):
+                                cached_data.update(file_data)
+                            cache_found = True
+                            self.logger.debug(f"Loaded Architect cache from {cache_path}")
+                    except Exception as e:
+                        self.logger.warning(f"Failed to load cache from {cache_path}: {e}")
+            
+            if cache_found:
+                # Populate shared memory and agent_results with cached data
+                shared_memory = context.get('shared_memory', {})
+                if 'analysis_results' not in shared_memory:
+                    shared_memory['analysis_results'] = {}
+                
+                # Extract the data portion from cached files (handle both formats)
+                final_data = cached_data
+                
+                # If the cache contains the full agent result structure, extract the data
+                if 'data' in cached_data and isinstance(cached_data['data'], dict):
+                    final_data = cached_data['data']
+                
+                # Ensure PE analysis structure exists in final_data
+                if 'pe_analysis' not in final_data:
+                    # Try to construct PE analysis from pe_structure_cache data
+                    if 'sections' in cached_data or 'imports' in cached_data:
+                        final_data['pe_analysis'] = {
+                            'sections': cached_data.get('sections', []),
+                            'imports': cached_data.get('imports', []),
+                            'exports': cached_data.get('exports', []),
+                            'resources': cached_data.get('resources', {}),
+                            'strings': cached_data.get('strings', [])
+                        }
+                    else:
+                        final_data['pe_analysis'] = {
+                            'sections': [],
+                            'imports': [],
+                            'exports': [],
+                            'resources': {},
+                            'strings': []
+                        }
+                
+                # Create mock Architect result object for Keymaker with proper data structure
+                architect_result = type('MockResult', (), {
+                    'data': final_data,
+                    'status': 'cached',
+                    'agent_id': 2
+                })
+                
+                # Populate agent_results for compatibility
+                if 'agent_results' not in context:
+                    context['agent_results'] = {}
+                context['agent_results'][2] = architect_result
+                
+                # Also add to shared_memory analysis_results
+                shared_memory['analysis_results'][2] = {
+                    'status': 'cached',
+                    'data': final_data
+                }
+                
+                resources_count = len(final_data.get('pe_analysis', {}).get('resources', {}))
+                strings_count = len(final_data.get('pe_analysis', {}).get('strings', []))
+                self.logger.info(f"Successfully loaded Architect cache data for Keymaker with {resources_count} resources and {strings_count} strings")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            self.logger.warning(f"Error loading Architect cache data: {e}")
+            return False

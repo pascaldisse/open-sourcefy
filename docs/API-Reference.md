@@ -49,30 +49,33 @@ def execute_single_agent(agent_id: int, context: Dict[str, Any]) -> AgentResult:
 
 ### Agent Base Framework
 
-#### ReconstructionAgent Base Class
+#### MatrixAgent Base Class
 
-**File**: `src/core/shared_components.py`
+**File**: `src/core/matrix_agents.py`
 
 ```python
-class ReconstructionAgent:
-    """Base class for all Matrix agents"""
+class MatrixAgent(abc.ABC):
+    """Enhanced base class for all Matrix agents with LangChain integration"""
     
     def __init__(self, agent_id: int, matrix_character: MatrixCharacter):
         """Initialize agent with ID and Matrix character"""
-        pass
+        # Source: src/core/matrix_agents.py:93
         
+    @abc.abstractmethod
     def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Main execution method - must be overridden by subclasses"""
-        raise NotImplementedError("Agents must implement execute_matrix_task")
+        # Abstract method defined in matrix_agents.py
         
-    def _validate_prerequisites(self, context: Dict[str, Any]) -> None:
-        """Validate agent prerequisites - must be overridden"""
-        raise NotImplementedError("Agents must implement _validate_prerequisites")
+    def get_dependencies(self) -> List[int]:
+        """Get agent dependencies"""
+        # Implemented in base class
         
     def get_matrix_description(self) -> str:
         """Get agent description for documentation"""
-        pass
+        # Optional override method
 ```
+
+**Note**: The actual base class is `MatrixAgent`, not `ReconstructionAgent`. There are also specialized subclasses like `AnalysisAgent`, `ReconstructionAgent`, etc. in the same file.
 
 #### Agent Result Structures
 

@@ -26,13 +26,15 @@ Master → Foundation → Advanced → Reconstruction → Quality Assurance
 - **Quality Gates**: Enforces validation checkpoints throughout pipeline
 - **Error Recovery**: Coordinates error handling and recovery strategies
 
-#### Key Methods
+#### Key Methods (Source: `src/core/agents/agent00_deus_ex_machina.py`)
 ```python
-def coordinate_pipeline_execution(self, context: Dict[str, Any]) -> Dict[str, Any]
-def resolve_agent_dependencies(self, selected_agents: List[int]) -> List[List[int]]
-def enforce_quality_gates(self, agent_results: Dict[int, AgentResult]) -> bool
-def handle_pipeline_errors(self, error_context: Dict[str, Any]) -> Dict[str, Any]
+def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]  # Line 110
+def execute_async(self, context: Dict[str, Any])  # Line 160
+def _validate_pipeline_prerequisites(self, context: Dict[str, Any]) -> None  # Line 202
+def _create_execution_plan(self, context: Dict[str, Any]) -> PipelineExecutionPlan  # Line 229
 ```
+
+**Note**: Some documented methods like `coordinate_pipeline_execution`, `resolve_agent_dependencies`, `enforce_quality_gates`, and `handle_pipeline_errors` are not present in the actual implementation. The agent uses simpler coordination patterns.
 
 #### Output Structure
 ```json
@@ -212,19 +214,8 @@ def handle_pipeline_errors(self, error_context: Dict[str, Any]) -> Dict[str, Any
 }
 ```
 
-### Agent 6: The Twins
-**File**: `src/core/agents/agent06_the_twins.py`  
-**Status**: ✅ Production Ready  
-**Dependencies**: [5]
-
-#### Capabilities
-- **Binary Differential Analysis**: Version comparison and change detection
-- **Integrity Verification**: Checksum and hash validation
-- **Similarity Analysis**: Code pattern matching
-- **Quality Assessment**: Decompilation accuracy measurement
-
-### Agent 7: The Trainman
-**File**: `src/core/agents/agent07_the_trainman.py`  
+### Agent 6: The Trainman  
+**File**: `src/core/agents/agent06_trainman_assembly_analysis.py`  
 **Status**: ✅ Production Ready  
 **Dependencies**: [1, 5]
 
@@ -234,8 +225,8 @@ def handle_pipeline_errors(self, error_context: Dict[str, Any]) -> Dict[str, Any
 - **Performance Analysis**: Code efficiency assessment
 - **Compiler-Specific Analysis**: Toolchain-specific optimizations
 
-### Agent 8: The Keymaker
-**File**: `src/core/agents/agent08_the_keymaker.py`  
+### Agent 7: The Keymaker
+**File**: `src/core/agents/agent07_keymaker_resource_reconstruction.py`  
 **Status**: ✅ Production Ready  
 **Dependencies**: [1, 4]
 
@@ -245,10 +236,21 @@ def handle_pipeline_errors(self, error_context: Dict[str, Any]) -> Dict[str, Any
 - **Resource Compilation**: RC.EXE integration for resource building
 - **Asset Validation**: Resource integrity and format verification
 
+### Agent 8: Commander Locke
+**File**: `src/core/agents/agent08_commander_locke.py`  
+**Status**: ✅ Production Ready  
+**Dependencies**: [5, 7]
+
+#### Capabilities
+- **Build System Integration**: MSBuild and CMake project generation
+- **VS2022 Preview Integration**: Build environment coordination
+- **Tool Validation**: Compilation toolchain verification
+- **Environment Configuration**: Build environment setup
+
 ## Reconstruction Phase (Agents 9-13)
 
-### Agent 9: Commander Locke
-**File**: `src/core/agents/agent09_commander_locke.py`  
+### Agent 9: The Machine
+**File**: `src/core/agents/agent09_the_machine.py`  
 **Status**: ✅ Production Ready  
 **Dependencies**: [1, 2, 5, 8]
 
@@ -256,16 +258,16 @@ def handle_pipeline_errors(self, error_context: Dict[str, Any]) -> Dict[str, Any
 - **Global Source Reconstruction**: Complete C source code generation
 - **Build System Integration**: MSBuild and CMake project generation
 - **Import Table Integration**: Complete DLL dependency resolution
-- **Compilation Orchestration**: VS2022 Preview integration
+- **Resource Compilation**: RC.EXE integration and VS compilation
 
 #### Compilation Results
-- **Output Size**: 4.3MB (83.36% of original 5.1MB)
-- **Function Count**: 538+ functions successfully compiled
+- **Output Size**: 4.3MB+ reconstruction capability
+- **Function Count**: Comprehensive import table processing
 - **Resource Integration**: Complete resource compilation with RC.EXE
-- **Build Success**: Consistent compilation with VS2022 Preview
+- **Build Success**: VS2022 Preview compatibility integration
 
-### Agent 10: The Machine
-**File**: `src/core/agents/agent10_the_machine.py`  
+### Agent 10: The Twins
+**File**: `src/core/agents/agent10_twins_binary_diff.py`  
 **Status**: ✅ Production Ready  
 **Dependencies**: [9]
 
@@ -275,27 +277,27 @@ def handle_pipeline_errors(self, error_context: Dict[str, Any]) -> Dict[str, Any
 - **Reconstruction Verification**: Output accuracy assessment
 - **Quality Metrics**: Performance and accuracy measurement
 
-### Agent 11: Link
-**File**: `src/core/agents/agent11_link.py`  
+### Agent 11: The Oracle
+**File**: `src/core/agents/agent11_the_oracle.py`  
 **Status**: ✅ Production Ready  
-**Dependencies**: [10]
-
-#### Capabilities
-- **Code Integration**: Module linking and integration
-- **Symbol Resolution**: Cross-reference resolution
-- **Dependency Management**: Inter-module dependency handling
-- **Final Assembly**: Complete project assembly
-
-### Agent 12: Oracle
-**File**: `src/core/agents/agent12_oracle.py`  
-**Status**: ✅ Production Ready  
-**Dependencies**: [9, 11]
+**Dependencies**: [9, 10]
 
 #### Capabilities
 - **Semantic Analysis**: Code meaning and intent analysis
 - **Quality Prediction**: Success probability assessment
 - **Wisdom Synthesis**: Knowledge integration across agents
 - **Strategic Guidance**: Pipeline optimization recommendations
+
+### Agent 12: Link
+**File**: `src/core/agents/agent12_link.py`  
+**Status**: ✅ Production Ready  
+**Dependencies**: [9, 11]
+
+#### Capabilities
+- **Code Integration**: Module linking and integration
+- **Symbol Resolution**: Cross-reference resolution
+- **Dependency Management**: Inter-module dependency handling
+- **Final Assembly**: Complete project assembly
 
 ### Agent 13: Agent Johnson
 **File**: `src/core/agents/agent13_agent_johnson.py`  
@@ -312,109 +314,58 @@ def handle_pipeline_errors(self, error_context: Dict[str, Any]) -> Dict[str, Any
 
 ### Agent 14: The Cleaner
 **File**: `src/core/agents/agent14_the_cleaner.py`  
-**Status**: ✅ Production Ready (Elite Refactored)  
+**Status**: ✅ Production Ready  
 **Dependencies**: [1, 2, 5, 9, 13]
 
-#### Enhanced Capabilities
-- **Advanced Code Analysis**: AI-enhanced pattern recognition
-- **Security-Focused Cleanup**: Vulnerability detection and fixing
-- **VS2022 Integration**: Advanced compilation validation
-- **Production Polish**: Final code quality enhancement
-
-#### Elite Features
-```json
-{
-  "advanced_analysis": {
-    "ai_pattern_recognition": true,
-    "security_vulnerability_scan": true,
-    "code_quality_enhancement": true
-  },
-  "vs2022_integration": {
-    "compilation_testing": true,
-    "optimization_validation": true,
-    "build_system_verification": true
-  }
-}
-```
+#### Capabilities
+- **Code Cleanup**: Code formatting and standardization
+- **Comment Generation**: Documentation enhancement
+- **Final Code Polishing**: Quality improvement processes
+- **Security-Focused Cleanup**: Basic vulnerability detection
 
 ### Agent 15: The Analyst
 **File**: `src/core/agents/agent15_analyst.py`  
-**Status**: ✅ Production Ready (Elite Refactored)  
+**Status**: ✅ Production Ready  
 **Dependencies**: [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14]
 
-#### Enhanced Capabilities
+#### Capabilities
 - **Cross-Agent Intelligence Correlation**: Pattern analysis across all agents
-- **Predictive Quality Assessment**: ML-based quality prediction
-- **Documentation Automation**: AI-enhanced technical documentation
-- **Intelligence Fusion**: Advanced data correlation and insight generation
-
-#### Intelligence Synthesis
-```json
-{
-  "intelligence_correlation": {
-    "pattern_matches": 127,
-    "correlation_strength": 0.89,
-    "confidence_scores": {...},
-    "anomaly_detection": []
-  },
-  "predictive_assessment": {
-    "quality_prediction": 0.85,
-    "success_probability": 0.92,
-    "risk_factors": [],
-    "optimization_recommendations": [...]
-  }
-}
-```
+- **Quality Assessment**: Reconstruction quality evaluation
+- **Documentation Generation**: Technical documentation creation
+- **Intelligence Synthesis**: Data correlation and insight generation
 
 ### Agent 16: Agent Brown
 **File**: `src/core/agents/agent16_agent_brown.py`  
-**Status**: ✅ Production Ready (Elite Refactored)  
+**Status**: ✅ Production Ready  
 **Dependencies**: [1, 2, 3, 4, 14, 15]
 
-#### Enhanced Capabilities
-- **NSA-Level QA Validation**: Military-grade quality assurance
-- **Binary-Identical Validation**: Precise reconstruction verification
-- **Zero-Tolerance Quality Control**: Strict compliance enforcement
+#### Capabilities
+- **Final QA Validation**: Quality assurance validation
+- **Output Verification**: Final output verification processes
+- **Compliance Checking**: Standards compliance enforcement
 - **Production Certification**: Final deployment readiness assessment
-
-#### Elite QA Metrics
-```json
-{
-  "elite_quality_metrics": {
-    "code_quality": 0.9,
-    "compilation_success": 1.0,
-    "security_score": 0.95,
-    "production_readiness_score": 0.9
-  },
-  "nsa_security_metrics": {
-    "vulnerability_score": 0.95,
-    "compliance_score": 0.95,
-    "overall_security_rating": "EXCELLENT"
-  }
-}
-```
 
 ## Agent Dependencies
 
-### Dependency Graph
+### Dependency Graph (Source Code Verified)
 ```
-Agent 0: [] (Master)
-Agent 1: [] (Foundation)
-Agent 2: [1]
-Agent 3: [1]
-Agent 4: [1]
-Agent 5: [1, 2, 3]
-Agent 6: [5]
-Agent 7: [1, 5]
-Agent 8: [1, 4]
-Agent 9: [1, 2, 5, 8]
-Agent 10: [9]
-Agent 11: [10]
-Agent 12: [9, 11]
-Agent 13: [9, 12]
-Agent 14: [1, 2, 5, 9, 13]
-Agent 15: [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14]
-Agent 16: [1, 2, 3, 4, 14, 15]
+Agent 0: [] (Master - Deus Ex Machina)
+Agent 1: [] (Foundation - Sentinel)
+Agent 2: [1] (Architect)
+Agent 3: [1] (Merovingian)
+Agent 4: [1] (Agent Smith)
+Agent 5: [1, 2, 3] (Neo)
+Agent 6: [1, 5] (Trainman - Assembly Analysis)
+Agent 7: [1, 4] (Keymaker - Resource Reconstruction)
+Agent 8: [5, 7] (Commander Locke)
+Agent 9: [1, 2, 5, 8] (The Machine)
+Agent 10: [9] (The Twins - Binary Diff)
+Agent 11: [9, 10] (The Oracle)
+Agent 12: [9, 11] (Link)
+Agent 13: [9, 12] (Agent Johnson)
+Agent 14: [1, 2, 5, 9, 13] (The Cleaner)
+Agent 15: [1-14] (The Analyst)
+Agent 16: [1, 2, 3, 4, 14, 15] (Agent Brown)
 ```
 
 ### Execution Batches
