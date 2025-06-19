@@ -58,6 +58,7 @@ env/
 .venv/
 .ENV/
 .env/
+matrix_venv/
 
 # IDEs and editors
 .vscode/
