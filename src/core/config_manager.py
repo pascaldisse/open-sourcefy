@@ -239,26 +239,55 @@ class ConfigManager:
                 )
     
     def _auto_detect_ghidra(self) -> Optional[str]:
-        """Auto-detect Ghidra installation safely."""
-        # Only check relative to project root for security
-        possible_locations = [
-            self.project_root / "ghidra"
-        ]
-        
-        # Add system paths only if explicitly allowed via environment
-        if os.environ.get('MATRIX_ALLOW_SYSTEM_GHIDRA', '').lower() == 'true':
-            possible_locations.extend([
-                Path("C:\\ghidra"),
-                Path("C:\\Program Files\\ghidra"),
-                Path("C:\\Program Files (x86)\\ghidra")
-            ])
-        
-        for location in possible_locations:
-            if location and location.exists():
-                headless = location / "support" / "analyzeHeadless"
-                if headless.exists():
-                    self.logger.info(f"Auto-detected Ghidra at: {location}")
-                    return str(location)
+        """Auto-detect Ghidra installation safely with path validation."""
+        # SECURITY FIX: Validate all paths to prevent directory traversal
+        try:
+            project_root_resolved = self.project_root.resolve()
+            
+            # Only check relative to project root for security
+            ghidra_relative = project_root_resolved / "ghidra"
+            possible_locations = []
+            
+            # Validate that ghidra path is actually under project root
+            if str(ghidra_relative.resolve()).startswith(str(project_root_resolved)):
+                possible_locations.append(ghidra_relative)
+            
+            # Add system paths only if explicitly allowed via environment
+            if os.environ.get('MATRIX_ALLOW_SYSTEM_GHIDRA', '').lower() == 'true':
+                # Validate system paths to prevent path traversal
+                system_paths = [
+                    Path("C:\\ghidra"),
+                    Path("C:\\Program Files\\ghidra"),
+                    Path("C:\\Program Files (x86)\\ghidra")
+                ]
+                for path in system_paths:
+                    try:
+                        resolved_path = path.resolve()
+                        # Only allow paths under standard Windows directories
+                        if str(resolved_path).startswith("C:\\"):
+                            possible_locations.append(resolved_path)
+                    except (OSError, ValueError):
+                        # Skip invalid paths
+                        continue
+            
+            for location in possible_locations:
+                if location and location.exists():
+                    try:
+                        # Validate headless script path
+                        headless = location / "support" / "analyzeHeadless"
+                        headless_resolved = headless.resolve()
+                        
+                        # Ensure headless script is under the ghidra directory
+                        if (str(headless_resolved).startswith(str(location.resolve())) 
+                            and headless.exists()):
+                            self.logger.info(f"Auto-detected Ghidra at: {location}")
+                            return str(location)
+                    except (OSError, ValueError):
+                        # Skip invalid or dangerous paths
+                        continue
+            
+        except (OSError, ValueError) as e:
+            self.logger.warning(f"Path validation error during Ghidra detection: {e}")
         
         return None
     

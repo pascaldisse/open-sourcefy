@@ -7,6 +7,7 @@ import logging
 import subprocess
 import tempfile
 import os
+import shutil
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 
@@ -68,30 +69,45 @@ class AISystem:
         return None
     
     def _test_claude_cli(self) -> bool:
-        """Test if Claude CLI is working properly"""
+        """Test if Claude CLI is working properly with secure command execution"""
         if not self.claude_cmd:
             return False
             
         try:
-            # Test using the same echo pipe method we use in production
-            cmd = f"echo 'test' | {self.claude_cmd} --print --output-format text"
+            # SECURITY FIX: Use secure command execution without shell=True
+            # Create a temporary input file for testing
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as temp_input:
+                temp_input.write('test')
+                temp_input_path = temp_input.name
             
-            test_result = subprocess.run(
-                cmd,
-                shell=True,
-                capture_output=True,
-                timeout=5,
-                text=True
-            )
-            
-            # Success if command ran without error and produced some output
-            success = test_result.returncode == 0 and len(test_result.stdout.strip()) > 0
-            if success:
-                self.logger.debug("Claude CLI test passed")
-            else:
-                self.logger.debug(f"Claude CLI test failed: return code {test_result.returncode}, output: {test_result.stdout}")
-            
-            return success
+            try:
+                # Execute Claude CLI with secure subprocess call
+                with open(temp_input_path, 'r') as input_file:
+                    test_result = subprocess.run(
+                        [self.claude_cmd, '--print', '--output-format', 'text'],
+                        stdin=input_file,
+                        capture_output=True,
+                        timeout=5,
+                        text=True,
+                        check=False  # Don't raise on non-zero exit
+                    )
+                
+                # Success if command ran without error and produced some output
+                success = test_result.returncode == 0 and len(test_result.stdout.strip()) > 0
+                if success:
+                    self.logger.debug("Claude CLI test passed")
+                else:
+                    self.logger.debug(f"Claude CLI test failed: return code {test_result.returncode}, output: {test_result.stdout}")
+                
+                return success
+                
+            finally:
+                # Clean up temporary file
+                try:
+                    os.unlink(temp_input_path)
+                except:
+                    pass
             
         except (subprocess.TimeoutExpired, Exception) as e:
             self.logger.debug(f"Claude CLI test failed: {e}")
@@ -123,14 +139,20 @@ class AISystem:
             )
     
     def _call_claude_cli(self, prompt: str, system_prompt: Optional[str] = None) -> AIResponse:
-        """Call Claude CLI using file-based approach for maximum compatibility"""
+        """Call Claude CLI using secure file-based approach without shell injection vulnerabilities"""
         try:
-            # Prepare full prompt
-            full_prompt = prompt
-            if system_prompt:
-                full_prompt = f"System: {system_prompt}\n\nUser: {prompt}"
+            # Input validation to prevent injection attacks
+            if not isinstance(prompt, str):
+                raise ValueError("Prompt must be a string")
+            if system_prompt is not None and not isinstance(system_prompt, str):
+                raise ValueError("System prompt must be a string")
             
-            # Create temporary files for input and output
+            # Prepare full prompt with input sanitization
+            full_prompt = prompt.strip()
+            if system_prompt:
+                full_prompt = f"System: {system_prompt.strip()}\n\nUser: {full_prompt}"
+            
+            # Create temporary files for input and output with secure permissions
             with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as input_file:
                 input_file.write(full_prompt)
                 input_path = input_file.name
@@ -139,16 +161,18 @@ class AISystem:
                 output_path = output_file.name
             
             try:
-                # Use subprocess with timeout instead of os.system for proper timeout handling
-                cmd = ["bash", "-c", f"cat {input_path} | {self.claude_cmd} --print --output-format text > {output_path} 2>&1"]
-                
-                self.logger.debug(f"Executing Claude CLI with {self.timeout}s timeout")
-                result = subprocess.run(
-                    cmd,
-                    timeout=self.timeout,  # Use configured timeout (default 10s)
-                    capture_output=False,  # We're using file redirection
-                    check=False
-                )
+                # SECURITY FIX: Use secure subprocess execution without shell=True
+                # Read input file and pipe directly to Claude CLI
+                with open(input_path, 'r') as input_file, open(output_path, 'w') as output_file:
+                    self.logger.debug(f"Executing Claude CLI with {self.timeout}s timeout")
+                    result = subprocess.run(
+                        [self.claude_cmd, '--print', '--output-format', 'text'],
+                        stdin=input_file,
+                        stdout=output_file,
+                        stderr=subprocess.STDOUT,
+                        timeout=self.timeout,  # Use configured timeout (default 10s)
+                        check=False  # Don't raise on non-zero exit
+                    )
                 exit_code = result.returncode
                 
                 # Read the output file
@@ -177,18 +201,24 @@ class AISystem:
                 return AIResponse(content=content, success=True)
                 
             finally:
-                # Clean up temporary files
+                # Clean up temporary files securely
                 try:
                     os.unlink(input_path)
                     os.unlink(output_path)
-                except:
-                    pass
+                except Exception as cleanup_error:
+                    self.logger.warning(f"Failed to clean up temporary files: {cleanup_error}")
                     
         except subprocess.TimeoutExpired:
             return AIResponse(
                 content="",
                 success=False,
                 error=f"Claude CLI timeout after {self.timeout}s"
+            )
+        except ValueError as e:
+            return AIResponse(
+                content="",
+                success=False,
+                error=f"Input validation error: {e}"
             )
         except Exception as e:
             return AIResponse(

@@ -3,7 +3,7 @@ Matrix Framework Exception Classes
 Production-ready exception hierarchy for Matrix agents and pipeline
 """
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 
 class MatrixError(Exception):
@@ -24,17 +24,37 @@ class MatrixError(Exception):
 class MatrixAgentError(MatrixError):
     """Exception raised by Matrix agents during execution"""
     
-    def __init__(self, message: str, agent_id: Optional[int] = None, 
-                 matrix_character: Optional[str] = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self, 
+        message: str, 
+        agent_id: Optional[int] = None, 
+        matrix_character: Optional[str] = None, 
+        context: Optional[Dict[str, Any]] = None,
+        error_id: Optional[str] = None,
+        category: Optional[str] = None,
+        severity: Optional[str] = None,
+        recoverable: bool = True
+    ):
         context = context or {}
         if agent_id is not None:
             context['agent_id'] = agent_id
         if matrix_character is not None:
             context['matrix_character'] = matrix_character
+        if error_id is not None:
+            context['error_id'] = error_id
+        if category is not None:
+            context['category'] = category
+        if severity is not None:
+            context['severity'] = severity
+        context['recoverable'] = recoverable
         
         super().__init__(message, context)
         self.agent_id = agent_id
         self.matrix_character = matrix_character
+        self.error_id = error_id
+        self.category = category
+        self.severity = severity
+        self.recoverable = recoverable
 
 
 class ValidationError(MatrixError):
@@ -201,6 +221,51 @@ class TimeoutError(MatrixError):
         super().__init__(message, context)
         self.timeout_seconds = timeout_seconds
         self.operation = operation
+
+
+class DecompilationError(MatrixAgentError):
+    """Exception raised during decompilation operations"""
+    
+    def __init__(self, message: str, binary_path: Optional[str] = None,
+                 decompilation_stage: Optional[str] = None, **kwargs):
+        context = kwargs.get('context', {})
+        if binary_path:
+            context['binary_path'] = binary_path
+        if decompilation_stage:
+            context['decompilation_stage'] = decompilation_stage
+        
+        super().__init__(message, context=context, **kwargs)
+        self.binary_path = binary_path
+        self.decompilation_stage = decompilation_stage
+
+
+class ReconstructionError(MatrixAgentError):
+    """Exception raised during reconstruction operations"""
+    
+    def __init__(self, message: str, reconstruction_stage: Optional[str] = None,
+                 source_files: Optional[List[str]] = None, **kwargs):
+        context = kwargs.get('context', {})
+        if reconstruction_stage:
+            context['reconstruction_stage'] = reconstruction_stage
+        if source_files:
+            context['source_files'] = source_files
+        
+        super().__init__(message, context=context, **kwargs)
+        self.reconstruction_stage = reconstruction_stage
+        self.source_files = source_files or []
+
+
+class SecurityViolationError(MatrixError):
+    """Exception raised when security policies are violated"""
+    
+    def __init__(self, message: str, violation_type: str, 
+                 security_context: Optional[Dict[str, Any]] = None):
+        context = security_context or {}
+        context['violation_type'] = violation_type
+        context['security_level'] = 'CRITICAL'
+        
+        super().__init__(message, context)
+        self.violation_type = violation_type
 
 
 # Exception handling utilities

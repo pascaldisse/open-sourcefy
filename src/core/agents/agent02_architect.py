@@ -202,11 +202,11 @@ class ArchitectAgent(AnalysisAgent):
             try:
                 path = self.config.get_path(path_key)
                 if path is None:
-                    # Use default paths if not configured
+                    # Use config manager for default paths
                     if path_key == 'paths.temp_directory':
-                        path = Path('./temp')
+                        path = Path(self.config.get_path('temp_dir', 'output/temp'))
                     elif path_key == 'paths.output_directory':
-                        path = Path('./output')
+                        path = Path(self.config.get_path('default_output_dir', 'output'))
                     else:
                         missing_paths.append(f"{path_key}: No path configured")
                         continue
@@ -681,6 +681,10 @@ class ArchitectAgent(AnalysisAgent):
             compiler_analysis = core_results.get('compiler_analysis')
             optimization_analysis = core_results.get('optimization_analysis')
             
+            # Validate required analysis results
+            if not compiler_analysis or not optimization_analysis:
+                return self._create_fallback_ai_results()
+            
             # Create AI analysis prompt
             prompt = f"""
             Analyze the architectural patterns in this binary:
@@ -764,6 +768,7 @@ class ArchitectAgent(AnalysisAgent):
             )
         
         # Compiler detection is optional - some binaries may not have clear signatures
+        compiler_analysis = results.get('compiler_analysis')
         
         return ArchitectValidationResult(
             is_valid=len(error_messages) == 0,

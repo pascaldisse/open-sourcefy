@@ -1875,10 +1875,11 @@ class MerovingianAgent(DecompilerAgent):
         """Attempt to unpack UPX-packed binary"""
         try:
             import subprocess
-            import tempfile
             
-            # Create temporary file for unpacked binary
-            temp_dir = Path(tempfile.mkdtemp())
+            # Create temp file in output directory structure
+            output_base = Path('output')
+            temp_dir = output_base / 'temp'
+            temp_dir.mkdir(parents=True, exist_ok=True)
             unpacked_path = temp_dir / f"unpacked_{binary_path.name}"
             
             # Try to find UPX executable

@@ -24,7 +24,8 @@ from datetime import datetime, timedelta
 
 from .exceptions import (
     MatrixAgentError, ValidationError, ConfigurationError, 
-    BinaryAnalysisError, DecompilationError, ReconstructionError
+    BinaryAnalysisError, DecompilationError, ReconstructionError,
+    SecurityViolationError
 )
 
 
@@ -210,6 +211,12 @@ class MatrixErrorHandler:
             PermissionError: {
                 'category': ErrorCategory.SYSTEM,
                 'severity': ErrorSeverity.HIGH,
+                'recovery': RecoveryStrategy.ABORT,
+                'recoverable': False
+            },
+            SecurityViolationError: {
+                'category': ErrorCategory.SYSTEM,
+                'severity': ErrorSeverity.CRITICAL,
                 'recovery': RecoveryStrategy.ABORT,
                 'recoverable': False
             }
