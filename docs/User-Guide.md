@@ -8,6 +8,32 @@ Open-Sourcefy provides multiple ways to analyze and decompile binary executables
 
 ## Basic Usage
 
+### First Analysis {#first-analysis}
+
+To run your first analysis with Open-Sourcefy:
+
+```bash
+# Start with the default binary
+python main.py
+
+# This runs the complete 17-agent Matrix pipeline on input/launcher.exe
+# Output will be generated in output/launcher/{timestamp}/
+```
+
+**What happens during your first analysis:**
+1. **Agent 0**: Coordinates the entire pipeline
+2. **Agents 1-4**: Foundation analysis (binary structure, imports, patterns)
+3. **Agents 5-8**: Advanced decompilation with Ghidra integration
+4. **Agents 9-13**: Source reconstruction and compilation
+5. **Agents 14-16**: Quality assurance and final validation
+
+**Expected output:**
+- Reconstructed C source code in `output/launcher/{timestamp}/compilation/src/`
+- Compiled executable in `output/launcher/{timestamp}/compilation/build/`
+- Comprehensive analysis reports in `output/launcher/{timestamp}/reports/`
+
+**Analysis time:** 15-30 minutes for typical 5MB binary
+
 ### Quick Analysis
 ```bash
 # Analyze default binary (launcher.exe in input/ directory)
