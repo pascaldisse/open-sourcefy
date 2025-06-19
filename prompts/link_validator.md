@@ -65,6 +65,9 @@ class LinkType(Enum):
     ABSOLUTE_PATH = "absolute_path"      # /full/path/to/file
     EMAIL_LINK = "email"                 # mailto:user@domain.com
     PROTOCOL_OTHER = "protocol_other"    # git://, ssh://, etc.
+    GITHUB_WIKI_LINK = "github_wiki"     # [[Page Name|File-Name]]
+    GITHUB_ISSUE = "github_issue"        # https://github.com/user/repo/issues/123
+    GITHUB_COMMIT = "github_commit"      # https://github.com/user/repo/commit/abc123
 ```
 
 ### 2. Link Validation Engine
@@ -218,8 +221,13 @@ def analyze_link_context(
 - `/mnt/c/Users/pascaldisse/Downloads/open-sourcefy/CLAUDE.md`
 - `/mnt/c/Users/pascaldisse/Downloads/open-sourcefy/rules.md`
 
-### Priority 2: Technical Documentation
-- `/mnt/c/Users/pascaldisse/Downloads/open-sourcefy/docs/*.md`
+### Priority 2: GitHub Wiki Documentation (HIGHEST PRIORITY)
+- `/mnt/c/Users/pascaldisse/Downloads/open-sourcefy/docs/*.md` (GitHub Wiki source files)
+- **CRITICAL**: Fix GitHub Wiki internal linking format
+- **CRITICAL**: Validate all [[Page Name|File-Name]] style links
+- **CRITICAL**: Ensure _Sidebar.md navigation works correctly
+
+### Priority 3: Technical Documentation  
 - `/mnt/c/Users/pascaldisse/Downloads/open-sourcefy/prompts/*.md`
 
 ### Priority 3: Agent Documentation
@@ -256,7 +264,26 @@ internal_links = [
 ]
 ```
 
-### 3. Documentation Cross-References
+### 3. GitHub Wiki Links (CRITICAL PRIORITY)
+**Validate and Fix**: GitHub Wiki internal links
+```python
+# GitHub Wiki link patterns that need validation/fixing
+github_wiki_links = [
+    "[[Getting Started|Getting-Started]]",
+    "[[Architecture Overview|Architecture-Overview]]", 
+    "[[User Guide|User-Guide]]",
+    "[[Developer Guide|Developer-Guide]]",
+    "[[API Reference|API-Reference]]",
+    "[[Agent Documentation|Agent-Documentation]]",
+    "[[Configuration Guide|Configuration-Guide]]",
+    "[[Troubleshooting|Troubleshooting]]"
+]
+
+# Ensure these match actual file names in docs/ directory
+# Fix any mismatched file names or broken wiki links
+```
+
+### 4. Documentation Cross-References
 **Validate**: Links between documentation files
 ```python
 # Example validation targets
