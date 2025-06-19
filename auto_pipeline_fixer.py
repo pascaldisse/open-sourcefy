@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env /mnt/c/Users/pascaldisse/Downloads/open-sourcefy/matrix_venv/bin/python3
 """
 Automated Pipeline Fixer - Continuous Pipeline Execution with Claude Code SDK
 Uses git worktree for isolated Claude Code instances as recommended.
@@ -169,10 +169,36 @@ class AutoPipelineFixer:
         if not pipeline_script.exists():
             return False, "", f"Pipeline script not found: {pipeline_script}"
         
-        # Run pipeline with extended timeout for complex operations
+        # Run pipeline with clean flag and specific binary using virtual environment
+        venv_python = worktree_path / "matrix_venv" / "bin" / "python3"
+        if not venv_python.exists():
+            venv_python = sys.executable
+            
         success, stdout, stderr = self._run_command([
-            sys.executable, "main.py"
+            str(venv_python), "main.py", "input/launcher.exe", "--clean", 
+            "-o", f"output/pipeline_run_{int(time.time())}"
         ], cwd=worktree_path, timeout=3600)  # 1 hour timeout
+        
+        # Check if pipeline successfully created a ~5MB executable
+        if success:
+            output_dir = worktree_path / f"output/pipeline_run_{int(time.time())}"
+            exe_files = list(output_dir.glob("**/*.exe")) if output_dir.exists() else []
+            
+            # Look for compiled executables around 4-5MB
+            for exe_file in exe_files:
+                if exe_file.exists():
+                    file_size = exe_file.stat().st_size
+                    size_mb = file_size / (1024 * 1024)
+                    logger.info(f"Found executable: {exe_file} ({size_mb:.1f} MB)")
+                    
+                    # Consider success if we have an executable between 3-6MB
+                    if 3.0 <= size_mb <= 6.0:
+                        logger.info(f"✅ SUCCESS: Pipeline created {size_mb:.1f}MB executable (target ~5MB)")
+                        return True, stdout, stderr
+            
+            # If no large executable found, consider it a failure
+            logger.warning("Pipeline completed but no ~5MB executable found")
+            return False, stdout, "No target-sized executable generated"
         
         return success, stdout, stderr
     
