@@ -22,6 +22,14 @@ from ..shared_components import (
 from ..exceptions import MatrixAgentError, ValidationError
 from ..config_manager import get_config_manager
 
+# Ghidra integration imports
+try:
+    from ..ghidra_headless import GhidraHeadless
+    from ..ghidra_processor import GhidraProcessor, FunctionInfo
+    GHIDRA_AVAILABLE = True
+except ImportError:
+    GHIDRA_AVAILABLE = False
+
 @dataclass
 class DecompiledFunction:
     """Decompiled function with complete source code"""
@@ -62,6 +70,23 @@ class NeoAgent(DecompilerAgent):
         self.error_handler = MatrixErrorHandler("Neo")
         self.metrics = MatrixMetrics("Neo", self.matrix_character)
         self.validation_tools = SharedValidationTools()
+        
+        # Initialize Ghidra integration if available
+        self.ghidra_analyzer = None
+        self.ghidra_processor = None
+        if GHIDRA_AVAILABLE:
+            try:
+                ghidra_home = self.config.get_path('ghidra_home')
+                if ghidra_home:
+                    self.ghidra_analyzer = GhidraHeadless(ghidra_home, enable_accuracy_optimizations=True)
+                    self.ghidra_processor = GhidraProcessor()
+                    self.logger.info("Neo enhanced with Ghidra integration")
+                else:
+                    self.logger.warning("Ghidra home not configured - falling back to basic decompilation")
+            except Exception as e:
+                self.logger.warning(f"Ghidra initialization failed: {e} - using fallback decompilation")
+        else:
+            self.logger.info("Ghidra not available - using built-in decompilation")
         
     def get_matrix_description(self) -> str:
         return "Neo is The One who can see the Matrix's true nature. Agent 05 pierces through binary obfuscation to reconstruct the original source code with perfect clarity."
@@ -147,7 +172,7 @@ class NeoAgent(DecompilerAgent):
         }
 
     def _extract_merovingian_functions(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Extract function data from Agent 3 (Merovingian)"""
+        """Extract function data from Agent 3 (Merovingian), enhanced with Ghidra analysis if available"""
         agent_results = context.get('agent_results', {})
         agent3_result = agent_results.get(3)
         
@@ -157,10 +182,264 @@ class NeoAgent(DecompilerAgent):
         agent3_data = agent3_result.data
         functions = agent3_data.get('functions', [])
         
+        # Enhance with Ghidra analysis if available
+        if self.ghidra_analyzer and functions:
+            try:
+                binary_path = context['binary_path']
+                output_paths = context.get('output_paths', {})
+                
+                # Set up Ghidra output directory
+                ghidra_output_dir = output_paths.get('ghidra', Path('output/ghidra'))
+                self.ghidra_analyzer.output_base_dir = str(ghidra_output_dir.parent)
+                
+                self.logger.info("Enhancing function analysis with Ghidra")
+                ghidra_functions = self._run_ghidra_analysis(binary_path, ghidra_output_dir)
+                
+                # Merge Merovingian and Ghidra function data
+                enhanced_functions = self._merge_function_data(functions, ghidra_functions)
+                self.logger.info(f"Enhanced {len(enhanced_functions)} functions with Ghidra analysis")
+                return enhanced_functions
+                
+            except Exception as e:
+                self.logger.warning(f"Ghidra enhancement failed: {e} - using Merovingian data only")
+        
         self.logger.info(f"Extracted {len(functions)} functions from Merovingian")
         print(f"[NEO DEBUG] Merovingian provided {len(functions)} functions for analysis")
         
         return functions
+    
+    def _run_ghidra_analysis(self, binary_path: Path, output_dir: Path) -> List[Dict[str, Any]]:
+        """Run Ghidra analysis to extract enhanced function information"""
+        try:
+            # Run Ghidra headless analysis using the existing interface
+            self.logger.info(f"Running Ghidra analysis on {binary_path}")
+            
+            # Ensure Ghidra output directory exists
+            ghidra_output_dir = output_dir / "ghidra_analysis"
+            ghidra_output_dir.mkdir(exist_ok=True)
+            
+            # Run analysis with EnhancedDecompiler script
+            success, output = self.ghidra_analyzer.run_ghidra_analysis(
+                str(binary_path),
+                str(ghidra_output_dir),
+                script_name="EnhancedDecompiler.java",
+                timeout=self.config.get_value('agents.timeouts.ghidra', 600)
+            )
+            
+            if success:
+                # Look for enhanced decompilation output files
+                functions = self._parse_ghidra_output(ghidra_output_dir)
+                self.logger.info(f"Ghidra analysis completed - found {len(functions)} functions")
+                return functions
+            else:
+                self.logger.warning(f"Ghidra analysis failed: {output}")
+                return []
+                
+        except Exception as e:
+            self.logger.error(f"Ghidra analysis failed: {e}")
+            return []
+    
+    def _parse_ghidra_output(self, ghidra_output_dir: Path) -> List[Dict[str, Any]]:
+        """Parse Ghidra decompilation output files"""
+        functions = []
+        
+        try:
+            # Look for the main decompiled C file
+            decompiled_file = None
+            for c_file in ghidra_output_dir.glob("*.c"):
+                if c_file.exists():
+                    decompiled_file = c_file
+                    break
+            
+            if not decompiled_file:
+                self.logger.warning("No Ghidra decompiled C file found")
+                return []
+            
+            # Read and parse the decompiled file
+            with open(decompiled_file, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+            
+            # Parse functions from the decompiled code
+            functions = self._extract_functions_from_ghidra_code(content)
+            
+            # Look for quality report
+            quality_file = ghidra_output_dir / f"{decompiled_file.stem}_enhanced_decompiled.quality.json"
+            if quality_file.exists():
+                try:
+                    import json
+                    with open(quality_file, 'r') as f:
+                        quality_data = json.load(f)
+                    
+                    # Enhance functions with quality metrics
+                    self._enhance_functions_with_quality_data(functions, quality_data)
+                    
+                except Exception as e:
+                    self.logger.warning(f"Failed to parse quality report: {e}")
+            
+            self.logger.info(f"Parsed {len(functions)} functions from Ghidra output")
+            return functions
+            
+        except Exception as e:
+            self.logger.error(f"Failed to parse Ghidra output: {e}")
+            return []
+    
+    def _extract_functions_from_ghidra_code(self, content: str) -> List[Dict[str, Any]]:
+        """Extract individual functions from Ghidra decompiled code"""
+        import re
+        functions = []
+        
+        # Split content by function boundaries
+        # Look for function patterns: type name(...) {
+        function_pattern = r'(?://\s*Function:\s*([^\n]+)\n)?(?://\s*Address:\s*([^\n]+)\n)?(?://\s*Confidence:\s*([^\n]+)\n)?((?:(?:void|int|char|long|short|unsigned|static|extern)\s+)+)?(\w+)\s*\([^)]*\)\s*\{'
+        
+        matches = list(re.finditer(function_pattern, content, re.MULTILINE))
+        
+        for i, match in enumerate(matches):
+            func_name_comment = match.group(1)
+            address_comment = match.group(2)  
+            confidence_comment = match.group(3)
+            return_type = match.group(4) or 'void'
+            func_name = match.group(5)
+            
+            # Extract function body
+            start_pos = match.start()
+            brace_count = 0
+            body_start = content.find('{', start_pos)
+            pos = body_start
+            
+            while pos < len(content):
+                if content[pos] == '{':
+                    brace_count += 1
+                elif content[pos] == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        break
+                pos += 1
+            
+            if brace_count == 0:
+                func_code = content[start_pos:pos+1]
+                
+                # Parse address
+                address = 0
+                if address_comment:
+                    addr_match = re.search(r'0x([0-9a-fA-F]+)', address_comment)
+                    if addr_match:
+                        address = int(addr_match.group(1), 16)
+                
+                # Parse confidence
+                confidence = 75
+                if confidence_comment:
+                    conf_match = re.search(r'(\d+)', confidence_comment)
+                    if conf_match:
+                        confidence = int(conf_match.group(1))
+                
+                # Use function name from comment if available, otherwise use parsed name
+                final_name = func_name_comment.strip() if func_name_comment else func_name
+                
+                function_data = {
+                    'name': final_name,
+                    'address': address,
+                    'code': func_code,
+                    'confidence': confidence / 100.0,  # Convert to 0-1 range
+                    'return_type': return_type.strip(),
+                    'size': len(func_code)  # Approximate size
+                }
+                
+                functions.append(function_data)
+        
+        return functions
+    
+    def _enhance_functions_with_quality_data(self, functions: List[Dict[str, Any]], quality_data: Dict[str, Any]) -> None:
+        """Enhance function data with quality metrics from Ghidra analysis"""
+        metrics = quality_data.get('metrics', {})
+        
+        total_functions = metrics.get('total_functions', len(functions))
+        success_rate = metrics.get('success_rate', 75)
+        
+        # Apply global quality adjustments
+        for func in functions:
+            # Adjust confidence based on success rate
+            base_confidence = func.get('confidence', 0.75)
+            adjusted_confidence = base_confidence * (success_rate / 100.0)
+            func['confidence'] = min(0.95, max(0.5, adjusted_confidence))
+            
+            # Add quality indicators
+            func['ghidra_quality'] = {
+                'success_rate': success_rate,
+                'total_functions': total_functions,
+                'enhanced': True
+            }
+    
+    def _merge_function_data(self, merovingian_functions: List[Dict[str, Any]], 
+                           ghidra_functions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Merge function data from Merovingian and Ghidra for enhanced analysis"""
+        enhanced_functions = []
+        
+        # Create address-based lookup for Ghidra functions
+        ghidra_by_address = {}
+        for gfunc in ghidra_functions:
+            if 'address' in gfunc:
+                addr = gfunc['address']
+                if isinstance(addr, str) and addr.startswith('0x'):
+                    ghidra_by_address[int(addr, 16)] = gfunc
+                elif isinstance(addr, int):
+                    ghidra_by_address[addr] = gfunc
+        
+        # Enhance Merovingian functions with Ghidra data
+        for mfunc in merovingian_functions:
+            enhanced_func = mfunc.copy()
+            
+            # Try to find matching Ghidra function
+            mfunc_addr = mfunc.get('address', 0)
+            if isinstance(mfunc_addr, str) and mfunc_addr.startswith('0x'):
+                mfunc_addr = int(mfunc_addr, 16)
+            
+            if mfunc_addr in ghidra_by_address:
+                gfunc = ghidra_by_address[mfunc_addr]
+                
+                # Enhance with Ghidra's superior decompilation
+                if gfunc.get('code'):
+                    enhanced_func['ghidra_decompiled_code'] = gfunc['code']
+                    enhanced_func['decompilation_confidence'] = max(
+                        enhanced_func.get('confidence', 0.5), 0.85
+                    )
+                
+                # Add Ghidra-specific analysis
+                if 'complexity_score' in gfunc:
+                    enhanced_func['complexity_score'] = gfunc['complexity_score']
+                if 'dependencies' in gfunc:
+                    enhanced_func['dependencies'] = gfunc['dependencies']
+                
+                # Mark as Ghidra-enhanced
+                enhanced_func['ghidra_enhanced'] = True
+            else:
+                enhanced_func['ghidra_enhanced'] = False
+            
+            enhanced_functions.append(enhanced_func)
+        
+        # Add any Ghidra-only functions that weren't matched
+        matched_addresses = {func.get('address', 0) for func in enhanced_functions}
+        for gfunc in ghidra_functions:
+            gaddr = gfunc.get('address', 0)
+            if isinstance(gaddr, str) and gaddr.startswith('0x'):
+                gaddr = int(gaddr, 16)
+            
+            if gaddr not in matched_addresses:
+                # Convert Ghidra function to Neo format
+                neo_func = {
+                    'name': gfunc.get('name', f'ghidra_func_{gaddr:x}'),
+                    'address': gaddr,
+                    'size': gfunc.get('size', 0),
+                    'code': gfunc.get('code', ''),
+                    'ghidra_decompiled_code': gfunc.get('code', ''),
+                    'confidence': 0.9,  # High confidence for Ghidra-only functions
+                    'decompilation_confidence': 0.9,
+                    'ghidra_enhanced': True,
+                    'source': 'ghidra_only'
+                }
+                enhanced_functions.append(neo_func)
+        
+        return enhanced_functions
 
     def _perform_binary_analysis(self, decompilation_context: Dict[str, Any]) -> Dict[str, Any]:
         """Perform advanced binary analysis using direct PE parsing"""
@@ -340,14 +619,19 @@ class NeoAgent(DecompilerAgent):
         func_address = func.get('address', 0)
         detection_method = func.get('detection_method', 'unknown')
         
-        # Check if we have real assembly instructions from enhanced Agent 3
+        # PRIORITY 1: Use Ghidra decompiled code if available (highest quality)
+        if func.get('ghidra_enhanced', False) and func.get('ghidra_decompiled_code'):
+            self.logger.info(f"Using Ghidra decompiled code for function {func_name}")
+            return self._enhance_ghidra_decompiled_code(func, binary_analysis, decompilation_context)
+        
+        # PRIORITY 2: Check if we have real assembly instructions from enhanced Agent 3
         assembly_instructions = func.get('assembly_instructions')
         
         if assembly_instructions and len(assembly_instructions) > 0:
             # Use real assembly instructions to generate actual C code
             return self._decompile_from_assembly(func, assembly_instructions, binary_analysis, decompilation_context)
         else:
-            # Fallback to template-based generation if no assembly available
+            # PRIORITY 3: Fallback to template-based generation if no assembly available
             if detection_method == 'entry_point':
                 return self._generate_main_function(func, binary_analysis, decompilation_context)
             elif detection_method == 'import_table':
@@ -1272,6 +1556,130 @@ This project was reconstructed from binary analysis by Neo Advanced Decompiler.
             return operand
             
         return operand
+
+    def _enhance_ghidra_decompiled_code(self, func: Dict[str, Any], binary_analysis: Dict[str, Any], decompilation_context: Dict[str, Any]) -> str:
+        """Enhance Ghidra decompiled code with additional context and cleanup"""
+        ghidra_code = func.get('ghidra_decompiled_code', '')
+        func_name = func.get('name', 'unknown_function')
+        
+        if not ghidra_code:
+            self.logger.warning(f"No Ghidra code available for function {func_name}")
+            return self._generate_generic_function(func, binary_analysis)
+        
+        # Clean up Ghidra code artifacts
+        enhanced_code = self._cleanup_ghidra_artifacts(ghidra_code)
+        
+        # Add context information from binary analysis
+        enhanced_code = self._add_context_to_ghidra_code(enhanced_code, func, binary_analysis, decompilation_context)
+        
+        # Validate the enhanced code
+        if not self._validate_ghidra_enhanced_code(enhanced_code):
+            self.logger.warning(f"Ghidra code validation failed for {func_name}, using fallback")
+            return self._generate_generic_function(func, binary_analysis)
+        
+        return enhanced_code
+    
+    def _cleanup_ghidra_artifacts(self, ghidra_code: str) -> str:
+        """Clean up common Ghidra decompilation artifacts"""
+        import re
+        
+        # Remove Ghidra comments that don't add value
+        ghidra_code = re.sub(r'// WARNING: .*\n', '', ghidra_code)
+        ghidra_code = re.sub(r'// DWARF DIE.*\n', '', ghidra_code)
+        
+        # Replace Ghidra-specific variable names with more readable names
+        ghidra_code = re.sub(r'\buVar(\d+)\b', r'local_var_\1', ghidra_code)
+        ghidra_code = re.sub(r'\biVar(\d+)\b', r'int_var_\1', ghidra_code)
+        ghidra_code = re.sub(r'\bpuVar(\d+)\b', r'ptr_var_\1', ghidra_code)
+        ghidra_code = re.sub(r'\bDAT_([0-9a-fA-F]+)\b', r'data_\1', ghidra_code)
+        
+        # Clean up excessive whitespace
+        ghidra_code = re.sub(r'\n\s*\n\s*\n', '\n\n', ghidra_code)
+        ghidra_code = ghidra_code.strip()
+        
+        return ghidra_code
+    
+    def _add_context_to_ghidra_code(self, ghidra_code: str, func: Dict[str, Any], binary_analysis: Dict[str, Any], decompilation_context: Dict[str, Any]) -> str:
+        """Add context information to Ghidra decompiled code"""
+        func_name = func.get('name', 'unknown_function')
+        func_address = func.get('address', 0)
+        confidence = func.get('decompilation_confidence', 0.0)
+        
+        # Build enhanced header
+        header_lines = [
+            f"// Enhanced decompilation of function: {func_name}",
+            f"// Original address: 0x{func_address:x}",
+            f"// Decompiled with Ghidra + Neo enhancement",
+            f"// Confidence: {confidence:.2f}",
+            ""
+        ]
+        
+        # Add import information if available
+        imports = binary_analysis.get('import_analysis', [])
+        if imports:
+            relevant_imports = [imp for imp in imports if imp.lower() in ghidra_code.lower()]
+            if relevant_imports:
+                header_lines.extend([
+                    "// Required imports detected:",
+                    *[f"// - {imp}" for imp in relevant_imports[:5]],
+                    ""
+                ])
+        
+        # Add includes based on detected API usage
+        includes = self._detect_required_includes(ghidra_code, binary_analysis)
+        if includes:
+            header_lines.extend(includes)
+            header_lines.append("")
+        
+        # Combine header with enhanced code
+        enhanced_code = "\n".join(header_lines) + ghidra_code
+        
+        return enhanced_code
+    
+    def _detect_required_includes(self, code: str, binary_analysis: Dict[str, Any]) -> List[str]:
+        """Detect required includes based on code analysis"""
+        includes = []
+        
+        # Standard includes based on detected APIs
+        if any(api in code for api in ['CreateWindow', 'GetMessage', 'ShowWindow']):
+            includes.append('#include <windows.h>')
+        
+        if any(api in code for api in ['printf', 'sprintf', 'malloc', 'free']):
+            includes.append('#include <stdio.h>')
+            includes.append('#include <stdlib.h>')
+        
+        if any(api in code for api in ['strlen', 'strcpy', 'strcat']):
+            includes.append('#include <string.h>')
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_includes = []
+        for include in includes:
+            if include not in seen:
+                seen.add(include)
+                unique_includes.append(include)
+        
+        return unique_includes
+    
+    def _validate_ghidra_enhanced_code(self, code: str) -> bool:
+        """Validate that the enhanced Ghidra code is reasonable"""
+        if not code or len(code.strip()) < 20:
+            return False
+        
+        # Check for basic function structure
+        if not ('{' in code and '}' in code):
+            return False
+        
+        # Check for excessive undefined behavior indicators
+        undefined_count = code.count('undefined')
+        if undefined_count > len(code) / 100:  # More than 1% undefined
+            return False
+        
+        # Check for reasonable C-like structure
+        if not any(keyword in code for keyword in ['return', 'if', 'for', 'while', '=']):
+            return False
+        
+        return True
 
     def _validate_results(self, results: Dict[str, Any]) -> None:
         """Validate results according to rules.md strict compliance"""

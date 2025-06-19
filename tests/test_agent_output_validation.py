@@ -436,6 +436,23 @@ class TestAgent15AnalystOutput(TestAgentOutputValidation):
         """Test Agent 15 intelligence synthesis quality"""
         try:
             from core.agents.agent15_analyst import Agent15_Analyst
+            from core.matrix_agents import AgentResult, AgentStatus
+            
+            # Create proper AgentResult objects for Agent 15 dependencies
+            self.test_context['agent_results'] = {
+                1: AgentResult(agent_id=1, status=AgentStatus.SUCCESS, data={'binary_info': {'format': 'PE', 'architecture': 'x86'}}, agent_name="Sentinel", matrix_character="sentinel"),
+                2: AgentResult(agent_id=2, status=AgentStatus.SUCCESS, data={'compiler_analysis': {'toolchain': 'MSVC', 'version': '14.0'}}, agent_name="Architect", matrix_character="architect"),
+                3: AgentResult(agent_id=3, status=AgentStatus.SUCCESS, data={'decompilation': {'functions': 50}}, agent_name="Merovingian", matrix_character="merovingian"),
+                4: AgentResult(agent_id=4, status=AgentStatus.SUCCESS, data={'structure_analysis': {'sections': 5}}, agent_name="AgentSmith", matrix_character="agent_smith"),
+                5: AgentResult(agent_id=5, status=AgentStatus.SUCCESS, data={'advanced_decompilation': {'confidence': 0.85}}, agent_name="Neo", matrix_character="neo"),
+                6: AgentResult(agent_id=6, status=AgentStatus.SUCCESS, data={'optimization': {'patterns': 20}}, agent_name="Trainman", matrix_character="trainman"),
+                7: AgentResult(agent_id=7, status=AgentStatus.SUCCESS, data={'assembly_analysis': {'instructions': 1000}}, agent_name="Keymaker", matrix_character="keymaker"),
+                8: AgentResult(agent_id=8, status=AgentStatus.SUCCESS, data={'resource_analysis': {'resources': 15}}, agent_name="CommanderLocke", matrix_character="commander_locke"),
+                9: AgentResult(agent_id=9, status=AgentStatus.SUCCESS, data={'compilation': {'success': True}}, agent_name="Machine", matrix_character="machine"),
+                12: AgentResult(agent_id=12, status=AgentStatus.SUCCESS, data={'linking': {'status': 'complete'}}, agent_name="Link", matrix_character="link"),
+                13: AgentResult(agent_id=13, status=AgentStatus.SUCCESS, data={'quality_assurance': {'score': 0.9}}, agent_name="AgentJohnson", matrix_character="agent_johnson"),
+                14: AgentResult(agent_id=14, status=AgentStatus.SUCCESS, data={'security_validation': {'threat_level': 'Low'}}, agent_name="Cleaner", matrix_character="cleaner")
+            }
             
             # Populate shared memory with mock agent results for synthesis
             self.test_context['shared_memory']['analysis_results'] = {
@@ -485,6 +502,17 @@ class TestAgent16AgentBrownOutput(TestAgentOutputValidation):
         """Test Agent 16 QA validation quality"""
         try:
             from core.agents.agent16_agent_brown import Agent16_AgentBrown
+            from core.matrix_agents import AgentResult, AgentStatus
+            
+            # Create proper AgentResult objects for Agent 16 dependencies (needs agent 14)
+            self.test_context['agent_results'] = {
+                1: AgentResult(agent_id=1, status=AgentStatus.SUCCESS, data={'binary_info': {'format': 'PE'}}, agent_name="Sentinel", matrix_character="sentinel"),
+                2: AgentResult(agent_id=2, status=AgentStatus.SUCCESS, data={'compiler_analysis': {'toolchain': 'MSVC'}}, agent_name="Architect", matrix_character="architect"),
+                3: AgentResult(agent_id=3, status=AgentStatus.SUCCESS, data={'decompilation': {'functions': 50}}, agent_name="Merovingian", matrix_character="merovingian"),
+                4: AgentResult(agent_id=4, status=AgentStatus.SUCCESS, data={'structure_analysis': {'sections': 5}}, agent_name="AgentSmith", matrix_character="agent_smith"),
+                14: AgentResult(agent_id=14, status=AgentStatus.SUCCESS, data={'security_validation': {'threat_level': 'Low'}}, agent_name="Cleaner", matrix_character="cleaner"),
+                15: AgentResult(agent_id=15, status=AgentStatus.SUCCESS, data={'intelligence_synthesis': {'quality': 0.9}}, agent_name="Analyst", matrix_character="analyst")
+            }
             
             # Populate comprehensive test data for QA validation
             self.test_context['shared_memory']['analysis_results'] = {
@@ -562,20 +590,46 @@ class TestAgentOutputIntegration(TestAgentOutputValidation):
                     from core.matrix_agents import AgentResult, AgentStatus
                     test_context['agent_results'][1] = AgentResult(
                         agent_id=1,
-                        agent_name="Agent01_Sentinel", 
-                        matrix_character="sentinel",
                         status=AgentStatus.SUCCESS,
                         data={'binary_metadata': {'file_size': 5000000}},
-                        execution_time=1.0
+                        agent_name="Sentinel",
+                        matrix_character="sentinel"
                     )
                     test_context['agent_results'][2] = AgentResult(
                         agent_id=2,
-                        agent_name="Agent02_Architect",
-                        matrix_character="architect",
-                        status=AgentStatus.SUCCESS, 
+                        status=AgentStatus.SUCCESS,
                         data={'architecture_analysis': {'architecture': 'x86_64'}},
-                        execution_time=1.5
+                        agent_name="Architect",
+                        matrix_character="architect"
                     )
+                    
+                    # Agent 15 needs additional dependencies for full synthesis
+                    if agent_id == 15:
+                        for aid in [3, 4, 5, 6, 7, 8, 9, 12, 13, 14]:
+                            test_context['agent_results'][aid] = AgentResult(
+                                agent_id=aid,
+                                status=AgentStatus.SUCCESS,
+                                data={f'agent_{aid}_data': f'mock_data_{aid}'},
+                                agent_name=f"Agent{aid}",
+                                matrix_character=f"agent_{aid}"
+                            )
+                    
+                    # Agent 16 also needs Agent 14 and 15
+                    if agent_id == 16:
+                        test_context['agent_results'][14] = AgentResult(
+                            agent_id=14,
+                            status=AgentStatus.SUCCESS,
+                            data={'security_validation': {'threat_level': 'Low'}},
+                            agent_name="Cleaner",
+                            matrix_character="cleaner"
+                        )
+                        test_context['agent_results'][15] = AgentResult(
+                            agent_id=15,
+                            status=AgentStatus.SUCCESS,
+                            data={'intelligence_synthesis': {'quality': 0.9}},
+                            agent_name="Analyst",
+                            matrix_character="analyst"
+                        )
                 
                 if agent_id == 0:  # Deus Ex Machina needs agent selection
                     test_context['selected_agents'] = [1, 2, 14]
