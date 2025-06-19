@@ -132,15 +132,6 @@ class MerovingianAgent(DecompilerAgent):
         
         # Initialize components
         self.logger = logging.getLogger(f"Agent{self.agent_id:02d}_Merovingian")
-        self.logger.setLevel(logging.DEBUG)  # Ensure debug level
-        
-        # Add console handler if not present
-        if not self.logger.handlers:
-            console_handler = logging.StreamHandler()
-            console_handler.setLevel(logging.DEBUG)
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            console_handler.setFormatter(formatter)
-            self.logger.addHandler(console_handler)
         
         self.error_handler = MatrixErrorHandler("Merovingian")
         self.metrics = MatrixMetrics("Merovingian", self.matrix_character)
@@ -153,9 +144,7 @@ class MerovingianAgent(DecompilerAgent):
         """Execute Merovingian's basic decompilation and function detection"""
         self.metrics.start_tracking()
         
-        # Immediate logging test
-        print(f"[MEROVINGIAN DEBUG] Agent 3 execute_matrix_task starting...")
-        self.logger.info("🔍 Merovingian starting function detection analysis...")
+        self.logger.info("Starting function detection analysis")
         
         try:
             # Step 1: Validate prerequisites
@@ -250,7 +239,6 @@ class MerovingianAgent(DecompilerAgent):
         unpacked_binary = None
         if packer_info['is_likely_packed']:
             self.logger.info(f"Packed binary detected: {packer_info['packer_type']} (confidence: {packer_info['confidence']:.2f})")
-            print(f"[MEROVINGIAN DEBUG] Packed binary detected: {packer_info['packer_type']}")
             unpacked_binary = self._attempt_unpacking(binary_path, packer_info)
             
         # Use unpacked binary for analysis if available
@@ -293,19 +281,9 @@ class MerovingianAgent(DecompilerAgent):
         # Remove duplicates
         unique_functions = self._deduplicate_functions(functions)
         
-        # Force output with both print and logging
+        # Log detection results
         dotnet_attempted = is_dotnet_clr or is_dotnet_peid or packer_info.get('might_be_dotnet', False)
         dotnet_result_text = f"{len(dotnet_functions)} (.NET: CLR={is_dotnet_clr}, PEID={is_dotnet_peid})" if dotnet_attempted else "N/A (not .NET)"
-        
-        print(f"[MEROVINGIAN DEBUG] Detection methods results:")
-        print(f"[MEROVINGIAN DEBUG]   Import functions: {len(import_functions)}")
-        print(f"[MEROVINGIAN DEBUG]   Entry functions: {len(entry_functions)}")
-        print(f"[MEROVINGIAN DEBUG]   Pattern functions: {len(pattern_functions)}")
-        print(f"[MEROVINGIAN DEBUG]   .NET functions: {dotnet_result_text}")
-        print(f"[MEROVINGIAN DEBUG]   Control flow functions: {len(control_flow_functions)}")
-        print(f"[MEROVINGIAN DEBUG]   MSVC optimization functions: {len(msvc_optimization_functions)}")
-        print(f"[MEROVINGIAN DEBUG]   Section functions: {len(section_functions)}")
-        print(f"[MEROVINGIAN DEBUG] Detected {len(unique_functions)} unique functions from {len(functions)} candidates")
         
         self.logger.info(f"Detection methods results:")
         self.logger.info(f"  Import functions: {len(import_functions)}")
@@ -1920,7 +1898,6 @@ class MerovingianAgent(DecompilerAgent):
             if not upx_found:
                 self.logger.warning("UPX unpacker not available in system PATH")
                 self.logger.info("To install UPX: sudo apt-get install upx-ucl (Linux) or download from https://upx.github.io/")
-                print(f"[MEROVINGIAN DEBUG] UPX not found - install for better unpacking support")
                 return None
             
             # Attempt unpacking
@@ -1930,7 +1907,6 @@ class MerovingianAgent(DecompilerAgent):
             
             if result.returncode == 0 and unpacked_path.exists():
                 self.logger.info(f"Successfully unpacked UPX binary: {unpacked_path}")
-                print(f"[MEROVINGIAN DEBUG] UPX unpacking successful!")
                 return unpacked_path
             else:
                 self.logger.debug(f"UPX unpacking failed: {result.stderr.decode()}")
@@ -2009,17 +1985,16 @@ class MerovingianAgent(DecompilerAgent):
         """Validate results according to rules.md"""
         functions = results.get('functions', [])
         
-        # Rule #53: STRICT ERROR HANDLING - Must find functions in 5MB+ binary
+        # Validate meaningful function detection in substantial binaries
         binary_size = results.get('merovingian_metadata', {}).get('binary_size', 0)
         
-        if binary_size > 1024*1024 and len(functions) == 0:  # 1MB+ binary should have functions
+        if binary_size > 1024*1024 and len(functions) == 0:
             raise RuntimeError(
-                f"PIPELINE FAILURE - Agent 3 STRICT MODE: Found {len(functions)} functions in {binary_size/1024/1024:.1f}MB binary. "
-                f"A binary this size should contain functions. This violates rules.md Rule #53 (STRICT ERROR HANDLING) - "
-                f"Agent must fail when requirements not met. NO PLACEHOLDER CODE allowed per Rule #44."
+                f"Function detection failed: Found {len(functions)} functions in {binary_size/1024/1024:.1f}MB binary. "
+                f"A binary this size should contain detectable functions."
             )
         
-        # Ensure no placeholder/fake data per Rule #44
+        # Validate function data integrity
         for func in functions:
             if not func.get('name') or not func.get('detection_method'):
-                raise RuntimeError("Invalid function data detected - violates Rule #44 (NO PLACEHOLDER CODE)")
+                raise RuntimeError("Invalid function data detected - incomplete function information")

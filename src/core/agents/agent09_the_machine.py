@@ -194,6 +194,21 @@ class Agent9_TheMachine(ReconstructionAgent):
 
     def _extract_import_table_from_sentinel(self, context: Dict[str, Any]) -> List[ImportTableData]:
         """CRITICAL: Extract comprehensive import table data from Agent 1 (Sentinel)"""
+        # Try to get enhanced import table from shared memory first (CRITICAL FIX)
+        shared_memory = context.get('shared_memory', {})
+        if shared_memory:
+            discovery_data = shared_memory.get('binary_metadata', {}).get('discovery', {})
+            enhanced_import_table = discovery_data.get('enhanced_import_table', {})
+            
+            if enhanced_import_table.get('critical_fix_applied', False):
+                self.logger.info("✅ CRITICAL: Using enhanced import table from Agent 1 shared memory")
+                imports_data = enhanced_import_table.get('imports', [])
+                dll_function_mapping = enhanced_import_table.get('dll_function_mapping', {})
+                
+                if imports_data:
+                    return self._process_enhanced_import_data(imports_data, dll_function_mapping)
+        
+        # Fallback to agent results if shared memory not available
         agent_results = context.get('agent_results', {})
         
         # STRICT: Agent 1 (Sentinel) is MANDATORY for import table data
@@ -217,6 +232,8 @@ class Agent9_TheMachine(ReconstructionAgent):
         
         # Priority 1: Get imports from format_analysis (most detailed)
         imports_data = format_analysis.get('imports', [])
+        dll_function_mapping = format_analysis.get('dll_function_mapping', {})
+        
         if not imports_data:
             # Priority 2: Get from binary_analysis
             imports_data = binary_analysis.get('imports', [])
@@ -228,38 +245,75 @@ class Agent9_TheMachine(ReconstructionAgent):
                 "Agent 1 must provide comprehensive import analysis."
             )
         
-        # Convert Agent 1's import data to ImportTableData structures
+        return self._process_enhanced_import_data(imports_data, dll_function_mapping)
+    
+    def _process_enhanced_import_data(self, imports_data: List[Dict], dll_function_mapping: Dict) -> List[ImportTableData]:
+        """Process enhanced import data from Agent 1's critical fix"""
         import_table_data = []
         total_functions = 0
         
         for import_entry in imports_data:
             if isinstance(import_entry, dict):
                 dll_name = import_entry.get('dll', import_entry.get('library', 'unknown.dll'))
+                
+                # Use detailed_functions if available (from enhanced extraction)
+                detailed_functions = import_entry.get('detailed_functions', [])
                 functions = import_entry.get('functions', [])
                 
-                # Handle different function formats from Agent 1
-                processed_functions = []
-                ordinal_mappings = {}
-                
-                for func in functions:
-                    if isinstance(func, str):
-                        # Simple string function name
-                        processed_functions.append({
-                            'name': func,
-                            'ordinal': None,
-                            'type': 'named'
-                        })
-                    elif isinstance(func, dict):
-                        # Detailed function info
-                        func_name = func.get('name', func.get('function_name', f'ordinal_{func.get("ordinal", 0)}'))
-                        ordinal = func.get('ordinal')
-                        processed_functions.append({
-                            'name': func_name,
-                            'ordinal': ordinal,
-                            'type': func.get('type', 'named')
-                        })
-                        if ordinal:
-                            ordinal_mappings[ordinal] = func_name
+                if detailed_functions:
+                    # Process enhanced function data
+                    processed_functions = []
+                    ordinal_mappings = {}
+                    
+                    for func_data in detailed_functions:
+                        if isinstance(func_data, dict):
+                            func_name = func_data.get('name', 'unknown_function')
+                            ordinal = func_data.get('ordinal')
+                            func_type = func_data.get('type', 'named')
+                            
+                            processed_functions.append({
+                                'name': func_name,
+                                'ordinal': ordinal,
+                                'type': func_type,
+                                'hint': func_data.get('hint'),
+                                'address': func_data.get('address')
+                            })
+                            
+                            if ordinal:
+                                ordinal_mappings[ordinal] = func_name
+                        else:
+                            # Fallback for string functions
+                            processed_functions.append({
+                                'name': str(func_data),
+                                'ordinal': None,
+                                'type': 'named'
+                            })
+                    
+                    total_functions += len(processed_functions)
+                else:
+                    # Fallback to simple function list
+                    processed_functions = []
+                    ordinal_mappings = {}
+                    
+                    for func in functions:
+                        if isinstance(func, str):
+                            processed_functions.append({
+                                'name': func,
+                                'ordinal': None,
+                                'type': 'named'
+                            })
+                        elif isinstance(func, dict):
+                            func_name = func.get('name', func.get('function_name', f'ordinal_{func.get("ordinal", 0)}'))
+                            ordinal = func.get('ordinal')
+                            processed_functions.append({
+                                'name': func_name,
+                                'ordinal': ordinal,
+                                'type': func.get('type', 'named')
+                            })
+                            if ordinal:
+                                ordinal_mappings[ordinal] = func_name
+                    
+                    total_functions += len(processed_functions)
                 
                 if processed_functions:
                     import_table_data.append(ImportTableData(
@@ -268,9 +322,8 @@ class Agent9_TheMachine(ReconstructionAgent):
                         ordinal_mappings=ordinal_mappings,
                         mfc_version='7.1' if 'MFC71' in dll_name.upper() else None
                     ))
-                    total_functions += len(processed_functions)
         
-        self.logger.info(f"✅ CRITICAL FIX: Extracted {len(import_table_data)} DLLs with {total_functions} functions")
+        self.logger.info(f"✅ CRITICAL FIX: Processed {len(import_table_data)} DLLs with {total_functions} functions")
         
         # Log the DLL breakdown for debugging
         for dll_data in import_table_data:

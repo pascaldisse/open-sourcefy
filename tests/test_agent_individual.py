@@ -24,7 +24,7 @@ try:
     from core.agents.agent03_merovingian import MerovingianAgent
     from core.agents.agent04_agent_smith import AgentSmithAgent
     from core.agents.agent05_neo_advanced_decompiler import NeoAgent
-    from core.agents.agent10_twins_binary_diff import Agent10_Twins_BinaryDiff
+    from core.agents.agent10_the_machine import Agent10_TheMachine
     IMPORTS_AVAILABLE = True
 except ImportError as e:
     IMPORTS_AVAILABLE = False

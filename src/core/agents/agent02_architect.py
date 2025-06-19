@@ -24,23 +24,7 @@ from ..exceptions import MatrixAgentError, ValidationError, ConfigurationError
 # AI system integration
 from ..ai_system import ai_available, ai_analyze_code, ai_request_safe
 
-# LangChain imports (conditional)
-try:
-    from langchain.agents import AgentExecutor, ReActDocstoreAgent
-    from langchain.memory import ConversationBufferMemory
-    from langchain.tools import Tool
-    LANGCHAIN_AVAILABLE = True
-except ImportError:
-    LANGCHAIN_AVAILABLE = False
-    # Create dummy classes for type hints when LangChain not available
-    class AgentExecutor:
-        pass
-    class ConversationBufferMemory:
-        pass
-    class ReActDocstoreAgent:
-        pass
-    class Tool:
-        pass
+# LangChain removed per rules.md - using centralized AI system only
 
 # Configuration constants - NO MAGIC NUMBERS
 class ArchitectConstants:
@@ -237,35 +221,7 @@ class ArchitectAgent(AnalysisAgent):
         if missing_paths:
             raise ConfigurationError(f"Invalid configuration paths: {missing_paths}")
     
-    # AI setup methods no longer needed - using centralized system
-    
-    def _setup_langchain_agent(self) -> Optional[AgentExecutor]:
-        """Setup LangChain agent with Architect-specific tools"""
-        if not self.ai_enabled or not self.llm or not LANGCHAIN_AVAILABLE:
-            return None
-            
-        try:
-            tools = self._create_agent_tools()
-            memory = ConversationBufferMemory()
-            
-            agent = ReActDocstoreAgent.from_llm_and_tools(
-                llm=self.llm,
-                tools=tools,
-                verbose=self.config.get_value('debug.enabled', False)
-            )
-            
-            return AgentExecutor.from_agent_and_tools(
-                agent=agent,
-                tools=tools,
-                memory=memory,
-                verbose=self.config.get_value('debug.enabled', False),
-                max_iterations=self.config.get_value('ai.max_iterations', 5)
-            )
-        except Exception as e:
-            self.logger.warning(f"Failed to setup LangChain agent: {e}")
-            return None
-    
-    # Tool creation methods removed - using centralized AI system
+    # LangChain integration removed per rules.md - using centralized AI system
     
     def get_matrix_description(self) -> str:
         """The Architect's role in the Matrix"""
@@ -715,11 +671,10 @@ class ArchitectAgent(AnalysisAgent):
         if not self.ai_enabled:
             return {
                 'ai_analysis_available': False,
-                'architectural_insights': 'AI analysis not available - LangChain not initialized',
+                'architectural_insights': 'AI analysis not available',
                 'compiler_recommendations': 'Basic heuristics only',
                 'optimization_patterns': 'Manual analysis required',
-                'confidence_score': 0.0,
-                'ai_enhancement_suggestions': 'Install and configure LangChain for enhanced architectural analysis'
+                'confidence_score': 0.0
             }
         
         try:
@@ -738,8 +693,9 @@ class ArchitectAgent(AnalysisAgent):
             """
             
             # Execute AI analysis using centralized AI system
-            from ..ai_system import ai_request
-            ai_result = ai_request(prompt, "You are a reverse engineering expert. Analyze code patterns and architectural decisions to understand the original software design and purpose.")
+            from ..ai_system import ai_analyze
+            ai_response = ai_analyze(prompt, "You are a reverse engineering expert. Analyze code patterns and architectural decisions to understand the original software design and purpose.")
+            ai_result = ai_response.content if ai_response.success else None
             
             return {
                 'ai_insights': ai_result,
@@ -807,10 +763,7 @@ class ArchitectAgent(AnalysisAgent):
                 f"Quality score {quality_score:.3f} below threshold {self.constants.QUALITY_THRESHOLD}"
             )
         
-        # Additional validation checks - make compiler detection less strict
-        compiler_analysis = results.get('compiler_analysis')
-        # Don't require compiler detection - some binaries may not have clear compiler signatures
-        # This is acceptable for basic analysis
+        # Compiler detection is optional - some binaries may not have clear signatures
         
         return ArchitectValidationResult(
             is_valid=len(error_messages) == 0,
@@ -890,4 +843,4 @@ class ArchitectAgent(AnalysisAgent):
             'architect_confidence': results['architect_metadata']['quality_score']
         }
     
-    # AI tool methods removed - using centralized AI system
+    # Centralized AI system handles all AI functionality
