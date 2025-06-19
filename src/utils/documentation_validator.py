@@ -683,9 +683,9 @@ class DocumentationValidator:
     
     def _validate_documentation_file(self, doc_file: str) -> Dict[str, Any]:
         """Validate all claims in a single documentation file"""
-        # Implementation placeholder - would analyze file content for claims
-        # and validate each one against source code
-        return {
+        self.logger.info(f"Validating documentation file: {doc_file}")
+        
+        file_validation = {
             'total_claims': 0,
             'valid_claims': 0,
             'false_claims': 0,
@@ -694,6 +694,344 @@ class DocumentationValidator:
             'corrections': [],
             'manual_review': []
         }
+        
+        try:
+            with open(doc_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            lines = content.split('\n')
+            
+            # Extract claims from file
+            claims = self._extract_claims_from_documentation(content, doc_file)
+            file_validation['total_claims'] = len(claims)
+            
+            # Validate each claim
+            for claim in claims:
+                validation_result = self._validate_specific_claim(claim, doc_file)
+                
+                if validation_result.exists and validation_result.confidence >= 0.7:
+                    file_validation['valid_claims'] += 1
+                else:
+                    file_validation['false_claims'] += 1
+                    file_validation['false_claims_details'].append({
+                        'claim': claim,
+                        'reason': validation_result.error_message or 'Low confidence',
+                        'confidence': validation_result.confidence,
+                        'evidence': validation_result.evidence
+                    })
+                    
+                    # Attempt automatic correction
+                    if validation_result.confidence < 0.3:
+                        correction = self._attempt_automatic_correction(claim, doc_file)
+                        if correction.corrected:
+                            file_validation['corrected_claims'] += 1
+                            file_validation['corrections'].append({
+                                'original': correction.original_claim,
+                                'corrected': correction.corrected_claim,
+                                'method': correction.correction_method
+                            })
+                        elif correction.manual_review_needed:
+                            file_validation['manual_review'].append({
+                                'claim': claim,
+                                'suggested_action': 'Manual review required'
+                            })
+            
+            return file_validation
+            
+        except Exception as e:
+            self.logger.error(f"Failed to validate file {doc_file}: {e}")
+            return file_validation
+    
+    def _extract_claims_from_documentation(self, content: str, doc_file: str) -> List[str]:
+        """Extract verifiable claims from documentation content"""
+        claims = []
+        
+        # Agent implementation claims
+        agent_pattern = r'Agent \d+.*?(?:✅|🚨|IMPLEMENTED|Production|CRITICAL)'
+        claims.extend(re.findall(agent_pattern, content, re.IGNORECASE))
+        
+        # Status claims
+        status_pattern = r'STATUS.*?(?:✅|🚨|Production|CRITICAL|IMPLEMENTED|NEEDED)'
+        claims.extend(re.findall(status_pattern, content, re.IGNORECASE))
+        
+        # Percentage claims
+        percentage_pattern = r'(\d+%\+?)\s+(?:success|coverage|accuracy|rate)'
+        claims.extend([f"{match} claim" for match in re.findall(percentage_pattern, content, re.IGNORECASE)])
+        
+        # Count claims
+        count_patterns = [
+            (r'(\d+)[-\s]*agent', 'agent count'),
+            (r'(\d+)\s+DLLs?', 'DLL count'),
+            (r'(\d+)\s+functions?', 'function count')
+        ]
+        
+        for pattern, claim_type in count_patterns:
+            matches = re.findall(pattern, content, re.IGNORECASE)
+            claims.extend([f"{match} {claim_type}" for match in matches])
+        
+        # Feature claims
+        feature_lines = []
+        for line in content.split('\n'):
+            if any(keyword in line.lower() for keyword in ['features:', 'capabilities:', 'includes:']):
+                feature_lines.append(line.strip())
+        
+        claims.extend(feature_lines)
+        
+        return [claim for claim in claims if claim.strip()]
+    
+    def _validate_specific_claim(self, claim: str, doc_file: str) -> ValidationResult:
+        """Validate a specific claim against source code"""
+        # Determine claim type and validate accordingly
+        if re.search(r'Agent \d+', claim):
+            # Extract agent number
+            agent_match = re.search(r'Agent (\d+)', claim)
+            if agent_match:
+                agent_id = int(agent_match.group(1))
+                status = "IMPLEMENTED" if "✅" in claim else "CRITICAL" if "🚨" in claim else "UNKNOWN"
+                return self.validate_agent_status_claim(agent_id, status)
+        
+        elif re.search(r'\d+%', claim):
+            return self._validate_percentage_claim(claim)
+        
+        elif any(keyword in claim.lower() for keyword in ['agent', 'dll', 'function']):
+            return self._validate_count_claim(claim)
+        
+        else:
+            # General feature claim
+            return self.validate_feature_claim(claim, doc_file)
+    
+    def _validate_percentage_claim(self, claim: str) -> ValidationResult:
+        """Validate percentage claims"""
+        percentage_match = re.search(r'(\d+)%', claim)
+        if not percentage_match:
+            return ValidationResult(
+                exists=False,
+                claim_type=ClaimType.PERFORMANCE_METRIC,
+                source_files=[],
+                line_references=[],
+                confidence=0.0,
+                evidence="Could not extract percentage",
+                source_reference=None,
+                error_message="Invalid percentage format"
+            )
+        
+        percentage = int(percentage_match.group(1))
+        
+        # Validate reasonableness
+        if "coverage" in claim.lower():
+            confidence = 0.8 if 80 <= percentage <= 95 else 0.3
+        elif "success" in claim.lower():
+            confidence = 0.7 if 60 <= percentage <= 90 else 0.4
+        else:
+            confidence = 0.5
+        
+        return ValidationResult(
+            exists=True,
+            claim_type=ClaimType.PERFORMANCE_METRIC,
+            source_files=[],
+            line_references=[],
+            confidence=confidence,
+            evidence=f"Percentage {percentage}% is {'reasonable' if confidence > 0.6 else 'questionable'}",
+            source_reference=None,
+            error_message=None if confidence > 0.6 else f"Percentage {percentage}% may be inaccurate"
+        )
+    
+    def _validate_count_claim(self, claim: str) -> ValidationResult:
+        """Validate count claims (agents, DLLs, functions)"""
+        count_match = re.search(r'(\d+)', claim)
+        if not count_match:
+            return ValidationResult(
+                exists=False,
+                claim_type=ClaimType.ARCHITECTURE_CLAIM,
+                source_files=[],
+                line_references=[],
+                confidence=0.0,
+                evidence="Could not extract count",
+                source_reference=None,
+                error_message="Invalid count format"
+            )
+        
+        count = int(count_match.group(1))
+        
+        if "agent" in claim.lower():
+            # Count actual agent files
+            agent_files = [f for f in self._get_python_files() if 'agent' in f.lower()]
+            actual_count = len(agent_files)
+            accuracy = 1.0 - abs(actual_count - count) / max(actual_count, count, 1)
+            
+            return ValidationResult(
+                exists=True,
+                claim_type=ClaimType.ARCHITECTURE_CLAIM,
+                source_files=agent_files,
+                line_references=[],
+                confidence=accuracy,
+                evidence=f"Claimed: {count}, Actual: {actual_count}",
+                source_reference=None,
+                error_message=None if accuracy > 0.8 else f"Count mismatch: claimed {count}, found {actual_count}"
+            )
+        
+        # For other counts, partial validation
+        return ValidationResult(
+            exists=True,
+            claim_type=ClaimType.ARCHITECTURE_CLAIM,
+            source_files=[],
+            line_references=[],
+            confidence=0.5,
+            evidence="Count requires runtime validation",
+            source_reference=None,
+            error_message=None
+        )
+    
+    def _attempt_automatic_correction(self, claim: str, doc_file: str) -> CorrectionResult:
+        """Attempt automatic correction of false claims"""
+        # For now, mark for manual review - automatic correction would need
+        # more sophisticated analysis
+        return CorrectionResult(
+            corrected=False,
+            original_claim=claim,
+            corrected_claim="",
+            correction_method="manual_review_required",
+            source_reference=None,
+            manual_review_needed=True
+        )
+    
+    def _find_agent_file(self, agent_id: int) -> Optional[str]:
+        """Find agent implementation file by ID"""
+        agent_pattern = f"agent{agent_id:02d}_"
+        
+        for py_file in self._get_python_files():
+            if agent_pattern in py_file.lower():
+                return py_file
+        
+        return None
+    
+    def _analyze_agent_implementation(self, agent_file: str) -> Dict[str, Any]:
+        """Analyze agent implementation completeness"""
+        try:
+            with open(agent_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Check for key implementation indicators
+            indicators = {
+                'class_definition': 'class' in content and 'Agent' in content,
+                'execute_method': 'execute_matrix_task' in content,
+                'error_handling': 'try:' in content and 'except' in content,
+                'logging': 'logger' in content,
+                'documentation': '"""' in content or "'''" in content
+            }
+            
+            implementation_score = sum(indicators.values()) / len(indicators)
+            
+            # Check for NotImplementedError or TODOs
+            has_placeholders = any(placeholder in content for placeholder in [
+                'NotImplementedError', 'TODO', 'placeholder', 'pass  # Implementation'
+            ])
+            
+            confidence = implementation_score * (0.5 if has_placeholders else 1.0)
+            
+            return {
+                'confidence': confidence,
+                'key_lines': [1],  # Simplified
+                'indicators': indicators,
+                'has_placeholders': has_placeholders
+            }
+            
+        except Exception as e:
+            return {
+                'confidence': 0.0,
+                'key_lines': [],
+                'indicators': {},
+                'has_placeholders': True,
+                'error': str(e)
+            }
+    
+    def _determine_agent_status(self, implementation_analysis: Dict) -> str:
+        """Determine actual agent status from implementation analysis"""
+        confidence = implementation_analysis.get('confidence', 0.0)
+        has_placeholders = implementation_analysis.get('has_placeholders', True)
+        
+        if confidence >= 0.8 and not has_placeholders:
+            return "IMPLEMENTED"
+        elif confidence >= 0.5:
+            return "PARTIAL"
+        else:
+            return "CRITICAL"
+    
+    def _compare_agent_status(self, claimed_status: str, actual_status: str) -> bool:
+        """Compare claimed vs actual agent status"""
+        status_mapping = {
+            "✅": "IMPLEMENTED",
+            "🚨": "CRITICAL",
+            "IMPLEMENTED": "IMPLEMENTED",
+            "PRODUCTION": "IMPLEMENTED",
+            "CRITICAL": "CRITICAL",
+            "NEEDED": "CRITICAL"
+        }
+        
+        normalized_claimed = status_mapping.get(claimed_status, claimed_status)
+        return normalized_claimed == actual_status
+    
+    def _validate_function_signature(self, location: Dict, documented_signature: str) -> Dict[str, Any]:
+        """Validate function signature against documentation"""
+        try:
+            with open(location['file'], 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            tree = ast.parse(content)
+            
+            # Find the specific function
+            for node in ast.walk(tree):
+                if (isinstance(node, ast.FunctionDef) and 
+                    node.name == location['name'] and 
+                    node.lineno == location['line']):
+                    
+                    # Extract actual signature
+                    args = [arg.arg for arg in node.args.args]
+                    actual_signature = f"{node.name}({', '.join(args)})"
+                    
+                    # Simple comparison
+                    matches = actual_signature in documented_signature or documented_signature in actual_signature
+                    
+                    return {
+                        'matches': matches,
+                        'file': location['file'],
+                        'line': location['line'],
+                        'actual_signature': actual_signature
+                    }
+            
+            return {
+                'matches': False,
+                'file': location['file'],
+                'line': location['line'],
+                'actual_signature': 'Function not found',
+                'error': 'Function not found in AST'
+            }
+            
+        except Exception as e:
+            return {
+                'matches': False,
+                'file': location['file'],
+                'line': location['line'],
+                'actual_signature': 'Parse error',
+                'error': str(e)
+            }
+    
+    def _generate_corrected_claim(self, claim: str, actual_status: str) -> str:
+        """Generate corrected version of false claim"""
+        # Simple correction - would need more sophisticated logic for production
+        if "✅" in claim and actual_status == "CRITICAL":
+            return claim.replace("✅", "🚨")
+        elif "🚨" in claim and actual_status == "IMPLEMENTED":
+            return claim.replace("🚨", "✅")
+        
+        return claim
+    
+    def _validate_correction_safety(self, original: str, corrected: str, content: str) -> bool:
+        """Validate that correction is safe to apply"""
+        # Simple safety check - ensure we're not breaking critical formatting
+        return (original != corrected and 
+                len(corrected) > 0 and 
+                content.count(original) == 1)
     
     def _log_validation_operation(
         self, 

@@ -1887,6 +1887,35 @@ class Agent10_Twins_BinaryDiff(AnalysisAgent):
         
         return imports
     
+    def _check_for_generated_source_files(self, context: Dict[str, Any]) -> bool:
+        """Check if source files were generated even if binary compilation failed"""
+        try:
+            output_paths = context.get('output_paths', {})
+            
+            # Check for source files in compilation directory
+            compilation_dir = output_paths.get('compilation')
+            if compilation_dir:
+                source_patterns = ['*.c', '*.cpp', '*.h', '*.hpp']
+                for pattern in source_patterns:
+                    source_files = list(Path(compilation_dir).rglob(pattern))
+                    if source_files:
+                        self.logger.info(f"✅ Found {len(source_files)} {pattern} source files")
+                        return True
+            
+            # Also check src subdirectory
+            src_dir = Path(output_paths.get('compilation', '')) / 'src'
+            if src_dir.exists():
+                source_files = list(src_dir.glob('*.c')) + list(src_dir.glob('*.h'))
+                if source_files:
+                    self.logger.info(f"✅ Found {len(source_files)} source files in src/")
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            self.logger.warning(f"Error checking for source files: {e}")
+            return False
+    
     def _extract_reconstructed_imports(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Extract reconstructed import data from Agent 9 (The Machine) results"""
         imports = {

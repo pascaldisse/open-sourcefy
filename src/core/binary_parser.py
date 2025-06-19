@@ -15,7 +15,7 @@ Features:
 import logging
 import mmap
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Union, BinaryIO
+from typing import Dict, Any, List, Optional, Union, BinaryIO, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 import hashlib
@@ -620,15 +620,222 @@ class SecurityAwareBinaryParser:
             return 0.0
     
     def _parse_elf_format(self, binary_path: Path, output_dir: Path) -> BinaryMetadata:
-        """Parse ELF format binary"""
+        """Parse ELF format binary with comprehensive analysis"""
         if not ELF_AVAILABLE:
             raise BinaryParsingError("ELF parsing not available - install pyelftools library")
         
-        raise NotImplementedError(
-            "ELF format parsing not fully implemented - requires ELF header analysis, "
-            "section parsing, symbol table extraction, and dynamic linking analysis "
-            "using pyelftools library"
-        )
+        try:
+            # Open ELF file
+            with open(binary_path, 'rb') as f:
+                elf_file = ELFFile(f)
+                
+                # Initialize metadata
+                metadata = BinaryMetadata(
+                    format=BinaryFormat.ELF,
+                    architecture=self._detect_elf_architecture(elf_file),
+                    bit_width=32 if elf_file.elfclass == 32 else 64,
+                    entry_point=elf_file.header.e_entry,
+                    base_address=0,  # ELF doesn't have fixed base like PE
+                    file_size=binary_path.stat().st_size,
+                    parsing_confidence=0.90  # High confidence for valid ELF files
+                )
+                
+                # Extract compilation information
+                metadata.creation_time = None  # ELF doesn't store creation time in header
+                
+                # Parse sections
+                metadata.sections = self._parse_elf_sections(elf_file, binary_path)
+                
+                # Parse symbols and imports
+                metadata.imports, metadata.exports = self._parse_elf_symbols(elf_file)
+                
+                # Detect security features
+                security_features = self._analyze_elf_security_features(elf_file)
+                
+                # Detect packing (basic heuristics)
+                metadata.is_packed = self._detect_elf_packing(elf_file, metadata.sections)
+                
+                # Check for debug information
+                metadata.has_debug_info = any(section.name == '.debug_info' for section in metadata.sections)
+                
+                # Detect compiler/linker
+                metadata.compiler_info = self._detect_elf_compiler(elf_file)
+                
+                # No digital signatures in standard ELF
+                metadata.digital_signatures = []
+                
+                metadata.parsing_errors = []
+                
+                self.logger.info(f"Successfully parsed ELF binary: {metadata.architecture.value} {metadata.bit_width}-bit")
+                return metadata
+                
+        except ELFError as e:
+            error_msg = f"Invalid ELF format: {e}"
+            self.logger.error(error_msg)
+            raise BinaryParsingError(error_msg)
+        except Exception as e:
+            error_msg = f"ELF parsing failed: {e}"
+            self.logger.error(error_msg)
+            raise BinaryParsingError(error_msg)
+    
+    def _detect_elf_architecture(self, elf_file) -> Architecture:
+        """Detect ELF architecture from machine type"""
+        machine = elf_file.header.e_machine
+        
+        if machine == 'EM_386':
+            return Architecture.X86
+        elif machine == 'EM_X86_64':
+            return Architecture.X86_64
+        elif machine == 'EM_ARM':
+            return Architecture.ARM
+        elif machine == 'EM_AARCH64':
+            return Architecture.ARM64
+        else:
+            self.logger.warning(f"Unknown ELF machine type: {machine}")
+            return Architecture.UNKNOWN
+    
+    def _parse_elf_sections(self, elf_file, binary_path: Path) -> List[BinarySection]:
+        """Parse ELF sections"""
+        sections = []
+        
+        try:
+            with open(binary_path, 'rb') as f:
+                for section in elf_file.iter_sections():
+                    # Calculate permissions from section flags
+                    flags = section.header.sh_flags
+                    permissions = ""
+                    if flags & 0x2:  # SHF_ALLOC
+                        permissions += "R"
+                    if flags & 0x1:  # SHF_WRITE
+                        permissions += "W"
+                    if flags & 0x4:  # SHF_EXECINSTR
+                        permissions += "X"
+                    
+                    # Read section data for entropy calculation
+                    section_data = None
+                    entropy = None
+                    try:
+                        section_data = section.data()
+                        if section_data:
+                            entropy = self._calculate_entropy(section_data)
+                    except:
+                        self.logger.warning(f"Could not read section {section.name}")
+                    
+                    sections.append(BinarySection(
+                        name=section.name,
+                        address=section.header.sh_addr,
+                        size=section.header.sh_size,
+                        offset=section.header.sh_offset,
+                        permissions=permissions,
+                        entropy=entropy,
+                        data=section_data[:1024] if section_data else None  # Store first 1KB
+                    ))
+                    
+        except Exception as e:
+            self.logger.error(f"ELF section parsing failed: {e}")
+        
+        return sections
+    
+    def _parse_elf_symbols(self, elf_file) -> Tuple[List[BinaryImport], List[BinaryExport]]:
+        """Parse ELF symbols for imports and exports"""
+        imports = []
+        exports = []
+        
+        try:
+            # Parse symbol tables
+            for section in elf_file.iter_sections():
+                if hasattr(section, 'iter_symbols'):
+                    for symbol in section.iter_symbols():
+                        symbol_name = symbol.name
+                        if not symbol_name:
+                            continue
+                        
+                        # Determine if import or export based on symbol binding and section
+                        if symbol.entry.st_shndx == 'SHN_UNDEF':
+                            # Undefined symbols are imports
+                            imports.append(BinaryImport(
+                                name=symbol_name,
+                                library="unknown",  # ELF doesn't specify library in symbol table
+                                address=symbol.entry.st_value
+                            ))
+                        elif symbol.entry.st_info.bind == 'STB_GLOBAL':
+                            # Global symbols are potential exports
+                            exports.append(BinaryExport(
+                                name=symbol_name,
+                                address=symbol.entry.st_value
+                            ))
+                            
+        except Exception as e:
+            self.logger.error(f"ELF symbol parsing failed: {e}")
+        
+        return imports, exports
+    
+    def _analyze_elf_security_features(self, elf_file) -> Dict[str, bool]:
+        """Analyze ELF security features"""
+        features = {
+            'pie': False,
+            'relro': False,
+            'canary': False,
+            'nx': False
+        }
+        
+        try:
+            # Check for Position Independent Executable
+            if elf_file.header.e_type == 'ET_DYN':
+                features['pie'] = True
+            
+            # Check for RELRO and other security features in program headers
+            for segment in elf_file.iter_segments():
+                if segment.header.p_type == 'PT_GNU_RELRO':
+                    features['relro'] = True
+                elif segment.header.p_type == 'PT_GNU_STACK':
+                    if segment.header.p_flags & 0x1 == 0:  # Not executable
+                        features['nx'] = True
+                        
+        except Exception as e:
+            self.logger.error(f"ELF security analysis failed: {e}")
+        
+        return features
+    
+    def _detect_elf_packing(self, elf_file, sections: List[BinarySection]) -> bool:
+        """Detect if ELF is packed"""
+        try:
+            # Check for common packer section names
+            packer_sections = ['.upx', '.packed', '.compressed']
+            for section in sections:
+                if any(packer in section.name.lower() for packer in packer_sections):
+                    return True
+            
+            # Check entropy - packed sections typically have high entropy
+            high_entropy_sections = sum(1 for s in sections if s.entropy and s.entropy > 7.0)
+            if len(sections) > 0 and high_entropy_sections / len(sections) > 0.6:
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"ELF packing detection failed: {e}")
+        
+        return False
+    
+    def _detect_elf_compiler(self, elf_file) -> Optional[str]:
+        """Detect compiler from ELF characteristics"""
+        try:
+            # Check .comment section for compiler information
+            for section in elf_file.iter_sections():
+                if section.name == '.comment':
+                    comment_data = section.data()
+                    if comment_data:
+                        comment_str = comment_data.decode('utf-8', errors='ignore')
+                        if 'GCC' in comment_str:
+                            return f"GCC {comment_str}"
+                        elif 'clang' in comment_str:
+                            return f"Clang {comment_str}"
+                        elif 'icc' in comment_str:
+                            return "Intel C++ Compiler"
+                            
+        except Exception as e:
+            self.logger.error(f"ELF compiler detection failed: {e}")
+        
+        return None
     
     def _parse_macho_format(self, binary_path: Path, output_dir: Path) -> BinaryMetadata:
         """Parse Mach-O format binary"""
