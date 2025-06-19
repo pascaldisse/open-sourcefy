@@ -273,9 +273,9 @@ class TestAgentOutputValidation(TestPhase4Infrastructure):
         self.test_context = {
             'binary_path': str(self.project_root / 'input' / 'launcher.exe'),
             'output_paths': {
-                'base': str(self.temp_output),
-                'agents': str(self.temp_output / 'agents'),
-                'reports': str(self.temp_output / 'reports')
+                'base': self.temp_output,
+                'agents': self.temp_output / 'agents',
+                'reports': self.temp_output / 'reports'
             },
             'shared_memory': {
                 'analysis_results': {},
