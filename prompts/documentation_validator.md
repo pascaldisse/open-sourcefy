@@ -158,6 +158,7 @@ def validate_documentation_accuracy() -> ValidationReport:
 - `/mnt/c/Users/pascaldisse/Downloads/open-sourcefy/README.md`
 - `/mnt/c/Users/pascaldisse/Downloads/open-sourcefy/CLAUDE.md`
 - `/mnt/c/Users/pascaldisse/Downloads/open-sourcefy/prompts/CLAUDE.md`
+- `/mnt/c/Users/pascaldisse/Downloads/open-sourcefy/tasks.md`
 
 ### Priority 2: Technical Documentation
 - `/mnt/c/Users/pascaldisse/Downloads/open-sourcefy/docs/SYSTEM_ARCHITECTURE.md`
