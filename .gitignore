@@ -258,5 +258,13 @@ ehthumbs_vista.db
 *_temp_*
 *_backup_*
 
+# Ghidra installation directory
+ghidra/
+!ghidra/.gitkeep
+
+# Git worktrees directory  
+worktrees/
+!worktrees/.gitkeep
+
 # Keep essential empty directories
 !*/.gitkeep
