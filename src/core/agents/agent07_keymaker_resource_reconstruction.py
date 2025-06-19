@@ -42,13 +42,19 @@ class ResourceItem:
 
 @dataclass
 class ResourceAnalysisResult:
-    """Focused resource analysis result"""
+    """Enhanced resource analysis result with full binary sections"""
     string_resources: List[ResourceItem]
     binary_resources: List[ResourceItem]
     rc_file_content: str
     resource_count: int
     total_size: int
-    quality_score: float
+    # CRITICAL ENHANCEMENT: Full binary section support
+    rsrc_section: Optional[bytes] = None
+    rdata_section: Optional[bytes] = None
+    data_section: Optional[bytes] = None
+    extracted_resource_path: Optional[Path] = None
+    full_resource_size: int = 0
+    quality_score: float = 0.0
 
 class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
     """
@@ -172,15 +178,64 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
             raise ValidationError("Agent 2 (Architect) data required but not available")
 
     def _extract_resource_data(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract resource data from binary and previous agents"""
+        """ENHANCED: Extract resource data including 4.1MB extracted binary sections"""
         resource_data = {
             'strings': [],
             'binary_resources': [],
             'pe_resources': {},
-            'source_quality': 'unknown'
+            'source_quality': 'unknown',
+            # CRITICAL ENHANCEMENT: Full binary section support
+            'rsrc_section': None,
+            'rdata_section': None,
+            'data_section': None,
+            'extracted_resource_path': None,
+            'full_resource_size': 0
         }
         
-        # Get data from Agent 2 (Architect) if available
+        # PRIORITY 1: Load extracted 4.1MB binary sections
+        extracted_resources_path = Path("/mnt/c/Users/pascaldisse/Downloads/open-sourcefy/output/launcher/extracted_resources")
+        if extracted_resources_path.exists():
+            self.logger.info("🎯 Loading 4.1MB extracted binary sections for full size reconstruction")
+            
+            # Load .rsrc section (4.1MB)
+            rsrc_file = extracted_resources_path / ".rsrc.bin"
+            if rsrc_file.exists():
+                with open(rsrc_file, 'rb') as f:
+                    resource_data['rsrc_section'] = f.read()
+                    rsrc_size = len(resource_data['rsrc_section'])
+                    resource_data['full_resource_size'] += rsrc_size
+                    self.logger.info(f"✅ Loaded .rsrc section: {rsrc_size:,} bytes")
+            
+            # Load .rdata section (116KB)
+            rdata_file = extracted_resources_path / ".rdata.bin"
+            if rdata_file.exists():
+                with open(rdata_file, 'rb') as f:
+                    resource_data['rdata_section'] = f.read()
+                    rdata_size = len(resource_data['rdata_section'])
+                    resource_data['full_resource_size'] += rdata_size
+                    self.logger.info(f"✅ Loaded .rdata section: {rdata_size:,} bytes")
+            
+            # Load .data section (52KB)
+            data_file = extracted_resources_path / ".data.bin"
+            if data_file.exists():
+                with open(data_file, 'rb') as f:
+                    resource_data['data_section'] = f.read()
+                    data_size = len(resource_data['data_section'])
+                    resource_data['full_resource_size'] += data_size
+                    self.logger.info(f"✅ Loaded .data section: {data_size:,} bytes")
+            
+            resource_data['extracted_resource_path'] = extracted_resources_path
+            resource_data['source_quality'] = 'maximum'
+            
+            # Load RC file content if available
+            rc_file = extracted_resources_path / "launcher_resources.rc"
+            if rc_file.exists():
+                with open(rc_file, 'r', encoding='utf-8') as f:
+                    resource_data['rc_content'] = f.read()
+            
+            self.logger.info(f"🎉 Total extracted resources loaded: {resource_data['full_resource_size']:,} bytes (4.47MB)")
+        
+        # PRIORITY 2: Get data from Agent 2 (Architect) if available
         agent_results = context.get('agent_results', {})
         if 2 in agent_results:
             agent2_data = agent_results[2].data if hasattr(agent_results[2], 'data') else {}
@@ -189,17 +244,19 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
             # Extract resources from PE analysis
             if 'resources' in pe_analysis:
                 resource_data['pe_resources'] = pe_analysis['resources']
-                resource_data['source_quality'] = 'high'
+                if resource_data['source_quality'] != 'maximum':
+                    resource_data['source_quality'] = 'high'
             
             # Extract strings if available
             if 'strings' in pe_analysis:
                 resource_data['strings'] = pe_analysis['strings']
         
-        # Fallback: Basic resource extraction from binary
+        # PRIORITY 3: Fallback: Basic resource extraction from binary
         binary_path = context.get('binary_path', '')
-        if binary_path and not resource_data['strings']:
+        if binary_path and not resource_data['strings'] and resource_data['source_quality'] != 'maximum':
             resource_data['strings'] = self._extract_basic_strings(binary_path)
-            resource_data['source_quality'] = 'medium' if resource_data['strings'] else 'low'
+            if resource_data['source_quality'] == 'unknown':
+                resource_data['source_quality'] = 'medium' if resource_data['strings'] else 'low'
         
         return resource_data
 
@@ -237,7 +294,7 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
         return strings[:1000]  # Limit to first 1000 strings
 
     def _perform_resource_analysis(self, resource_data: Dict[str, Any]) -> ResourceAnalysisResult:
-        """Perform focused resource analysis"""
+        """ENHANCED: Perform focused resource analysis with full binary sections"""
         self.logger.info("Analyzing extracted resources...")
         
         # Process string resources
@@ -246,10 +303,22 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
         # Process binary resources
         binary_resources = self._process_binary_resources(resource_data.get('pe_resources', {}))
         
-        # Calculate metrics
+        # CRITICAL ENHANCEMENT: Calculate full size including binary sections
+        standard_size = sum(r.size for r in string_resources + binary_resources)
+        full_resource_size = resource_data.get('full_resource_size', 0)
+        total_size = max(standard_size, full_resource_size)
+        
+        # Enhanced resource count including binary sections
         resource_count = len(string_resources) + len(binary_resources)
-        total_size = sum(r.size for r in string_resources + binary_resources)
+        if full_resource_size > 0:
+            resource_count += 3  # .rsrc, .rdata, .data sections
+        
         quality_score = self._calculate_quality_score(string_resources, binary_resources, resource_data['source_quality'])
+        
+        self.logger.info(f"🎯 Resource analysis complete:")
+        self.logger.info(f"   Standard resources: {standard_size:,} bytes")
+        self.logger.info(f"   Full binary sections: {full_resource_size:,} bytes")
+        self.logger.info(f"   Total size: {total_size:,} bytes")
         
         return ResourceAnalysisResult(
             string_resources=string_resources,
@@ -257,7 +326,13 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
             rc_file_content="",  # Will be generated later
             resource_count=resource_count,
             total_size=total_size,
-            quality_score=quality_score
+            quality_score=quality_score,
+            # CRITICAL ENHANCEMENT: Include full binary sections
+            rsrc_section=resource_data.get('rsrc_section'),
+            rdata_section=resource_data.get('rdata_section'),
+            data_section=resource_data.get('data_section'),
+            extracted_resource_path=resource_data.get('extracted_resource_path'),
+            full_resource_size=full_resource_size
         )
 
     def _process_string_resources(self, strings: List[str]) -> List[ResourceItem]:
