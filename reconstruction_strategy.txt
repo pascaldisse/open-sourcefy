@@ -1,0 +1,38 @@
+
+PE Reconstruction Strategy
+=========================
+
+To achieve exact size match (5,267,456 bytes), we need to reconstruct:
+
+1. PE Headers (4,096 bytes):
+   - DOS header with stub
+   - PE signature and COFF header
+   - Optional header with all fields
+   - Section table
+
+2. .text section (688,128 bytes):
+   - Executable machine code
+   - Contains the main program logic
+   - Critical for functionality
+   
+3. STLPORT_ section (4,096 bytes):
+   - STLPort library data
+   - Mostly zeros (99.4%)
+   - Template instantiation data
+
+4. .reloc section (102,400 bytes):
+   - Base relocation table
+   - Needed for ASLR support
+   - 61% data, 39% padding
+
+Components already extracted:
+- .rdata: 118,784 bytes (read-only data)
+- .data: 53,248 bytes (initialized data)  
+- .rsrc: 4,296,704 bytes (resources)
+
+Next steps:
+1. Extract .text section and disassemble
+2. Create stub implementations for all functions
+3. Reconstruct relocation table structure
+4. Build complete PE with proper headers
+5. Verify byte-for-byte match
