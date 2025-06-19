@@ -684,12 +684,11 @@ class Agent15_Analyst(ReconstructionAgent):
     def _generate_comprehensive_documentation(self, result: EnhancedAnalystResult, output_paths: Dict[str, Path]) -> None:
         """Generate comprehensive documentation based on all analysis results"""
         
-        # Create docs directory in output root (not in agents subdirectory)
-        output_root = output_paths.get('output_root', Path())
-        if isinstance(output_root, str):
-            output_root = Path(output_root)
+        # Create docs directory using proper output structure
+        docs_dir = output_paths.get('docs', output_paths.get('base', Path('output')) / 'docs')
+        if isinstance(docs_dir, str):
+            docs_dir = Path(docs_dir)
         
-        docs_dir = output_root / "docs"
         docs_dir.mkdir(parents=True, exist_ok=True)
         
         self.logger.info(f"The Analyst generating comprehensive documentation in {docs_dir}")

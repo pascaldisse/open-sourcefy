@@ -326,7 +326,8 @@ def setup_output_structure(base_output_path: Path) -> Dict[str, Path]:
         'reports': base_output_path / 'reports',
         'logs': base_output_path / 'logs',
         'temp': base_output_path / 'temp',
-        'tests': base_output_path / 'tests'
+        'tests': base_output_path / 'tests',
+        'docs': base_output_path / 'docs'
     }
     
     # Create all directories

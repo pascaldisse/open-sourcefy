@@ -233,6 +233,21 @@ class PipelineValidator:
             threshold=0.75
         )
         
+        # Output Directory Compliance Rules
+        rules['output_directory_compliance'] = ValidationRule(
+            name="output_directory_compliance",
+            description="All outputs follow structured directory organization",
+            level=ValidationLevel.BASIC,
+            threshold=1.0
+        )
+        
+        rules['output_path_validation'] = ValidationRule(
+            name="output_path_validation",
+            description="No hardcoded paths outside output structure",
+            level=ValidationLevel.STANDARD,
+            threshold=1.0
+        )
+        
         return rules
     
     def validate_pipeline_results(
@@ -286,6 +301,10 @@ class PipelineValidator:
             # Phase 4: Performance Validation
             self.logger.info("Phase 4: Validating performance metrics")
             self._validate_performance_metrics(performance_metrics)
+            
+            # Phase 5: Output Directory Validation
+            self.logger.info("Phase 5: Validating output directory compliance")
+            self._validate_output_directory_structure(agent_results, output_dir)
             
             # Calculate overall results
             self._calculate_overall_results()
@@ -731,6 +750,120 @@ class PipelineValidator:
             'details': result.details,
             'execution_time': result.execution_time
         }
+
+    def _validate_output_directory_compliance(self, agent_results: Dict[int, AgentResult], output_dir: str) -> float:
+        """Validate that all outputs follow the structured directory organization"""
+        try:
+            output_path = Path(output_dir)
+            if not output_path.exists():
+                return 0.0
+            
+            # Expected output structure based on shared_components.setup_output_structure
+            expected_dirs = ['agents', 'ghidra', 'compilation', 'reports', 'logs', 'temp', 'tests', 'docs']
+            score = 0.0
+            total_dirs = len(expected_dirs)
+            
+            for expected_dir in expected_dirs:
+                dir_path = output_path / expected_dir
+                if dir_path.exists():
+                    score += 1.0
+                    
+                    # Check if directory has proper agent subdirectories for 'agents' dir
+                    if expected_dir == 'agents':
+                        agent_subdirs = [d for d in dir_path.iterdir() if d.is_dir() and d.name.startswith('agent_')]
+                        if len(agent_subdirs) > 0:
+                            score += 0.5  # Bonus for having agent subdirectories
+            
+            # Normalize score (max possible is total_dirs + 0.5 for agent bonus)
+            max_score = total_dirs + 0.5
+            return min(1.0, score / max_score)
+            
+        except Exception as e:
+            self.logger.error(f"Output directory compliance validation failed: {e}")
+            return 0.0
+
+    def _validate_output_path_structure(self, agent_results: Dict[int, AgentResult], output_dir: str) -> float:
+        """Validate that no files exist outside the structured output directory"""
+        try:
+            output_path = Path(output_dir)
+            project_root = output_path.parent if output_path.name != 'output' else output_path.parent
+            
+            # Check for any files/directories in project root that shouldn't be there
+            unauthorized_patterns = [
+                'temp*',
+                'output*',  # Should only be our structured output
+                '*.exe',
+                '*.dll', 
+                '*.obj',
+                'ghidra_*',
+                'compilation_*'
+            ]
+            
+            violations = 0
+            total_checks = len(unauthorized_patterns)
+            
+            for pattern in unauthorized_patterns:
+                matches = list(project_root.glob(pattern))
+                # Exclude our legitimate output directory
+                legitimate_matches = [m for m in matches if m == output_path]
+                unauthorized_matches = [m for m in matches if m not in legitimate_matches]
+                
+                if unauthorized_matches:
+                    violations += 1
+                    self.logger.warning(f"Found unauthorized files/dirs matching {pattern}: {unauthorized_matches}")
+            
+            # Calculate compliance score (1.0 = no violations, 0.0 = all patterns violated)
+            compliance_score = 1.0 - (violations / total_checks)
+            return compliance_score
+            
+        except Exception as e:
+            self.logger.error(f"Output path structure validation failed: {e}")
+            return 0.5  # Return neutral score on validation error
+
+    def _validate_output_directory_structure(self, agent_results: Dict[int, AgentResult], output_dir: str):
+        """Validate output directory structure and compliance"""
+        
+        # Validate directory compliance
+        if 'output_directory_compliance' in self.validation_rules:
+            rule = self.validation_rules['output_directory_compliance']
+            compliance_score = self._validate_output_directory_compliance(agent_results, output_dir)
+            
+            status = ValidationStatus.PASSED if compliance_score >= rule.threshold else ValidationStatus.FAILED
+            message = f"Directory structure compliance: {compliance_score:.1%}"
+            
+            self._add_validation_result(
+                rule_name=rule.name,
+                status=status,
+                score=compliance_score,
+                threshold=rule.threshold,
+                message=message,
+                details={
+                    'compliance_score': compliance_score,
+                    'output_directory': output_dir,
+                    'validation_type': 'directory_structure'
+                }
+            )
+        
+        # Validate path structure
+        if 'output_path_validation' in self.validation_rules:
+            rule = self.validation_rules['output_path_validation']
+            path_compliance_score = self._validate_output_path_structure(agent_results, output_dir)
+            
+            status = ValidationStatus.PASSED if path_compliance_score >= rule.threshold else ValidationStatus.FAILED
+            message = f"Output path structure compliance: {path_compliance_score:.1%}"
+            
+            self._add_validation_result(
+                rule_name=rule.name,
+                status=status,
+                score=path_compliance_score,
+                threshold=rule.threshold,
+                message=message,
+                details={
+                    'path_compliance_score': path_compliance_score,
+                    'output_directory': output_dir,
+                    'validation_type': 'path_structure'
+                }
+            )
 
 
 def create_pipeline_validator(level: ValidationLevel = ValidationLevel.STANDARD) -> PipelineValidator:

@@ -189,9 +189,9 @@ class AgentSmithAgent(AnalysisAgent):
                 if path is None:
                     # Use default paths if not configured
                     if path_key == 'paths.temp_directory':
-                        path = Path('./temp')
+                        path = Path(self.config.get_path('temp_dir', 'temp'))
                     elif path_key == 'paths.output_directory':
-                        path = Path('./output')
+                        path = Path(self.config.get_path('default_output_dir', 'output'))
                     elif path_key == 'paths.resources_directory':
                         path = Path('./resources')
                     else:

@@ -1877,7 +1877,7 @@ class MerovingianAgent(DecompilerAgent):
             import subprocess
             
             # Create temp file in output directory structure
-            output_base = Path('output')
+            output_base = Path(self.config.get_path('default_output_dir', 'output'))
             temp_dir = output_base / 'temp'
             temp_dir.mkdir(parents=True, exist_ok=True)
             unpacked_path = temp_dir / f"unpacked_{binary_path.name}"
