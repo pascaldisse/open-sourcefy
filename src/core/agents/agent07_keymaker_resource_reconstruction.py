@@ -129,16 +129,31 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
                     'binary_count': len(analysis_result.binary_resources),
                     'total_resources': analysis_result.resource_count,
                     'total_size': analysis_result.total_size,
-                    'quality_score': analysis_result.quality_score
+                    'quality_score': analysis_result.quality_score,
+                    # CRITICAL ENHANCEMENT: Full binary section information
+                    'full_resource_size': analysis_result.full_resource_size,
+                    'has_binary_sections': analysis_result.full_resource_size > 0,
+                    'extracted_resource_path': str(analysis_result.extracted_resource_path) if analysis_result.extracted_resource_path else None
                 },
                 'string_resources': [self._resource_to_dict(r) for r in analysis_result.string_resources],
                 'binary_resources': [self._resource_to_dict(r) for r in analysis_result.binary_resources],
                 'rc_file_content': analysis_result.rc_file_content,
+                # CRITICAL ENHANCEMENT: Binary sections for Agent 9
+                'binary_sections': {
+                    'rsrc_available': analysis_result.rsrc_section is not None,
+                    'rdata_available': analysis_result.rdata_section is not None,
+                    'data_available': analysis_result.data_section is not None,
+                    'rsrc_size': len(analysis_result.rsrc_section) if analysis_result.rsrc_section else 0,
+                    'rdata_size': len(analysis_result.rdata_section) if analysis_result.rdata_section else 0,
+                    'data_size': len(analysis_result.data_section) if analysis_result.data_section else 0,
+                    'total_binary_size': analysis_result.full_resource_size
+                },
                 'keymaker_metadata': {
                     'agent_id': self.agent_id,
                     'matrix_character': self.matrix_character.value,
                     'execution_time': execution_time,
-                    'resources_extracted': analysis_result.resource_count
+                    'resources_extracted': analysis_result.resource_count,
+                    'full_size_reconstruction': analysis_result.full_resource_size > 4000000  # >4MB indicates full reconstruction
                 }
             }
             
