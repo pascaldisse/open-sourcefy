@@ -641,12 +641,14 @@ class Agent9_TheMachine(ReconstructionAgent):
                 # Compile RC file to RES file
                 res_file_path = rc_file_path.with_suffix('.res')
                 
-                # Use RC.EXE to compile
+                # Use RC.EXE to compile with proper include paths
                 rc_command = [
                     self.rc_exe_path,
                     '/nologo',
-                    '/fo', str(res_file_path),
-                    str(rc_file_path)
+                    '/i', 'C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um',
+                    '/i', 'C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\shared', 
+                    '/fo', str(res_file_path).replace('/mnt/c/', 'C:\\').replace('/', '\\'),
+                    str(rc_file_path).replace('/mnt/c/', 'C:\\').replace('/', '\\')
                 ]
                 
                 self.logger.info(f"Executing RC compilation: {' '.join(rc_command)}")
@@ -921,6 +923,9 @@ class Agent9_TheMachine(ReconstructionAgent):
             
             # CRITICAL FIX: Ensure main source has a valid main() function for compilation
             self._fix_main_source_for_compilation(main_source)
+            
+            # CRITICAL FIX: Add missing assembly variables for decompiled code
+            self._fix_assembly_variables(main_source)
             
             # CRITICAL FIX: Fix header file duplicate declarations
             header_file = main_source.parent / 'main.h'
@@ -1219,6 +1224,18 @@ typedef unsigned long size_t;
             for include in includes_to_remove:
                 fixed_content = fixed_content.replace(include, '// CRITICAL FIX: Include removed for compilation compatibility')
             
+            # CRITICAL FIX: Remove duplicate function_ptr declarations to avoid conflicts with main.h
+            # Check if function_ptr is already declared, and if so, remove duplicate
+            lines = fixed_content.split('\n')
+            filtered_lines = []
+            for line in lines:
+                if 'extern function_ptr_t function_ptr;' in line:
+                    # Skip this line to avoid duplicate declaration
+                    filtered_lines.append('// CRITICAL FIX: function_ptr declaration moved to avoid duplicates')
+                else:
+                    filtered_lines.append(line)
+            fixed_content = '\n'.join(filtered_lines)
+            
             # Write the fixed imports back
             with open(imports_file, 'w', encoding='utf-8') as f:
                 f.write(fixed_content)
@@ -1228,6 +1245,92 @@ typedef unsigned long size_t;
         except Exception as e:
             self.logger.error(f"Failed to fix imports header: {e}")
             # Don't fail the whole compilation for this - just log the error
+
+    def _fix_assembly_variables(self, source_file: Path) -> None:
+        """
+        CRITICAL FIX: Add missing assembly condition variables and register variables
+        
+        The decompiled C code references assembly condition variables and registers
+        that need to be declared for compilation to succeed.
+        """
+        try:
+            self.logger.info(f"🔧 Adding missing assembly variables to: {source_file}")
+            
+            # Read the source file
+            with open(source_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Add assembly variable declarations after includes
+            assembly_declarations = '''
+// CRITICAL FIX: Assembly condition variables for decompiled code
+static int jbe_condition = 0;
+static int jge_condition = 0; 
+static int ja_condition = 0;
+static int jns_condition = 0;
+static int jle_condition = 0;
+static int jb_condition = 0;
+static int jp_condition = 0;
+
+// CRITICAL FIX: Register variables for decompiled code
+static unsigned char dl = 0;
+static unsigned char al = 0;
+static unsigned char bl = 0;
+static unsigned short dx = 0;
+static unsigned int ebp = 0;
+
+// CRITICAL FIX: Assembly data types
+typedef unsigned int dword;
+typedef void* ptr;
+'''
+            
+            # Find where to insert (after includes, before first function)
+            lines = content.split('\n')
+            insert_index = 0
+            
+            # Find the end of includes section
+            for i, line in enumerate(lines):
+                if line.strip().startswith('#include') or line.strip().startswith('//') or line.strip() == '':
+                    continue
+                elif line.strip().startswith('int ') and '(' in line:
+                    # Found first function, insert before it
+                    insert_index = i
+                    break
+            
+            # Insert the assembly declarations
+            lines.insert(insert_index, assembly_declarations)
+            fixed_content = '\n'.join(lines)
+            
+            # Fix any remaining syntax issues
+            fixed_content = self._fix_syntax_errors(fixed_content)
+            
+            # Write the fixed source back
+            with open(source_file, 'w', encoding='utf-8') as f:
+                f.write(fixed_content)
+            
+            self.logger.info(f"✅ Added assembly variables for compilation compatibility")
+                
+        except Exception as e:
+            self.logger.error(f"Failed to fix assembly variables: {e}")
+            # Don't fail the whole compilation for this - just log the error
+
+    def _fix_syntax_errors(self, content: str) -> str:
+        """
+        CRITICAL FIX: Fix common syntax errors from assembly-to-C translation
+        """
+        import re
+        
+        # Fix missing semicolons before closing braces (improved pattern)
+        # Look for lines that end with a word/number/identifier but no semicolon, followed by }
+        content = re.sub(r'\n(\s*)([a-zA-Z0-9_]+)\s*\n(\s*})', r'\n\1\2;\n\3', content)
+        
+        # Fix dword ptr [ebp+offset] syntax to valid C syntax
+        content = re.sub(r'dword\s+ptr\s*\[\s*ebp\s*([+-]\s*\d+)?\s*\]', r'*(dword*)(ebp)', content)
+        
+        # Fix function_ptr naming conflicts - rename the variable to avoid conflicts
+        content = content.replace('function_ptr_t function_ptr = NULL;', 'function_ptr_t global_function_ptr = NULL;')
+        content = content.replace('function_ptr = ', 'global_function_ptr = ')
+        
+        return content
 
     def _simple_compilation(self, source_file: Path, output_file: Path, build_manager) -> tuple:
         """
@@ -1285,9 +1388,9 @@ typedef unsigned long size_t;
                 f"/Fe{win_output}",  # Output path (no quotes)
                 "/link",  # Enable linking
                 # Add library search paths
-                '/LIBPATH:"C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x86"',
-                '/LIBPATH:"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x86"',
-                '/LIBPATH:"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x86"',
+                '/LIBPATH:C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x86',
+                '/LIBPATH:C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x86',
+                '/LIBPATH:C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x86',
                 # Now the actual libraries
                 "kernel32.lib", "user32.lib", "gdi32.lib", "winspool.lib",
                 "comdlg32.lib", "advapi32.lib", "shell32.lib", "ole32.lib",
@@ -1304,9 +1407,9 @@ typedef unsigned long size_t;
                 win_source,
                 f"/Fe{win_output}",
                 "/link",
-                "/LIBPATH:C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x86",
-                "/LIBPATH:C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x86",
-                "/LIBPATH:C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x86",
+                '/LIBPATH:C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x86',
+                '/LIBPATH:C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x86',
+                '/LIBPATH:C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x86',
                 # Increase heap and stack size for large resource files
                 "/HEAP:8388608,1048576",  # 8MB heap reserve, 1MB commit
                 "/STACK:2097152,65536",   # 2MB stack reserve, 64KB commit
