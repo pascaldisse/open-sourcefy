@@ -1168,6 +1168,7 @@ class Agent16_AgentBrown(ValidationAgent):
                     "output/launcher/latest/agents/agent_08/agent_result.json"
                 ],
                 9: [  # Agent 9 (The Machine)
+                    "output/launcher/latest/agents/agent_09_machine/agent_result.json",
                     "output/launcher/latest/agents/agent_09/compilation_cache.json",
                     "output/launcher/latest/agents/agent_09/machine_results.json",
                     "output/launcher/latest/agents/agent_09/agent_result.json"
@@ -1193,14 +1194,16 @@ class Agent16_AgentBrown(ValidationAgent):
                     "output/launcher/latest/agents/agent_13/agent_result.json"
                 ],
                 14: [  # Agent 14 (The Cleaner)
+                    "output/launcher/latest/agents/agent_14_cleaner/agent_result.json",
                     "output/launcher/latest/agents/agent_14/cleaner_analysis_cache.json",
                     "output/launcher/latest/agents/agent_14/code_optimization_results.json",
                     "output/launcher/latest/agents/agent_14/agent_result.json"
                 ],
                 15: [  # Agent 15 (The Analyst)
-                    "output/launcher/latest/agents/agent_15/comprehensive_metadata.json",
-                    "output/launcher/latest/agents/agent_15/intelligence_synthesis.json",
-                    "output/launcher/latest/agents/agent_15/quality_assessment.json",
+                    "output/launcher/latest/agents/agent_15_analyst/agent_result.json",
+                    "output/launcher/latest/agents/agent_15_analyst/comprehensive_metadata.json",
+                    "output/launcher/latest/agents/agent_15_analyst/intelligence_synthesis.json",
+                    "output/launcher/latest/agents/agent_15_analyst/quality_assessment.json",
                     "output/launcher/latest/agents/agent_15/agent_result.json"
                 ]
             }
