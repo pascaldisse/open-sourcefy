@@ -15,11 +15,93 @@ All cleanup operations must maintain absolute compliance with:
 
 Systematically clean up obsolete files, merge duplicate/similar content, and consolidate documentation while preserving the main Matrix agent architecture and all functional code.
 
-## 1. File Analysis and Categorization
+## 1. Comprehensive Directory Analysis and Categorization
 
-### Current File Status Analysis
+### ALL DIRECTORY SCAN - Complete File Inventory
 
-#### /docs Directory - CONTAINS MOSTLY OBSOLETE/MINIMAL FILES
+Let me scan ALL directories and subdirectories to identify every file type for cleanup:
+
+```python
+import os
+from pathlib import Path
+import subprocess
+
+def comprehensive_directory_scan():
+    """Scan ALL directories for obsolete, duplicate, and test files"""
+    
+    # Get complete file inventory
+    all_files = []
+    for root, dirs, files in os.walk('.'):
+        for file in files:
+            file_path = Path(root) / file
+            all_files.append({
+                'path': file_path,
+                'size': file_path.stat().st_size if file_path.exists() else 0,
+                'extension': file_path.suffix,
+                'name': file_path.name
+            })
+    
+    return all_files
+
+# Categories for comprehensive cleanup
+CLEANUP_CATEGORIES = {
+    'OBSOLETE_DOCS': {
+        'patterns': ['**/docs/API-Reference.md', '**/docs/Agent-Execution-Report.md', 
+                    '**/docs/Source-Code-Analysis.md', '**/docs/Technical-Specifications.md',
+                    '**/docs/README.md', '**/docs/index.md'],
+        'description': 'Minimal documentation stubs (4-125 lines)'
+    },
+    
+    'DUPLICATE_TESTS': {
+        'patterns': ['**/test_*.py', '**/tests/**/test_*.py', '**/*_test.py',
+                    '**/complete_pipeline_testing.md', '**/comprehensive_pipeline_tests.md',
+                    '**/enhanced_comprehensive_testing.md'],
+        'description': 'Duplicate and overlapping test files'
+    },
+    
+    'OLD_PROMPTS': {
+        'patterns': ['**/prompts/**/pipeline_compilation.md', '**/prompts/**/full_pipeline_compilation.md',
+                    '**/prompts/**/*_old.md', '**/prompts/**/*_backup.md',
+                    '**/prompts/**/*_deprecated.md'],
+        'description': 'Duplicate and old prompt files'
+    },
+    
+    'TEMP_FILES': {
+        'patterns': ['**/*.tmp', '**/*.temp', '**/*.bak', '**/*.backup',
+                    '**/*~', '**/.DS_Store', '**/Thumbs.db', '**/*.swp',
+                    '**/__pycache__/**', '**/*.pyc', '**/*.pyo'],
+        'description': 'Temporary files, caches, and system files'
+    },
+    
+    'OUTPUT_ARTIFACTS': {
+        'patterns': ['**/output/**', '**/temp/**', '**/logs/**/*.log',
+                    '**/build/**', '**/dist/**', '**/.vscode/**',
+                    '**/.idea/**', '**/*.egg-info/**'],
+        'description': 'Generated output, build artifacts, IDE files'
+    },
+    
+    'WORKTREES': {
+        'patterns': ['**/worktrees/**', '**/auto-fixer-run-*/**'],
+        'description': 'Git worktrees and automated fixer directories'
+    },
+    
+    'DUPLICATE_CONFIGS': {
+        'patterns': ['**/config*.yaml.bak', '**/config*.yaml.old',
+                    '**/build_config*.yaml.backup', '**/*_config.yaml.tmp'],
+        'description': 'Backup and duplicate configuration files'
+    },
+    
+    'TEST_ARTIFACTS': {
+        'patterns': ['**/test_results/**', '**/coverage/**', '**/.pytest_cache/**',
+                    '**/htmlcov/**', '**/*.coverage', '**/test_output/**'],
+        'description': 'Test execution artifacts and coverage files'
+    }
+}
+```
+
+### Current File Status Analysis - COMPREHENSIVE SCAN
+
+#### /docs Directory Analysis
 ```
 OBSOLETE/MINIMAL FILES TO DELETE:
 ├── API-Reference.md (4 lines - minimal stub)
@@ -27,7 +109,7 @@ OBSOLETE/MINIMAL FILES TO DELETE:
 ├── Source-Code-Analysis.md (4 lines - minimal stub)
 ├── Technical-Specifications.md (4 lines - minimal stub)
 ├── README.md (125 lines - generated placeholder, superseded by main CLAUDE.md)
-└── index.md (potential duplicate/obsolete)
+└── index.md (potentially obsolete - check content)
 
 KEEP - SUBSTANTIAL CONTENT:
 ├── SYSTEM_ARCHITECTURE.md (substantial architecture documentation)
@@ -35,31 +117,67 @@ KEEP - SUBSTANTIAL CONTENT:
 └── PRODUCTION_DEPLOYMENT_STRATEGY.md (deployment documentation)
 ```
 
-#### /prompts Directory - CONTAINS DUPLICATE TESTING PROMPTS
+#### /prompts Directory Analysis
 ```
 DUPLICATE/OVERLAPPING TESTING PROMPTS TO MERGE:
-├── complete_pipeline_testing.md (403 lines - comprehensive pipeline testing)
-├── comprehensive_pipeline_tests.md (869 lines - similar pipeline testing)
-└── enhanced_comprehensive_testing.md (599 lines - enhanced testing with caching)
+├── complete_pipeline_testing.md (comprehensive pipeline testing)
+├── comprehensive_pipeline_tests.md (similar pipeline testing)
+└── enhanced_comprehensive_testing.md (enhanced testing with caching)
 
 SIMILAR PROMPTS TO CONSOLIDATE:
-├── pipeline_compilation.md (potential overlap with compilation testing)
-├── full_pipeline_compilation.md (potential duplicate)
+├── pipeline_compilation.md (compilation testing)
+├── full_pipeline_compilation.md (potentially duplicate compilation)
+
+UNIFIED VERSIONS ALREADY EXIST:
+├── unified_comprehensive_testing.md (KEEP - already merged)
+├── unified_pipeline_compilation.md (KEEP - already merged)
 
 KEEP AS-IS (DISTINCT PURPOSES):
-├── CLAUDE.md (project overview - distinct from testing)
-├── agent_cleanup.md (agent cleanup - distinct purpose)
-├── code_quality_checker.md (quality checking - distinct purpose) 
-├── documentation_validator.md (documentation validation - distinct purpose)
-├── fallback_removal_automation.md (fallback removal - distinct purpose)
-├── implementation_fixing.md (implementation fixes - distinct purpose)
-├── link_validator.md (link validation - distinct purpose)
-├── master_prompt_executor.md (prompt execution - distinct purpose)
+├── CLAUDE.md (project overview)
+├── agent_cleanup.md (agent cleanup)
+├── code_quality_checker.md (quality checking)
+├── documentation_validator.md (documentation validation)
+├── comprehensive_cleanup.md (THIS FILE - cleanup operations)
+└── [other distinct purpose prompts]
+```
 
-UTILITY FILES TO KEEP:
-├── agent_assignment_validator.md (validation utility)
-├── fallback_removal_automation.py (Python utility)
-└── matrix_pipeline_helper.py (Python utility)
+#### /tests Directory Analysis
+```
+SCAN ALL TEST FILES FOR:
+├── Duplicate test files (same functionality different names)
+├── Obsolete test files (testing removed features)
+├── Test artifacts and cache files
+├── Old test results and coverage files
+└── Broken test files (import errors, missing dependencies)
+```
+
+#### ALL OTHER DIRECTORIES
+```
+TEMP AND CACHE FILES:
+├── **/__pycache__/** (Python cache directories)
+├── **/*.pyc, *.pyo (Python compiled files)
+├── **/.pytest_cache/** (Pytest cache)
+├── **/htmlcov/** (Coverage HTML reports)
+
+SYSTEM FILES:
+├── **/.DS_Store (macOS system files)
+├── **/Thumbs.db (Windows thumbnail cache)
+├── **/*.swp, *~ (Vim/editor temp files)
+
+BUILD ARTIFACTS:
+├── **/build/** (Build output directories)
+├── **/dist/** (Distribution directories)
+├── **/*.egg-info/** (Python package info)
+
+IDE FILES:
+├── **/.vscode/** (VS Code settings)
+├── **/.idea/** (IntelliJ/PyCharm settings)
+├── **/*.sublime-* (Sublime Text files)
+
+WORKTREES AND AUTOMATION:
+├── **/worktrees/** (Git worktree directories)
+├── **/auto-fixer-run-*/** (Automated fixer working directories)
+└── **/temp/** (Temporary working directories)
 ```
 
 ## 2. Cleanup Operations Plan

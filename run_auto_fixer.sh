@@ -22,7 +22,9 @@ fi
 
 # Check for virtual environment
 VENV_PATH=""
-if [[ -d "../../venv" ]]; then
+if [[ -d "matrix_venv" ]]; then
+    VENV_PATH="matrix_venv"
+elif [[ -d "../../venv" ]]; then
     VENV_PATH="../../venv"
 elif [[ -d "../venv" ]]; then
     VENV_PATH="../venv"
@@ -30,7 +32,7 @@ elif [[ -d "venv" ]]; then
     VENV_PATH="venv"
 else
     echo "❌ ERROR: Virtual environment not found"
-    echo "   Expected locations: ../../venv, ../venv, or ./venv"
+    echo "   Expected locations: matrix_venv, ../../venv, ../venv, or ./venv"
     exit 1
 fi
 
@@ -59,12 +61,14 @@ fi
 
 echo "✅ Git repository ready"
 
-# Set environment variables
-export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
+# Set environment variables - inherit from parent shell
 if [[ -z "$ANTHROPIC_API_KEY" ]]; then
     echo "⚠️  WARNING: ANTHROPIC_API_KEY not set"
     echo "   The Claude Code SDK may not function without an API key"
     echo "   Set it with: export ANTHROPIC_API_KEY=your_key_here"
+    echo "   Continuing anyway..."
+else
+    echo "✅ ANTHROPIC_API_KEY is set"
 fi
 
 # Create logs directory
