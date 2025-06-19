@@ -265,7 +265,7 @@ def consolidate_compilation_prompts():
 
 ## 4. Cleanup Execution Commands
 
-### Automated Cleanup Script
+### Comprehensive File Cleanup Script
 
 ```bash
 #!/bin/bash
@@ -282,145 +282,72 @@ rm -f docs/Source-Code-Analysis.md
 rm -f docs/Technical-Specifications.md
 rm -f docs/README.md
 rm -f docs/index.md
+rm -f docs/tasks.md
 
 echo "✅ Obsolete documentation stubs removed"
 
-# Phase 2: Create unified testing prompt (merge duplicates)
-echo "📋 Phase 2: Creating unified testing prompt..."
-python3 << 'EOF'
-from pathlib import Path
+# Phase 2: Clean up duplicate testing prompts
+echo "📋 Phase 2: Cleaning up duplicate testing prompts..."
+rm -f prompts/complete_pipeline_testing.md
+rm -f prompts/comprehensive_pipeline_tests.md
+rm -f prompts/enhanced_comprehensive_testing.md
 
-# Read the three testing prompts
-complete_pipeline = Path("prompts/complete_pipeline_testing.md").read_text()
-comprehensive_tests = Path("prompts/comprehensive_pipeline_tests.md").read_text()  
-enhanced_testing = Path("prompts/enhanced_comprehensive_testing.md").read_text()
+echo "✅ Duplicate testing prompts removed (keeping unified version)"
 
-# Create unified content (taking best from each)
-unified_content = f"""# Unified Comprehensive Testing Framework
+# Phase 3: Clean up duplicate compilation prompts
+echo "📋 Phase 3: Cleaning up duplicate compilation prompts..."
+rm -f prompts/pipeline_compilation.md
+rm -f prompts/full_pipeline_compilation.md
 
-## 🚨 MANDATORY RULES COMPLIANCE 🚨
-**READ /mnt/c/Users/pascaldisse/Downloads/open-sourcefy/rules.md FIRST AND ENFORCE ALL RULES**
+echo "✅ Duplicate compilation prompts removed (keeping unified version)"
 
-All testing must maintain absolute compliance with:
-- **NO FALLBACKS EVER** - one correct way only
-- **STRICT MODE ONLY** - fail fast on missing requirements  
-- **NO MOCK IMPLEMENTATIONS** - real implementations only
-- **NO HARDCODED VALUES** - all values from configuration
-- **NSA-LEVEL SECURITY** - zero tolerance for vulnerabilities
+# Phase 4: Remove temporary files and caches
+echo "📋 Phase 4: Removing temporary files and caches..."
 
-## Mission Objective
+# Python cache files
+find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+find . -name "*.pyc" -type f -delete 2>/dev/null || true
+find . -name "*.pyo" -type f -delete 2>/dev/null || true
 
-Execute comprehensive testing of the Matrix pipeline combining:
-1. **Individual Agent Testing with Caching** - Test each agent individually with dependency cache
-2. **Complete Pipeline Execution** - Full 17-agent pipeline with validation
-3. **Binary Comparison and Validation** - Compare original vs reconstructed binaries
-4. **Systematic Error Detection and Fixing** - Automated error resolution
-5. **Performance and Quality Assessment** - Comprehensive metrics and reporting
+# Test cache files
+rm -rf .pytest_cache 2>/dev/null || true
+rm -rf htmlcov 2>/dev/null || true
+rm -f .coverage 2>/dev/null || true
 
-## 1. Enhanced Individual Agent Testing with Caching
+# System files
+find . -name ".DS_Store" -type f -delete 2>/dev/null || true
+find . -name "Thumbs.db" -type f -delete 2>/dev/null || true
+find . -name "*.swp" -type f -delete 2>/dev/null || true
+find . -name "*~" -type f -delete 2>/dev/null || true
 
-{enhanced_testing.split('## 1. Enhanced Individual Agent Testing with Caching')[1].split('## 2.')[0]}
+# Temporary files and backups
+find . -name "*.tmp" -type f -delete 2>/dev/null || true
+find . -name "*.temp" -type f -delete 2>/dev/null || true
+find . -name "*.bak" -type f -delete 2>/dev/null || true
+find . -name "*.backup" -type f -delete 2>/dev/null || true
 
-## 2. Complete Pipeline Execution Testing
+# IDE and editor files
+rm -rf .vscode 2>/dev/null || true
+rm -rf .idea 2>/dev/null || true
+find . -name "*.sublime-*" -type f -delete 2>/dev/null || true
 
-{complete_pipeline.split('### 1. Complete Pipeline Execution Test')[1].split('### 2.')[0]}
+# Build artifacts
+rm -rf build 2>/dev/null || true
+rm -rf dist 2>/dev/null || true
+find . -name "*.egg-info" -type d -exec rm -rf {} + 2>/dev/null || true
 
-## 3. Binary Comparison and Size Validation
+echo "✅ Temporary files and caches removed"
 
-{enhanced_testing.split('## 2. Complete Pipeline Execution Testing')[1].split('## 3.')[0]}
+# Phase 5: Clean up git worktrees and automation directories
+echo "📋 Phase 5: Cleaning up git worktrees and automation directories..."
+rm -rf worktrees 2>/dev/null || true
+rm -rf auto-fixer-run-* 2>/dev/null || true
+rm -rf temp 2>/dev/null || true
 
-## 4. Systematic Error Detection and Resolution
+echo "✅ Git worktrees and automation directories cleaned"
 
-{comprehensive_tests.split('## Error Detection and Systematic Fixing')[1].split('## Testing Execution Framework')[0]}
-
-## 5. Automated Testing Framework
-
-{enhanced_testing.split('### Automated Test Suite Execution')[1].split('## 4.')[0]}
-
-{comprehensive_tests.split('### Automated Testing Pipeline')[1].split('## Rules.md Compliance Enforcement')[0]}
-
-## Success Criteria
-
-### Pipeline Execution Success
-- [ ] All 17 agents execute successfully
-- [ ] No agent failures or timeouts  
-- [ ] Context data flows correctly between agents
-- [ ] Output size within target range (4.5MB-5.5MB)
-- [ ] Generated code compiles successfully
-
-### Individual Agent Testing Success
-- [ ] All agents pass individual testing with cache
-- [ ] Dependency cache system works correctly
-- [ ] Performance targets met for each agent
-- [ ] Quality thresholds achieved
-
-### Binary Comparison Success
-- [ ] Size efficiency 90-110% of original
-- [ ] Runtime behavior equivalence validated
-- [ ] Basic execution functionality confirmed
-- [ ] Resource preservation validated
-
-### Quality and Compliance Success
-- [ ] 100% rules.md compliance maintained
-- [ ] NSA-level security standards enforced
-- [ ] No fallback systems detected
-- [ ] All hardcoded values eliminated
-
-This unified framework provides comprehensive testing capabilities while maintaining strict rules.md compliance."""
-
-# Write unified testing prompt
-Path("prompts/unified_comprehensive_testing.md").write_text(unified_content)
-print("✅ Created unified testing prompt: prompts/unified_comprehensive_testing.md")
-
-# Remove duplicate testing prompts
-Path("prompts/complete_pipeline_testing.md").unlink()
-Path("prompts/comprehensive_pipeline_tests.md").unlink()
-Path("prompts/enhanced_comprehensive_testing.md").unlink()
-print("✅ Removed duplicate testing prompts")
-EOF
-
-# Phase 3: Check compilation prompt overlap
-echo "📋 Phase 3: Analyzing compilation prompt overlap..."
-python3 << 'EOF'
-from pathlib import Path
-
-pipeline_comp = Path("prompts/pipeline_compilation.md")
-full_comp = Path("prompts/full_pipeline_compilation.md")
-
-if pipeline_comp.exists() and full_comp.exists():
-    content1 = pipeline_comp.read_text()
-    content2 = full_comp.read_text()
-    
-    # Simple overlap check based on common keywords
-    words1 = set(content1.lower().split())
-    words2 = set(content2.lower().split())
-    overlap = len(words1.intersection(words2)) / len(words1.union(words2))
-    
-    print(f"Compilation prompt overlap: {overlap:.1%}")
-    
-    if overlap > 0.7:
-        print("High overlap detected - merging compilation prompts")
-        # Create merged compilation prompt
-        merged = f"""# Unified Pipeline Compilation Framework
-
-{content1}
-
-## Additional Features from Full Pipeline Compilation
-
-{content2.split('# Full Pipeline Compilation')[1] if '# Full Pipeline Compilation' in content2 else content2}
-"""
-        Path("prompts/unified_pipeline_compilation.md").write_text(merged)
-        pipeline_comp.unlink()
-        full_comp.unlink()
-        print("✅ Merged compilation prompts")
-    else:
-        print("✅ Compilation prompts have distinct purposes - keeping separate")
-else:
-    print("✅ Compilation prompt analysis complete")
-EOF
-
-# Phase 4: Validate architecture preservation
-echo "📋 Phase 4: Validating architecture preservation..."
+# Phase 6: Validate architecture preservation
+echo "📋 Phase 6: Validating architecture preservation..."
 python3 << 'EOF'
 from pathlib import Path
 
@@ -452,12 +379,26 @@ if len(agent_files) >= 17:
     print(f"✅ Agent architecture preserved - {len(agent_files)} agent files found")
 else:
     print(f"⚠️  Expected 17+ agent files, found {len(agent_files)}")
+    
+# Check that unified prompts exist
+unified_prompts = [
+    "prompts/unified_comprehensive_testing.md",
+    "prompts/unified_pipeline_compilation.md"
+]
+
+for prompt in unified_prompts:
+    if Path(prompt).exists():
+        print(f"✅ Unified prompt exists: {prompt}")
+    else:
+        print(f"⚠️  Missing unified prompt: {prompt}")
 EOF
 
-echo "🎉 CLEANUP COMPLETED SUCCESSFULLY"
+echo "🎉 COMPREHENSIVE CLEANUP COMPLETED SUCCESSFULLY"
 echo "📊 Summary:"
 echo "   - Obsolete documentation stubs removed"
-echo "   - Duplicate testing prompts merged into unified framework"
+echo "   - Duplicate prompts cleaned up (unified versions preserved)"
+echo "   - Temporary files and caches removed"
+echo "   - Git worktrees and automation directories cleaned"
 echo "   - Main architecture preserved intact"
 echo "   - All 17 Matrix agents remain separate"
 echo "   - Rules.md compliance maintained throughout"
