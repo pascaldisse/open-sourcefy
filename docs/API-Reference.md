@@ -162,7 +162,7 @@ class BuildConfig:
 ### Agent 1: Sentinel
 
 ```python
-class Agent01_Sentinel(ReconstructionAgent):
+class Agent01_Sentinel(MatrixAgent):
     """Binary Discovery and Security Scanning"""
     
     def analyze_binary_format(self, binary_path: str) -> BinaryAnalysis:
@@ -185,7 +185,7 @@ class Agent01_Sentinel(ReconstructionAgent):
 ### Agent 5: Neo
 
 ```python
-class Agent05_Neo(ReconstructionAgent):
+class Agent05_Neo(MatrixAgent):
     """Advanced Decompilation with Ghidra Integration"""
     
     def initialize_ghidra_project(self, binary_path: str) -> GhidraProject:
@@ -208,7 +208,7 @@ class Agent05_Neo(ReconstructionAgent):
 ### Agent 9: Commander Locke
 
 ```python
-class Agent09_CommanderLocke(ReconstructionAgent):
+class Agent09_TheMachine(MatrixAgent):
     """Global Source Reconstruction and Compilation"""
     
     def generate_source_code(self, analysis_data: Dict[str, Any]) -> SourceGeneration:

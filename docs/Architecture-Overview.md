@@ -137,7 +137,7 @@ Final Processing: Agents 14, 15, 16
 Each agent follows a consistent implementation pattern:
 
 ```python
-class AgentX_MatrixCharacter(ReconstructionAgent):
+class AgentX_MatrixCharacter(MatrixAgent):
     def __init__(self):
         super().__init__(
             agent_id=X,

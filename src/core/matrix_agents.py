@@ -262,10 +262,56 @@ class MatrixAgent(abc.ABC):
         return base_keys
 
     def _is_dependency_satisfied(self, dep_id: int, context: Dict[str, Any]) -> bool:
-        """Check if dependency is satisfied"""
+        """Check if dependency is satisfied - either from live results or cache"""
+        # First check live agent results
         agent_results = context.get('agent_results', {})
         dep_result = agent_results.get(dep_id)
-        return dep_result and dep_result.status == AgentStatus.SUCCESS
+        if dep_result and dep_result.status == AgentStatus.SUCCESS:
+            return True
+            
+        # If no live results, check cache files
+        output_paths = context.get('output_paths', {})
+        if output_paths and 'agents' in output_paths:
+            from pathlib import Path
+            import json
+            
+            # Check multiple possible cache locations for the dependency
+            cache_locations = [
+                Path(output_paths['agents']) / f"agent_{dep_id:02d}" / "cache.json",
+                Path(output_paths['agents']) / f"agent_{dep_id:02d}" / f"agent_{dep_id:02d}_results.json",
+                Path(output_paths['agents']) / f"agent_{dep_id:02d}" / "agent_result.json"
+            ]
+            
+            # Also check agent-specific directories (e.g., agent_05_neo)
+            from pathlib import Path
+            import glob
+            agents_dir = Path(output_paths['agents'])
+            if agents_dir.exists():
+                # Find any directory that starts with agent_{dep_id:02d}_
+                agent_dirs = list(agents_dir.glob(f"agent_{dep_id:02d}_*"))
+                for agent_dir in agent_dirs:
+                    cache_locations.extend([
+                        agent_dir / "agent_result.json",
+                        agent_dir / "cache.json",
+                        agent_dir / f"agent_{dep_id:02d}_results.json"
+                    ])
+            
+            for cache_path in cache_locations:
+                if cache_path.exists():
+                    try:
+                        with open(cache_path, 'r') as f:
+                            cache_data = json.load(f)
+                            # Check if cache indicates successful completion
+                            if (cache_data.get('status') == 'SUCCESS' or 
+                                cache_data.get('status') == 'success' or
+                                cache_data.get('agent_status') == 'SUCCESS'):
+                                self.logger.debug(f"Dependency Agent{dep_id:02d} satisfied via cache: {cache_path}")
+                                return True
+                    except (json.JSONDecodeError, Exception) as e:
+                        self.logger.debug(f"Could not read cache file {cache_path}: {e}")
+                        continue
+        
+        return False
 
     def _post_process_results(self, task_data: Dict[str, Any], context: Dict[str, Any]) -> None:
         """Post-process results - can be overridden by subclasses"""

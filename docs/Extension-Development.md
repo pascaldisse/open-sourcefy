@@ -65,11 +65,11 @@ class ExtensionBase(ABC):
 ```python
 # File: extensions/agents/agent18_custom_character.py
 
-from src.core.shared_components import ReconstructionAgent, MatrixCharacter, AgentStatus
+from src.core.matrix_agents import MatrixAgent, MatrixCharacter, AgentStatus
 from typing import Dict, Any, List
 import time
 
-class Agent18_CustomCharacter(ReconstructionAgent):
+class Agent18_CustomCharacter(MatrixAgent):
     """Agent 18: Custom Character - Specialized analysis capability"""
     
     def __init__(self):
@@ -187,7 +187,7 @@ class MatrixCharacter(Enum):
 ```python
 # File: src/core/matrix_pipeline_orchestrator.py
 
-def _initialize_agent_registry(self) -> Dict[int, ReconstructionAgent]:
+def _initialize_agent_registry(self) -> Dict[int, MatrixAgent]:
     """Initialize all available agents including extensions"""
     agents = {}
     
@@ -200,7 +200,7 @@ def _initialize_agent_registry(self) -> Dict[int, ReconstructionAgent]:
     
     return agents
 
-def _load_extension_agents(self) -> Dict[int, ReconstructionAgent]:
+def _load_extension_agents(self) -> Dict[int, MatrixAgent]:
     """Load extension agents from extensions directory"""
     extension_agents = {}
     

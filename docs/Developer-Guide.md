@@ -127,12 +127,12 @@ Key methods to understand:
 - `_enforce_quality_gates()`: Validation checkpoint enforcement
 
 #### Agent Base Framework
-**File**: `src/core/shared_components.py`
+**File**: `src/core/matrix_agents.py`
 
-All agents inherit from the base `ReconstructionAgent` class:
+All agents inherit from the base `MatrixAgent` class:
 
 ```python
-class ReconstructionAgent:
+class MatrixAgent:
     """Base class for all Matrix agents"""
     
     def __init__(self, agent_id: int, matrix_character: MatrixCharacter):
@@ -154,7 +154,7 @@ class ReconstructionAgent:
 
 #### Standard Agent Structure
 ```python
-class Agent##_MatrixCharacter(ReconstructionAgent):
+class Agent##_MatrixCharacter(MatrixAgent):
     """Agent ## - Matrix Character Name (Description)"""
     
     def __init__(self):
@@ -239,12 +239,12 @@ class Agent##_MatrixCharacter(ReconstructionAgent):
 ```python
 # File: src/core/agents/agent17_new_character.py
 
-from ..shared_components import ReconstructionAgent
+from ..matrix_agents import MatrixAgent
 from ..matrix_agents import MatrixCharacter, AgentStatus
 from typing import Dict, Any, List
 import time
 
-class Agent17_NewCharacter(ReconstructionAgent):
+class Agent17_NewCharacter(MatrixAgent):
     """Agent 17: New Character - Custom functionality description"""
     
     def __init__(self):
@@ -273,7 +273,7 @@ class MatrixCharacter(Enum):
 ```python
 # File: src/core/matrix_pipeline_orchestrator.py
 
-def _initialize_agent_registry(self) -> Dict[int, ReconstructionAgent]:
+def _initialize_agent_registry(self) -> Dict[int, MatrixAgent]:
     """Initialize all available agents"""
     agents = {}
     
@@ -473,7 +473,7 @@ def process_agent_results(
     pass
 
 # Good: Comprehensive docstrings
-class Agent01_Sentinel(ReconstructionAgent):
+class Agent01_Sentinel(MatrixAgent):
     """
     Agent 1: Sentinel - Binary Discovery and Security Scanning
     
