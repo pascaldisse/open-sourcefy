@@ -1,8 +1,0 @@
-{
-  "agent_id": 5,
-  "status": "failed",
-  "data": {},
-  "error_message": "Prerequisites validation failed: Missing binary_path in context",
-  "execution_time": 0.00023412704467773438,
-  "timestamp": 1750283817.8953059
-}

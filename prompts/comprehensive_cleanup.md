@@ -338,13 +338,62 @@ find . -name "*.egg-info" -type d -exec rm -rf {} + 2>/dev/null || true
 
 echo "✅ Temporary files and caches removed"
 
-# Phase 5: Clean up git worktrees and automation directories
-echo "📋 Phase 5: Cleaning up git worktrees and automation directories..."
-rm -rf worktrees 2>/dev/null || true
-rm -rf auto-fixer-run-* 2>/dev/null || true
-rm -rf temp 2>/dev/null || true
+# Phase 5: Clean up ALL obsolete output files and folders (except output/)
+echo "📋 Phase 5: Cleaning up obsolete output files and temp directories..."
 
-echo "✅ Git worktrees and automation directories cleaned"
+# Remove all output files and folders OUTSIDE of output/ directory
+rm -rf agents/ 2>/dev/null || true
+rm -rf extracted_resources/ 2>/dev/null || true  
+rm -rf logs/ 2>/dev/null || true
+rm -rf temp/ 2>/dev/null || true
+rm -rf resources/ 2>/dev/null || true
+rm -rf downloads/ 2>/dev/null || true
+rm -rf venv/ 2>/dev/null || true
+rm -rf vs2003_manual_build/ 2>/dev/null || true
+
+# Remove obsolete working directories and automation files
+rm -rf worktrees/ 2>/dev/null || true
+rm -rf auto-fixer-run-* 2>/dev/null || true
+rm -f auto_pipeline_fixer.log 2>/dev/null || true
+rm -f debug.log 2>/dev/null || true
+rm -f debug_output.log 2>/dev/null || true
+
+# Remove test artifacts and compilation remnants outside output/
+rm -f *.res 2>/dev/null || true
+rm -f *.rc 2>/dev/null || true
+rm -f *.obj 2>/dev/null || true
+rm -f *.exe 2>/dev/null || true
+rm -f test_*.* 2>/dev/null || true
+rm -f decompiled_code.obj 2>/dev/null || true
+rm -f stringtable_*.* 2>/dev/null || true
+
+# Remove old report files outside output/
+rm -f *_REPORT.md 2>/dev/null || true
+rm -f *_ANALYSIS.md 2>/dev/null || true
+rm -f *_SUMMARY.md 2>/dev/null || true
+rm -f *_QUESTIONS.md 2>/dev/null || true
+rm -f POTENTIAL_CAUSES_*.md 2>/dev/null || true
+rm -f RECOMPILATION_SUCCESS.md 2>/dev/null || true
+rm -f RESEARCH_UNKNOWNS_TODO.md 2>/dev/null || true
+
+# Remove version files and packaging artifacts
+rm -f =0.0.20 2>/dev/null || true
+rm -f =0.1.0 2>/dev/null || true
+
+echo "✅ Obsolete output files and temp directories cleaned"
+
+# Phase 6: Clean up git worktrees and automation directories (additional cleanup)
+echo "📋 Phase 6: Final cleanup of automation and script artifacts..."
+
+# Remove script artifacts
+rm -f run_auto_fixer.* 2>/dev/null || true
+rm -f analyze_*.py 2>/dev/null || true
+rm -f pe_analyzer.py 2>/dev/null || true
+rm -f phase4_completion_test.py 2>/dev/null || true
+rm -f generate_stringtable.py 2>/dev/null || true
+rm -f claude_app.py 2>/dev/null || true
+
+echo "✅ Script artifacts and automation files cleaned"
 
 # Phase 6: Validate architecture preservation
 echo "📋 Phase 6: Validating architecture preservation..."

@@ -267,5 +267,9 @@ ghidra/
 worktrees/
 !worktrees/.gitkeep
 
+# Wiki repository clone (temporary)
+wiki-repo/
+wiki-temp/
+
 # Keep essential empty directories
 !*/.gitkeep
