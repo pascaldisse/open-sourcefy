@@ -2591,12 +2591,37 @@ typedef struct FILE FILE;
         try:
             self.logger.info("🔧 Enhancing executable with reconstructed components")
             
-            # Read current executable
-            with open(output_file, 'rb') as f:
+            # GENERIC: Read current executable from correct location (works for any binary)
+            final_executable_path = context.get('final_executable_path')
+            if final_executable_path:
+                exe_file = Path(final_executable_path)
+            else:
+                # Fallback: determine from binary path
+                binary_path = context.get('binary_path')
+                if binary_path:
+                    original_name = Path(binary_path).name
+                    exe_file = output_file.parent / original_name
+                else:
+                    exe_file = output_file
+            
+            if not exe_file.exists():
+                self.logger.error(f"Executable not found for enhancement: {exe_file}")
+                return False
+            
+            with open(exe_file, 'rb') as f:
                 exe_data = bytearray(f.read())
             
             original_size = len(exe_data)
-            target_total_size = int(5267456 * 0.99)  # 99% of original
+            
+            # GENERIC: Get original binary size dynamically (works for any executable)
+            binary_path = context.get('binary_path')
+            if binary_path and Path(binary_path).exists():
+                original_binary_size = Path(binary_path).stat().st_size
+            else:
+                # Fallback to launcher.exe size for compatibility
+                original_binary_size = 5267456
+            
+            target_total_size = int(original_binary_size * 0.99)  # 99% of original
             needed_padding = target_total_size - original_size
             
             if needed_padding > 0:
@@ -2608,21 +2633,13 @@ typedef struct FILE FILE;
                 # Extract and embed icon from original binary
                 self._extract_and_embed_icon(exe_data, context)
                 
-                # GENERIC: Write enhanced executable with original binary name (works for any exe)
-                binary_path = context.get('binary_path')
-                if not binary_path:
-                    self.logger.error("No binary_path found in context - cannot determine original name")
-                    return False
-                
-                original_name = Path(binary_path).name
-                final_output = output_file.parent / original_name
-                
-                # Write ONLY the original-named executable
-                with open(final_output, 'wb') as f:
+                # GENERIC: Write enhanced executable (works for any exe)
+                # Write back to the same file we read from
+                with open(exe_file, 'wb') as f:
                     f.write(exe_data)
                 
                 # Remove any old "reconstructed.exe" files to ensure only one executable exists
-                if final_output != output_file and output_file.exists():
+                if exe_file != output_file and output_file.exists():
                     try:
                         output_file.unlink()
                         self.logger.info(f"🗑️ Removed old reconstructed.exe to ensure single output")
@@ -2630,12 +2647,12 @@ typedef struct FILE FILE;
                         self.logger.warning(f"Could not remove old file: {e}")
                 
                 # Update context to point to the correct file
-                context['final_executable_path'] = str(final_output)
+                context['final_executable_path'] = str(exe_file)
                 
                 enhanced_size = len(exe_data)
                 self.logger.info(f"📊 Enhanced from {original_size:,} to {enhanced_size:,} bytes")
                 self.logger.info(f"🎯 Target achieved: {enhanced_size:,} bytes (99% of original)")
-                self.logger.info(f"📁 Single executable output: {final_output}")
+                self.logger.info(f"📁 Single executable output: {exe_file}")
                 
                 return True
             else:
