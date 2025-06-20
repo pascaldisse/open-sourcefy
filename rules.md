@@ -138,6 +138,12 @@ These rules are **ABSOLUTE**, **NON-NEGOTIABLE**, and **MANDATORY**. Violation r
 - **NEVER** return degraded or partial results
 - **PERFECT EXECUTION** - no tolerance for partial failures
 
+### Rule 21: MANDATORY TESTING PROTOCOL
+- **ALWAYS** test using `--clear` and `--clean` flags for full validation
+- **ANALYZE** final executable for size accuracy, icon preservation, and feasibility
+- **VALIDATE** output meets 99% size target and maintains original visual appearance
+- **VERIFY** executable functionality and structural integrity after reconstruction
+
 ## SECTION VII: ENFORCEMENT MECHANISMS
 
 ### Automated Rule Validation
@@ -204,6 +210,8 @@ These rules are **ABSOLUTE**, **NON-NEGOTIABLE**, and **MANDATORY**. Violation r
 - Enforce strict requirements
 - Maintain NSA-level security
 - Follow SOLID principles
+- Always test with --clear and --clean flags
+- Analyze final executable for size, icon, and feasibility
 
 ## SECTION X: ENFORCEMENT DECLARATION
 
@@ -225,6 +233,6 @@ By working on this project, you agree to:
 
 ## RULE REPETITION (ABSOLUTE ENFORCEMENT)
 
-**NO FALLBACKS EVER - NO NEW FOLDERS (DOCS ALLOWED) - NO NEW SCRIPTS - STRICT MODE ONLY - NO MOCK IMPLEMENTATIONS - NEVER EDIT SOURCE CODE (READABLE MAIN ALLOWED) - FIX COMPILER - NO HARDCODED VALUES - GENERIC DECOMPILER - FAIL FAST - NSA SECURITY - SOLID PRINCIPLES - VISUAL STUDIO 2022 PREVIEW ONLY - CONFIGURED PATHS ONLY - REAL IMPLEMENTATIONS ONLY - ALL OR NOTHING - ZERO TOLERANCE**
+**NO FALLBACKS EVER - NO NEW FOLDERS (DOCS ALLOWED) - NO NEW SCRIPTS - STRICT MODE ONLY - NO MOCK IMPLEMENTATIONS - NEVER EDIT SOURCE CODE (READABLE MAIN ALLOWED) - FIX COMPILER - NO HARDCODED VALUES - GENERIC DECOMPILER - FAIL FAST - NSA SECURITY - SOLID PRINCIPLES - VISUAL STUDIO 2022 PREVIEW ONLY - CONFIGURED PATHS ONLY - REAL IMPLEMENTATIONS ONLY - ALL OR NOTHING - ZERO TOLERANCE - ALWAYS TEST WITH --CLEAR AND --CLEAN - ANALYZE FINAL EXE SIZE, ICON, FEASIBILITY**
 
 *This pattern repeats infinitely to ensure absolute compliance*

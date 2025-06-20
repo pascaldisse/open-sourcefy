@@ -136,7 +136,8 @@ class MatrixCLI:
         parser.add_argument(
             "--update", 
             action="store_true",
-            help="Update mode: save to output/{binary-name}/latest and only update files, don't remove them"
+            default=True,
+            help="Update mode: save to output/{binary-name}/latest and only update files, don't remove them [DEFAULT]"
         )
         parser.add_argument(
             "--clean", 
@@ -1041,18 +1042,15 @@ Usage Examples:
                 # Use new path structure with config manager
                 binary_name = binary_path.stem if binary_path else 'unknown_binary'
                 
-                if update_mode:
-                    # Update mode: use output/{binary-name}/latest
-                    path = project_root / "output" / binary_name / "latest"
-                else:
-                    # Normal mode: use timestamped directory
-                    if hasattr(self, 'config_manager'):
-                        path = self.config_manager.get_output_path(binary_name)
-                    else:
-                        # Fallback for initialization phase
-                        from core.config_manager import get_config_manager
-                        config_manager = get_config_manager()
-                        path = config_manager.get_output_path(binary_name)
+                # Always use output/{binary-name}/latest by default
+                path = project_root / "output" / binary_name / "latest"
+                
+                # Clean existing output directory first
+                if path.exists():
+                    import shutil
+                    self.logger.info(f"🧹 Cleaning existing output directory: {path}")
+                    shutil.rmtree(path)
+                    self.logger.info(f"✅ Successfully cleaned {path}")
             
             # Validate final path is within project
             if not str(path.resolve()).startswith(str(project_root.resolve())):

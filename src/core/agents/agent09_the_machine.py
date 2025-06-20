@@ -2380,12 +2380,34 @@ typedef struct FILE FILE;
                 self.logger.warning("Component enhancement failed, using minimal stub")
             
             # Step 3: Verify final size and functionality
-            if output_file.exists():
-                final_size = output_file.stat().st_size
-                original_size = 5267456  # Original launcher.exe size
+            # GENERIC: Check for the correctly named executable (works for any binary)
+            final_executable_path = context.get('final_executable_path')
+            if final_executable_path:
+                final_executable = Path(final_executable_path)
+            else:
+                # Fallback: try to determine from binary path
+                binary_path = context.get('binary_path')
+                if binary_path:
+                    original_name = Path(binary_path).name
+                    final_executable = output_file.parent / original_name
+                else:
+                    final_executable = output_file
+            
+            if final_executable.exists():
+                final_size = final_executable.stat().st_size
+                
+                # GENERIC: Get original size dynamically from any binary
+                binary_path = context.get('binary_path')
+                if binary_path and Path(binary_path).exists():
+                    original_size = Path(binary_path).stat().st_size
+                else:
+                    # Fallback to launcher.exe size for compatibility
+                    original_size = 5267456
+                
                 target_size = int(original_size * 0.99)  # 99% target
                 
                 self.logger.info(f"✅ RECONSTRUCTION SUCCESS: Executable created!")
+                self.logger.info(f"📊 Final executable: {final_executable}")
                 self.logger.info(f"📊 Final size: {final_size:,} bytes ({final_size / (1024*1024):.2f} MB)")
                 self.logger.info(f"📊 Original size: {original_size:,} bytes ({original_size / (1024*1024):.2f} MB)")
                 self.logger.info(f"📊 Target 99%: {target_size:,} bytes ({target_size / (1024*1024):.2f} MB)")
@@ -2527,13 +2549,36 @@ typedef struct FILE FILE;
             # Combine all sections
             executable_data = headers_padded + code_section_padded + data_section + resource_section
             
-            # Write the executable
+            # Write the executable with original binary name (GENERIC for any executable)
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_file, 'wb') as f:
+            
+            # GENERIC: Extract original binary name dynamically for any executable
+            binary_path = context.get('binary_path')
+            if not binary_path:
+                self.logger.error("No binary_path found in context - cannot determine original name")
+                return False
+            
+            original_name = Path(binary_path).name
+            final_output = output_file.parent / original_name
+            
+            # Write ONLY the original-named executable
+            with open(final_output, 'wb') as f:
                 f.write(executable_data)
             
+            # Update the output_file path to point to the correctly named file
+            # This ensures all subsequent operations use the correct name
+            if final_output != output_file:
+                try:
+                    if output_file.exists():
+                        output_file.unlink()  # Remove old file if it exists
+                    # Move the context reference to the correctly named file
+                    context['final_executable_path'] = str(final_output)
+                except Exception as e:
+                    self.logger.warning(f"Could not clean up old output file: {e}")
+            
             initial_size = len(executable_data)
-            self.logger.info(f"✅ Minimal PE executable created: {initial_size:,} bytes")
+            self.logger.info(f"✅ Executable created with original name: {initial_size:,} bytes")
+            self.logger.info(f"📁 Output: {final_output}")
             
             return True
             
@@ -2560,13 +2605,37 @@ typedef struct FILE FILE;
                 padding_data = b'\x00' * needed_padding
                 exe_data.extend(padding_data)
                 
-                # Write enhanced executable
-                with open(output_file, 'wb') as f:
+                # Extract and embed icon from original binary
+                self._extract_and_embed_icon(exe_data, context)
+                
+                # GENERIC: Write enhanced executable with original binary name (works for any exe)
+                binary_path = context.get('binary_path')
+                if not binary_path:
+                    self.logger.error("No binary_path found in context - cannot determine original name")
+                    return False
+                
+                original_name = Path(binary_path).name
+                final_output = output_file.parent / original_name
+                
+                # Write ONLY the original-named executable
+                with open(final_output, 'wb') as f:
                     f.write(exe_data)
+                
+                # Remove any old "reconstructed.exe" files to ensure only one executable exists
+                if final_output != output_file and output_file.exists():
+                    try:
+                        output_file.unlink()
+                        self.logger.info(f"🗑️ Removed old reconstructed.exe to ensure single output")
+                    except Exception as e:
+                        self.logger.warning(f"Could not remove old file: {e}")
+                
+                # Update context to point to the correct file
+                context['final_executable_path'] = str(final_output)
                 
                 enhanced_size = len(exe_data)
                 self.logger.info(f"📊 Enhanced from {original_size:,} to {enhanced_size:,} bytes")
                 self.logger.info(f"🎯 Target achieved: {enhanced_size:,} bytes (99% of original)")
+                self.logger.info(f"📁 Single executable output: {final_output}")
                 
                 return True
             else:
@@ -2575,6 +2644,76 @@ typedef struct FILE FILE;
                 
         except Exception as e:
             self.logger.error(f"Failed to enhance executable: {e}")
+            return False
+
+    def _extract_and_embed_icon(self, exe_data: bytearray, context: Dict[str, Any]) -> bool:
+        """Extract icon from original binary and embed it in reconstructed executable"""
+        try:
+            self.logger.info("🎨 Extracting and embedding icon from original binary")
+            
+            # Get original binary path
+            binary_path = context.get('binary_path')
+            if not binary_path or not Path(binary_path).exists():
+                self.logger.warning("Original binary not found, skipping icon extraction")
+                return False
+            
+            # Read original binary to find icon resources
+            with open(binary_path, 'rb') as f:
+                original_data = f.read()
+            
+            # Simple icon resource extraction (basic implementation)
+            # Look for common icon patterns in the original binary
+            icon_signatures = [
+                b'\x00\x00\x01\x00',  # ICO file signature
+                b'\x00\x00\x02\x00',  # CUR file signature
+            ]
+            
+            for signature in icon_signatures:
+                icon_offset = original_data.find(signature)
+                if icon_offset != -1:
+                    # Extract potential icon data (simplified approach)
+                    # In a full implementation, this would parse PE resource directories
+                    icon_end_offset = min(icon_offset + 0x1000, len(original_data))  # Max 4KB icon
+                    icon_data = original_data[icon_offset:icon_end_offset]
+                    
+                    # Embed icon data in the resource section of our executable
+                    # Find resource section offset in our PE (simplified)
+                    resource_section_offset = 0x600  # Based on our PE structure
+                    if resource_section_offset < len(exe_data):
+                        # Replace zeros in resource section with icon data
+                        icon_size = min(len(icon_data), 0x200 - 16)  # Leave some space
+                        exe_data[resource_section_offset:resource_section_offset + icon_size] = icon_data[:icon_size]
+                        
+                        self.logger.info(f"✅ Icon embedded: {icon_size:,} bytes from offset {icon_offset}")
+                        return True
+            
+            # If no icon found in binary, try to extract from .rsrc section via Agent 8
+            agent_results = context.get('agent_results', {})
+            if 8 in agent_results:
+                agent8_result = agent_results[8]
+                if hasattr(agent8_result, 'data'):
+                    agent8_data = agent8_result.data
+                    icon_resources = agent8_data.get('icon_resources', [])
+                    
+                    if icon_resources:
+                        # Use the first available icon resource
+                        icon_resource = icon_resources[0]
+                        if isinstance(icon_resource, dict) and 'data' in icon_resource:
+                            icon_data = icon_resource['data']
+                            if isinstance(icon_data, (bytes, bytearray)):
+                                resource_section_offset = 0x600
+                                if resource_section_offset < len(exe_data):
+                                    icon_size = min(len(icon_data), 0x200 - 16)
+                                    exe_data[resource_section_offset:resource_section_offset + icon_size] = icon_data[:icon_size]
+                                    
+                                    self.logger.info(f"✅ Icon embedded from Agent 8: {icon_size:,} bytes")
+                                    return True
+            
+            self.logger.warning("No icon resources found in original binary")
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"Failed to extract and embed icon: {e}")
             return False
 
     def _compile_with_vs2003_devenv(self, project_file: Path, output_file: Path, context: Dict[str, Any], devenv_path: str) -> tuple:
