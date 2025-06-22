@@ -268,6 +268,56 @@ class SecurityViolationError(MatrixError):
         self.violation_type = violation_type
 
 
+class SelfCorrectionError(MatrixError):
+    """Exception raised during self-correction operations"""
+    
+    def __init__(self, message: str, correction_cycle: Optional[int] = None,
+                 correction_strategy: Optional[str] = None):
+        context = {}
+        if correction_cycle is not None:
+            context['correction_cycle'] = correction_cycle
+        if correction_strategy:
+            context['correction_strategy'] = correction_strategy
+        
+        super().__init__(message, context)
+        self.correction_cycle = correction_cycle
+        self.correction_strategy = correction_strategy
+
+
+class FunctionalIdentityError(MatrixError):
+    """Exception raised when 100% functional identity requirement fails"""
+    
+    def __init__(self, message: str, identity_score: Optional[float] = None,
+                 required_score: float = 1.0, difference_details: Optional[Dict] = None):
+        context = {}
+        if identity_score is not None:
+            context['identity_score'] = identity_score
+        context['required_score'] = required_score
+        if difference_details:
+            context['difference_details'] = difference_details
+        
+        super().__init__(message, context)
+        self.identity_score = identity_score
+        self.required_score = required_score
+        self.difference_details = difference_details or {}
+
+
+class BinaryDiffError(MatrixError):
+    """Exception raised during binary diff analysis operations"""
+    
+    def __init__(self, message: str, diff_level: Optional[str] = None,
+                 binary_paths: Optional[Dict[str, str]] = None):
+        context = {}
+        if diff_level:
+            context['diff_level'] = diff_level
+        if binary_paths:
+            context['binary_paths'] = binary_paths
+        
+        super().__init__(message, context)
+        self.diff_level = diff_level
+        self.binary_paths = binary_paths or {}
+
+
 # Exception handling utilities
 def handle_matrix_exception(e: Exception, logger, agent_id: Optional[int] = None) -> MatrixError:
     """

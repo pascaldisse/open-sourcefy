@@ -94,6 +94,7 @@ class MatrixCLIConfig:
     # Development options
     dry_run: bool = False
     profile_performance: bool = False
+    self_correction: bool = False
 
 
 class MatrixCLI:
@@ -165,27 +166,27 @@ class MatrixCLI:
         mode_group = pipeline_group.add_mutually_exclusive_group()
         mode_group.add_argument(
             "--full-pipeline", 
-            action="store_const", const=PipelineMode.FULL_PIPELINE, dest="pipeline_mode",
+            action="store_const", const=PipelineMode.FULL_PIPELINE if MATRIX_AVAILABLE else "full_pipeline", dest="pipeline_mode",
             help="Run complete pipeline (all agents) [default]"
         )
         mode_group.add_argument(
             "--decompile-only", 
-            action="store_const", const=PipelineMode.DECOMPILE_ONLY, dest="pipeline_mode",
+            action="store_const", const=PipelineMode.DECOMPILE_ONLY if MATRIX_AVAILABLE else "decompile_only", dest="pipeline_mode",
             help="Decompilation only (agents 1,2,3,5,7,14)"
         )
         mode_group.add_argument(
             "--analyze-only", 
-            action="store_const", const=PipelineMode.ANALYZE_ONLY, dest="pipeline_mode",
+            action="store_const", const=PipelineMode.ANALYZE_ONLY if MATRIX_AVAILABLE else "analyze_only", dest="pipeline_mode",
             help="Analysis only (agents 1,2,3,4,5,8,9)"
         )
         mode_group.add_argument(
             "--compile-only", 
-            action="store_const", const=PipelineMode.COMPILE_ONLY, dest="pipeline_mode",
+            action="store_const", const=PipelineMode.COMPILE_ONLY if MATRIX_AVAILABLE else "compile_only", dest="pipeline_mode",
             help="Compilation only (agents 6,11,12)"
         )
         mode_group.add_argument(
             "--validate-only", 
-            action="store_const", const=PipelineMode.VALIDATE_ONLY, dest="pipeline_mode",
+            action="store_const", const=PipelineMode.VALIDATE_ONLY if MATRIX_AVAILABLE else "validate_only", dest="pipeline_mode",
             help="Validation only (agents 8,12,13)"
         )
         
@@ -204,8 +205,8 @@ class MatrixCLI:
         exec_group = parser.add_argument_group("Execution Configuration")
         exec_group.add_argument(
             "--execution-mode", 
-            choices=[mode.value for mode in MatrixExecutionMode],
-            default=MatrixExecutionMode.MASTER_FIRST_PARALLEL.value,
+            choices=[mode.value for mode in MatrixExecutionMode] if MATRIX_AVAILABLE else ["master_first_parallel", "sequential", "full_parallel"],
+            default=MatrixExecutionMode.MASTER_FIRST_PARALLEL.value if MATRIX_AVAILABLE else "master_first_parallel",
             help="Matrix execution mode"
         )
         exec_group.add_argument(
@@ -295,6 +296,11 @@ class MatrixCLI:
             action="store_true",
             help="Show configuration summary and exit"
         )
+        dev_group.add_argument(
+            "--self-correction", 
+            action="store_true",
+            help="Enable self-correction mode with continuous validation until 100%% functional identity achieved"
+        )
         
         # Validation commands (P4.4)
         validation_group = parser.add_argument_group("Validation Commands")
@@ -355,20 +361,29 @@ class MatrixCLI:
         config.no_agents_mode = args.no_agents
         
         # Pipeline mode
-        config.pipeline_mode = getattr(args, 'pipeline_mode', None) or PipelineMode.FULL_PIPELINE
+        if MATRIX_AVAILABLE:
+            config.pipeline_mode = getattr(args, 'pipeline_mode', None) or PipelineMode.FULL_PIPELINE
+        else:
+            config.pipeline_mode = getattr(args, 'pipeline_mode', None) or "full_pipeline"
         
         # Execution configuration
-        config.execution_mode = MatrixExecutionMode(args.execution_mode)
+        if MATRIX_AVAILABLE:
+            config.execution_mode = MatrixExecutionMode(args.execution_mode)
+        else:
+            config.execution_mode = args.execution_mode
         # Convert resource profile string to MatrixResourceLimits instance
         config.resource_profile_name = args.resource_profile
-        if args.resource_profile == "standard":
-            config.resource_profile = MatrixResourceLimits.STANDARD()
-        elif args.resource_profile == "high_performance":
-            config.resource_profile = MatrixResourceLimits.HIGH_PERFORMANCE()
-        elif args.resource_profile == "conservative":
-            config.resource_profile = MatrixResourceLimits.CONSERVATIVE()
+        if MATRIX_AVAILABLE:
+            if args.resource_profile == "standard":
+                config.resource_profile = MatrixResourceLimits.STANDARD()
+            elif args.resource_profile == "high_performance":
+                config.resource_profile = MatrixResourceLimits.HIGH_PERFORMANCE()
+            elif args.resource_profile == "conservative":
+                config.resource_profile = MatrixResourceLimits.CONSERVATIVE()
+            else:
+                config.resource_profile = MatrixResourceLimits.STANDARD()
         else:
-            config.resource_profile = MatrixResourceLimits.STANDARD()
+            config.resource_profile = args.resource_profile
         config.max_parallel_agents = args.parallel_agents
         config.timeout_agent = args.timeout_agent
         config.timeout_master = args.timeout_master
@@ -377,7 +392,7 @@ class MatrixCLI:
         # Agent selection
         if args.agents:
             config.custom_agents = self._parse_agent_list(args.agents)
-            config.pipeline_mode = PipelineMode.CUSTOM_AGENTS
+            config.pipeline_mode = PipelineMode.CUSTOM_AGENTS if MATRIX_AVAILABLE else "custom_agents"
         if args.exclude_agents:
             config.exclude_agents = self._parse_agent_list(args.exclude_agents)
         
@@ -392,6 +407,7 @@ class MatrixCLI:
         # Development options
         config.dry_run = args.dry_run
         config.profile_performance = args.profile_performance
+        config.self_correction = args.self_correction
         
         # Handle clear operations first (before other validations)
         if args.clear_all:
@@ -413,6 +429,11 @@ class MatrixCLI:
             sys.exit(0)
         if args.config_summary:
             self._show_config_summary()
+            sys.exit(0)
+        
+        # Handle self-correction mode
+        if args.self_correction:
+            self._handle_self_correction_mode(config)
             sys.exit(0)
         
         # Handle validation commands (P4.4)
@@ -1021,6 +1042,101 @@ Usage Examples:
         except Exception as e:
             self.logger.error(f"❌ Failed to clear output directory: {e}")
             raise
+    
+    def _handle_self_correction_mode(self, config: MatrixCLIConfig):
+        """
+        Handle self-correction mode with continuous validation until 100% functional identity achieved
+        
+        CRITICAL: This mode integrates Agent 0 (Deus Ex Machina) with the self-correction engine
+        to continuously validate and fix issues until perfect reconstruction is achieved.
+        """
+        self.logger.info("🚀 Starting self-correction mode for 100% functional identity achievement")
+        
+        try:
+            # Resolve binary path
+            binary_path = self._resolve_binary_path(config.binary_path)
+            if not binary_path:
+                self.logger.error("❌ CRITICAL: No binary file found for self-correction mode")
+                print("❌ ERROR: Binary file not found")
+                print("Usage: python3 main.py --self-correction [binary_path]")
+                print("Example: python3 main.py --self-correction input/launcher.exe")
+                return
+            
+            # Setup output directory
+            output_dir = self._setup_output_directory(config.output_dir, binary_path)
+            
+            # Import Agent 0 (Deus Ex Machina) with self-correction capabilities
+            try:
+                from core.agents.agent00_deus_ex_machina import DeusExMachinaAgent
+            except ImportError as e:
+                self.logger.error(f"❌ CRITICAL: Failed to import Agent 0 (Deus Ex Machina): {e}")
+                print("❌ ERROR: Self-correction system not available")
+                print("Agent 0 (Deus Ex Machina) is required for self-correction mode")
+                return
+            
+            # Initialize Agent 0 with self-correction engine
+            self.logger.info("🎭 Initializing Agent 0 (Deus Ex Machina) with self-correction engine")
+            master_agent = DeusExMachinaAgent()
+            
+            # Create pipeline configuration for self-correction
+            pipeline_config = {
+                'execution_mode': config.execution_mode.value,
+                'resource_profile': config.resource_profile_name,
+                'max_parallel_agents': config.max_parallel_agents,
+                'timeout_agent': config.timeout_agent,
+                'timeout_master': config.timeout_master,
+                'max_retries': config.max_retries,
+                'debug': config.debug,
+                'verbose': config.verbose
+            }
+            
+            self.logger.info(f"🎯 Target: {binary_path}")
+            self.logger.info(f"📁 Output: {output_dir}")
+            self.logger.info("🔧 Self-correction engine: ENABLED with ZERO TOLERANCE for functional differences")
+            
+            print("\n" + "="*80)
+            print("🚀 SELF-CORRECTION MODE INITIATED")
+            print("="*80)
+            print(f"Target Binary: {binary_path}")
+            print(f"Output Directory: {output_dir}")
+            print("Mission: Achieve 100% functional identity through continuous validation")
+            print("Policy: ZERO TOLERANCE for functional differences - FAIL-FAST enforcement")
+            print("="*80 + "\n")
+            
+            # Execute pipeline with self-correction loop
+            success = master_agent.execute_pipeline_with_self_correction(
+                binary_path=binary_path,
+                output_dir=output_dir,
+                pipeline_config=pipeline_config
+            )
+            
+            # Report final results
+            if success:
+                print("\n" + "="*80)
+                print("🎉 SUCCESS: 100% FUNCTIONAL IDENTITY ACHIEVED!")
+                print("="*80)
+                print("✅ Binary reconstruction completed with perfect functional equivalence")
+                print("✅ Assembly-level validation: PASSED")
+                print("✅ Self-correction system: SUCCESSFUL")
+                print(f"✅ Output available in: {output_dir}")
+                print("="*80 + "\n")
+                self.logger.info("🎉 Self-correction mode completed successfully - 100% functional identity achieved!")
+            else:
+                print("\n" + "="*80)
+                print("❌ FAILURE: Unable to achieve 100% functional identity")
+                print("="*80)
+                print("❌ Self-correction system exhausted all correction strategies")
+                print("❌ Maximum correction cycles may have been exceeded")
+                print("❌ Check logs for detailed failure analysis")
+                print("="*80 + "\n")
+                self.logger.error("❌ Self-correction mode failed - unable to achieve 100% functional identity")
+                
+        except Exception as e:
+            self.logger.error(f"❌ Self-correction mode failed with exception: {e}")
+            print(f"\n❌ CRITICAL ERROR: Self-correction mode failed: {e}")
+            if config.debug:
+                import traceback
+                traceback.print_exc()
     
     def _setup_output_directory(self, output_dir: Optional[str], binary_path: Optional[Path] = None, update_mode: bool = False) -> Path:
         """Setup output directory securely."""

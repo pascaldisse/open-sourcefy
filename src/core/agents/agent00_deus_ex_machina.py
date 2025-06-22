@@ -27,8 +27,9 @@ from dataclasses import dataclass
 # Matrix framework imports
 from ..matrix_agents import MatrixAgent, MatrixCharacter, AgentStatus, AgentResult
 from ..shared_components import MatrixLogger, MatrixFileManager, MatrixValidator
-from ..exceptions import MatrixAgentError, ValidationError
+from ..exceptions import MatrixAgentError, ValidationError, SelfCorrectionError, FunctionalIdentityError
 from ..config_manager import get_config_manager
+from ..self_correction_engine import SelfCorrectionEngine
 
 # Import actual agent implementations
 from .agent01_sentinel import SentinelAgent
@@ -40,7 +41,7 @@ from .agent06_trainman_assembly_analysis import Agent6_Trainman_AssemblyAnalysis
 from .agent07_keymaker_resource_reconstruction import Agent7_Keymaker_ResourceReconstruction
 from .agent08_commander_locke import Agent8_CommanderLocke
 from .agent09_the_machine import Agent9_TheMachine
-from .agent10_twins_binary_diff import Agent10_Twins_BinaryDiff
+from .agent10_twins import TwinsAgent
 from .agent11_the_oracle import Agent11_TheOracle
 from .agent12_link import Agent12_Link
 from .agent13_agent_johnson import Agent13_AgentJohnson
@@ -94,7 +95,7 @@ class DeusExMachinaAgent(MatrixAgent):
             7: Agent7_Keymaker_ResourceReconstruction,
             8: Agent8_CommanderLocke,
             9: Agent9_TheMachine,
-            10: Agent10_Twins_BinaryDiff,
+            10: TwinsAgent,
             11: Agent11_TheOracle,
             12: Agent12_Link,
             13: Agent13_AgentJohnson,
@@ -106,6 +107,9 @@ class DeusExMachinaAgent(MatrixAgent):
         # Execution state
         self.execution_plan: Optional[PipelineExecutionPlan] = None
         self.execution_start_time = 0.0
+        
+        # CRITICAL: Self-correction engine for 100% functional identity
+        self.self_correction_engine = SelfCorrectionEngine(self.logger)
     
     def execute_matrix_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute master orchestration of the Matrix pipeline"""
@@ -198,6 +202,86 @@ class DeusExMachinaAgent(MatrixAgent):
             result.success = False
             result.error = str(e)
             return result
+    
+    def execute_pipeline_with_self_correction(self, binary_path: Path, output_dir: Path, 
+                                            pipeline_config: Dict) -> bool:
+        """
+        CRITICAL: Execute pipeline with self-correction loop for 100% functional identity
+        
+        This method integrates the self-correction engine with pipeline execution
+        to continuously validate and fix issues until 100% functional identity is achieved.
+        
+        Args:
+            binary_path: Path to original binary for reconstruction
+            output_dir: Pipeline output directory
+            pipeline_config: Pipeline configuration parameters
+            
+        Returns:
+            bool: True if 100% functional identity achieved, False on failure
+            
+        Raises:
+            FunctionalIdentityError: If 100% identity cannot be achieved
+            SelfCorrectionError: On self-correction system failure
+        """
+        self.logger.info("🚀 Starting pipeline execution with self-correction for 100% functional identity")
+        
+        try:
+            # Initialize diff agent (Agent 10: Twins) for validation
+            diff_agent = self.agent_classes[10]()  # Agent 10: Twins
+            
+            # Execute self-correction loop
+            success = self.self_correction_engine.execute_correction_loop(
+                binary_path=binary_path,
+                output_dir=output_dir,
+                diff_agent=diff_agent,
+                pipeline_orchestrator=self
+            )
+            
+            if success:
+                self.logger.info("🎉 SUCCESS: 100% functional identity achieved through self-correction!")
+                return True
+            else:
+                self.logger.error("❌ FAILURE: Unable to achieve 100% functional identity")
+                return False
+                
+        except FunctionalIdentityError as e:
+            self.logger.error(f"❌ CRITICAL: Functional identity requirement failed: {e}")
+            raise
+            
+        except SelfCorrectionError as e:
+            self.logger.error(f"❌ CRITICAL: Self-correction system failed: {e}")
+            raise
+            
+        except Exception as e:
+            self.logger.error(f"❌ Pipeline execution with self-correction failed: {e}")
+            raise MatrixAgentError(f"Pipeline execution failed: {e}")
+    
+    def re_execute_pipeline(self, binary_path: Path) -> bool:
+        """
+        Re-execute pipeline after corrections have been applied
+        
+        This method is called by the self-correction engine to apply corrections
+        """
+        try:
+            self.logger.info("🔄 Re-executing pipeline after corrections")
+            
+            # Create context for pipeline re-execution
+            context = {
+                'binary_path': str(binary_path),
+                'output_dir': str(binary_path.parent / "output" / binary_path.stem / "latest"),
+                'execution_mode': 'master_first_parallel',
+                'selected_agents': list(range(1, 17))  # All agents except master
+            }
+            
+            # Execute pipeline
+            result = self.execute_matrix_task(context)
+            
+            # Check if execution was successful
+            return result.get('pipeline_readiness', False)
+            
+        except Exception as e:
+            self.logger.error(f"❌ Pipeline re-execution failed: {e}")
+            return False
     
     def _validate_pipeline_prerequisites(self, context: Dict[str, Any]) -> None:
         """
