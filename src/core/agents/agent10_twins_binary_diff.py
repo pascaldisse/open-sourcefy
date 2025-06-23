@@ -737,7 +737,7 @@ class Agent10_Twins_BinaryDiff(AnalysisAgent):
         # Calculate metrics based on differences and changes
         structural_similarity = 1.0 - min(len(differences) / 100.0, 1.0)
         functional_similarity = self._calculate_functional_similarity(functional_changes)
-        code_similarity = 0.85  # Placeholder - would be calculated from actual code comparison
+        code_similarity = self._calculate_code_similarity(differences, functional_changes)
         optimization_detection = 0.9  # Based on optimization pattern detection quality
         
         overall_confidence = (
@@ -1700,8 +1700,34 @@ class Agent10_Twins_BinaryDiff(AnalysisAgent):
         return 0.95
     
     def _calculate_functional_similarity(self, functional_changes: Dict[str, Any]) -> float:
-        """Calculate functional similarity"""
-        return 0.9
+        """Calculate functional similarity based on actual functional changes"""
+        if not functional_changes:
+            return 1.0  # Perfect similarity if no functional changes
+            
+        behavior_changes = functional_changes.get('behavior_changes', [])
+        interface_changes = functional_changes.get('interface_changes', [])
+        
+        # Calculate penalty for each type of change
+        behavior_penalty = len(behavior_changes) * 0.1  # 10% penalty per behavior change
+        interface_penalty = len(interface_changes) * 0.15  # 15% penalty per interface change
+        
+        total_penalty = min(behavior_penalty + interface_penalty, 1.0)
+        return max(1.0 - total_penalty, 0.0)
+
+    def _calculate_code_similarity(self, differences: List[Dict[str, Any]], functional_changes: Dict[str, Any]) -> float:
+        """Calculate code similarity based on actual differences and changes"""
+        if not differences and not functional_changes:
+            return 1.0  # Perfect similarity if no differences
+            
+        # Calculate penalty for binary differences
+        difference_penalty = len(differences) * 0.05  # 5% penalty per difference
+        
+        # Calculate penalty for structural changes  
+        structural_changes = functional_changes.get('function_changes', {})
+        function_penalty = len(structural_changes.get('modified_functions', [])) * 0.1
+        
+        total_penalty = min(difference_penalty + function_penalty, 1.0)
+        return max(1.0 - total_penalty, 0.0)
 
     def _perform_critical_size_comparison(self, binary_path: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """

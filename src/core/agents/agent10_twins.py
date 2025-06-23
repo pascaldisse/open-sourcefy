@@ -139,16 +139,22 @@ class AssemblyDiffChecker:
         """
         try:
             import yaml
+            import os
             
             with open(self.config_path, 'r') as f:
                 config = yaml.safe_load(f)
             
-            # RULE 9: ONLY use configured Visual Studio 2022 Preview dumpbin path
-            # Note: dumpbin is typically in the same directory as other VS tools
-            vs_tools_path = config['build_system']['visual_studio']['vc_tools_path']
-            self.dumpbin_path = vs_tools_path + "/bin/Hostx64/x64/dumpbin.exe"
+            # RULE 6: ONLY use VS2003 dumpbin - NO FALLBACKS
+            if 'visual_studio_2003' not in config['build_system']:
+                raise AssemblyDiffError("CRITICAL: VS2003 configuration missing - Rule 6 violation")
+                
+            vs2003_path = config['build_system']['visual_studio_2003']['vc7_tools_path']
+            self.dumpbin_path = vs2003_path + "/bin/dumpbin.exe"
             
-            self.logger.info(f"✅ Loaded configured dumpbin path: {self.dumpbin_path}")
+            if not os.path.exists(self.dumpbin_path.replace('/mnt/c', 'C:')):
+                raise AssemblyDiffError(f"CRITICAL: VS2003 dumpbin not found at {self.dumpbin_path} - Rule 6 violation")
+                
+            self.logger.info(f"✅ Using VS2003 dumpbin for 100% functional identity: {self.dumpbin_path}")
             
         except Exception as e:
             # RULE 2: FAIL FAST on configuration errors
@@ -156,15 +162,16 @@ class AssemblyDiffChecker:
     
     def _validate_required_disassembler(self) -> str:
         """
-        RULE 6 COMPLIANCE: Validate ONLY Visual Studio 2022 Preview dumpbin is available
+        RULE 6 COMPLIANCE: Validate ONLY Visual Studio 2003 dumpbin is available
         
-        CRITICAL: NO FALLBACKS - dumpbin from VS2022 Preview is the ONLY acceptable disassembler
-        according to rules.md Rule 6: "ONLY use configured Visual Studio 2022 Preview paths"
+        CRITICAL: NO FALLBACKS - dumpbin from VS2003 is the ONLY acceptable disassembler
+        according to rules.md Rule 6: "ONLY use configured Visual Studio 2003 paths"
         """
         # RULE 9: Use ONLY configured path from build_config.yaml
         try:
-            result = subprocess.run([self.dumpbin_path, "/?"], capture_output=True)
-            if result.returncode == 0:
+            result = subprocess.run([self.dumpbin_path, "/?"], capture_output=True, timeout=10)
+            # dumpbin returns exit code 76 for /? help command - this is normal behavior
+            if result.returncode in [0, 76]:
                 self.logger.info(f"✅ Required disassembler validated: {self.dumpbin_path}")
                 return "dumpbin"
             else:
@@ -889,12 +896,12 @@ class TwinsAgent(AnalysisAgent):
         """
         RULE 14 COMPLIANCE: Validate all prerequisites for Twins agent execution
         
-        CRITICAL: Validates ONLY Visual Studio 2022 Preview dumpbin availability
+        CRITICAL: Validates ONLY Visual Studio 2003 dumpbin availability
         according to rules.md Rule 6 - NO FALLBACKS allowed
         """
         try:
-            # RULE 6: Validate ONLY VS2022 Preview dumpbin is available
-            self._validate_required_disassembler()
+            # RULE 6: Validate ONLY VS2003 dumpbin is available
+            self.assembly_diff_checker._validate_required_disassembler()
             
             # Validate required Python modules (warn but don't fail for testing)
             optional_modules = ['pefile', 'lief']

@@ -535,13 +535,13 @@ class FinalValidationOrchestrator:
         return []
     
     def _calculate_pe_checksum(self, binary_path: Path) -> Optional[int]:
-        """Calculate PE checksum"""
+        """Extract PE checksum from optional header"""
         try:
-            with open(binary_path, 'rb') as f:
-                data = f.read()
-                # PE checksum calculation implementation
-                return len(data)  # Simplified for now
-        except:
+            import pefile
+            pe = pefile.PE(str(binary_path))
+            return pe.OPTIONAL_HEADER.CheckSum
+        except Exception as e:
+            logger.warning(f"Failed to extract PE checksum from {binary_path}: {e}")
             return None
     
     def _extract_load_config(self, binary_path: Path) -> Dict:

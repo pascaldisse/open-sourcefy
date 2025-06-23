@@ -13,7 +13,10 @@
 ### Platform Requirements (ABSOLUTE)
 - **WINDOWS EXCLUSIVE**: Windows 10/11 64-bit ONLY
 - **NO FALLBACKS**: Zero alternatives, no graceful degradation
-- **VISUAL STUDIO 2022 PREVIEW**: Exclusive build system (no alternatives)
+- **VISUAL STUDIO .NET 2003**: PRIMARY build system for 100% functional identity (MANDATORY)
+- **VS2003 PATH**: `\\Mac\Home\Downloads\VS .NET Enterprise Architect 2003`
+- **ABSOLUTE REQUIREMENT**: \\Mac\Home\Downloads\VS .NET Enterprise Architect 2003
+- **NO ALTERNATIVES**: \\Mac\Home\Downloads\VS .NET Enterprise Architect 2003
 - **FAIL-FAST**: Immediate termination on missing requirements
 
 ### Architecture Overview
@@ -62,11 +65,11 @@ python3 main.py --validate-pipeline comprehensive
 
 ### Build System Commands
 ```bash
-# Validate VS2022 Preview installation
+# Validate VS2003 installation (MANDATORY)
 python3 main.py --verify-env
 
-# Debug build configuration
-python3 main.py --debug --profile
+# VS2003 compilation for 100% functional identity
+python3 main.py --vs2003
 
 # Configuration summary
 python3 main.py --config-summary
@@ -170,14 +173,20 @@ docs/                # Architecture and specification documentation
 
 ### Build System Configuration (build_config.yaml)
 ```yaml
+# PRIMARY: Visual Studio .NET 2003 for 100% functional identity
+visual_studio_2003:
+  compiler:
+    x86: "/mnt/c/Mac/Home/Downloads/VS .NET Enterprise Architect 2003/Vc7/bin/cl.exe"
+  installation_path: "/mnt/c/Mac/Home/Downloads/VS .NET Enterprise Architect 2003"
+  version: "7.1"
+
+# FALLBACK: Visual Studio 2022 (only when VS2003 unavailable)
 build_system:
   visual_studio:
     version: "2022_preview"
     installation_path: "C:/Program Files/Microsoft Visual Studio/2022/Preview"
-    cl_exe_path: "C:/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.XX.XXXXX/bin/Hostx64/x64/cl.exe"
-    msbuild_path: "C:/Program Files/Microsoft Visual Studio/2022/Preview/MSBuild/Current/Bin/MSBuild.exe"
   
-  # NO FALLBACK PATHS - CONFIGURED PATHS ONLY
+  # STRICT MODE: No alternatives, fail-fast validation
   strict_mode: true
   fail_on_missing_tools: true
 ```
@@ -288,8 +297,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 #### Build System Failures
 - **Symptoms**: Compilation errors, missing tools
-- **Root Cause**: VS2022 Preview path configuration
-- **Solution**: Validate `build_config.yaml` paths
+- **Root Cause**: VS2003 path configuration or missing installation
+- **Solution**: Validate VS2003 installation at `\\Mac\Home\Downloads\VS .NET Enterprise Architect 2003`
 - **Command**: `python3 main.py --verify-env`
 
 #### Agent Execution Failures
@@ -299,7 +308,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - **Debug**: `python3 main.py --debug`
 
 ### Critical Error Codes
-- **E001**: Missing VS2022 Preview installation
+- **E001**: Missing VS2003 installation at required path
 - **E002**: Invalid build_config.yaml configuration
 - **E003**: Insufficient system resources
 - **E004**: Agent prerequisite validation failure
