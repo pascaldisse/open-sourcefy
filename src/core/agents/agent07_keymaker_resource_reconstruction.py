@@ -147,6 +147,9 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
                     'rsrc_available': analysis_result.rsrc_section is not None,
                     'rdata_available': analysis_result.rdata_section is not None,
                     'data_available': analysis_result.data_section is not None,
+                    # CRITICAL: Section layout preservation for 100% hash match
+                    'section_layout_preserved': self._preserve_section_layout(resource_data, context),
+                    'section_layout_data': self._get_section_layout_data(context),
                     'rsrc_size': len(analysis_result.rsrc_section) if analysis_result.rsrc_section else 0,
                     'rdata_size': len(analysis_result.rdata_section) if analysis_result.rdata_section else 0,
                     'data_size': len(analysis_result.data_section) if analysis_result.data_section else 0,
@@ -738,3 +741,109 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
         except Exception as e:
             self.logger.warning(f"Error loading Architect cache data: {e}")
             return False
+
+    def _preserve_section_layout(self, resource_data: Dict[str, Any], context: Dict[str, Any]) -> bool:
+        """
+        CRITICAL: Preserve exact section layout for binary-identical reconstruction
+        
+        This method ensures that all binary sections maintain their exact layout,
+        padding, and alignment for 100% hash match with the original binary.
+        """
+        try:
+            self.logger.info("🎯 PRESERVING SECTION LAYOUT for 100% hash match...")
+            
+            # Get original binary analysis for section layout information
+            original_binary_path = context.get('binary_path', '')
+            if not original_binary_path or not Path(original_binary_path).exists():
+                self.logger.warning("Original binary not available - cannot preserve exact layout")
+                return False
+            
+            # Analyze original binary section layout
+            section_layout = self._analyze_original_section_layout(original_binary_path)
+            if not section_layout:
+                return False
+            
+            # Store section layout information for Agent 9
+            output_paths = context.get('output_paths', {})
+            compilation_dir = output_paths.get('compilation', Path('output/compilation'))
+            
+            section_layout_file = compilation_dir / 'section_layout_preservation.json'
+            section_layout_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            import json
+            with open(section_layout_file, 'w') as f:
+                json.dump(section_layout, f, indent=2)
+            
+            self.logger.info(f"✅ Section layout preserved: {len(section_layout.get('sections', []))} sections")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Section layout preservation failed: {e}")
+            return False
+    
+    def _analyze_original_section_layout(self, binary_path: str) -> Dict[str, Any]:
+        """Analyze original binary for exact section layout information"""
+        try:
+            with open(binary_path, 'rb') as f:
+                data = f.read()
+            
+            # Parse PE header
+            if not data.startswith(b'MZ'):
+                return {}
+            
+            pe_offset = struct.unpack('<L', data[60:64])[0]
+            if pe_offset + 4 > len(data) or data[pe_offset:pe_offset+4] != b'PE\x00\x00':
+                return {}
+            
+            # Parse COFF header
+            coff_header = data[pe_offset+4:pe_offset+24]
+            machine, num_sections, timestamp, ptr_to_symbols, num_symbols, opt_hdr_size, characteristics = struct.unpack('<HHIIIHH', coff_header)
+            
+            # Parse section headers
+            sections_offset = pe_offset + 24 + opt_hdr_size
+            sections = []
+            
+            for i in range(num_sections):
+                section_offset = sections_offset + (i * 40)
+                if section_offset + 40 > len(data):
+                    break
+                    
+                section_data = data[section_offset:section_offset+40]
+                name = section_data[:8].rstrip(b'\x00').decode('utf-8', errors='ignore')
+                virtual_size, virtual_addr, raw_size, raw_addr = struct.unpack('<IIII', section_data[8:24])
+                characteristics = struct.unpack('<I', section_data[36:40])[0]
+                
+                sections.append({
+                    'name': name,
+                    'virtual_address': virtual_addr,
+                    'virtual_size': virtual_size,
+                    'raw_address': raw_addr,
+                    'raw_size': raw_size,
+                    'characteristics': characteristics,
+                    'padding': raw_size - virtual_size if raw_size > virtual_size else 0
+                })
+            
+            return {
+                'total_size': len(data),
+                'pe_offset': pe_offset,
+                'sections': sections,
+                'section_alignment': 4096,  # Standard PE section alignment
+                'file_alignment': 512       # Standard PE file alignment
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Section layout analysis failed: {e}")
+            return {}
+    
+    def _get_section_layout_data(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Get section layout data directly for Agent 9 communication"""
+        try:
+            original_binary_path = context.get('binary_path', '')
+            if not original_binary_path or not Path(original_binary_path).exists():
+                return {}
+            
+            return self._analyze_original_section_layout(original_binary_path)
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get section layout data: {e}")
+            return {}

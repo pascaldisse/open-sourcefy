@@ -1,0 +1,40 @@
+{
+  "name": "multi-agent-system",
+  "version": "1.0.0",
+  "description": "Portable Multi-Agent System for any project",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "gaia-mas": "./cli.js"
+  },
+  "scripts": {
+    "start": "node cli.js start",
+    "status": "node cli.js status",
+    "interactive": "node cli.js interactive",
+    "test": "node test-system.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "^1.0.33",
+    "chalk": "^5.0.0",
+    "cli-table3": "^0.6.0",
+    "commander": "^11.0.0",
+    "dotenv": "^16.0.0",
+    "inquirer": "^9.0.0",
+    "node-cron": "^4.1.1",
+    "ora": "^6.0.0",
+    "uuid": "^9.0.0",
+    "winston": "^3.17.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "multi-agent",
+    "AI",
+    "automation",
+    "development",
+    "coordination"
+  ],
+  "author": "Multi-Agent System",
+  "license": "MIT"
+}

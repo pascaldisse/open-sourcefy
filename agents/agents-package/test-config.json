@@ -1,0 +1,51 @@
+{
+  "projectName": "example-project",
+  "projectPath": "./",
+  "taskMapping": {
+    "custom_task": [
+      1,
+      2
+    ],
+    "analysis": [
+      11,
+      16
+    ],
+    "compilation": [
+      7,
+      8,
+      9
+    ]
+  },
+  "agentOverrides": {
+    "1": {
+      "systemPrompt": "You are a specialized testing agent focused on unit tests and TDD.",
+      "capabilities": [
+        "test_driven_development",
+        "mocking",
+        "coverage_analysis"
+      ]
+    },
+    "2": {
+      "systemPrompt": "You are a documentation expert specializing in API documentation.",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "WebFetch"
+      ]
+    }
+  },
+  "conditions": [
+    {
+      "id": "all_tests_pass",
+      "type": "boolean",
+      "check": "all_tests_pass",
+      "description": "All unit tests must pass"
+    },
+    {
+      "id": "documentation_complete",
+      "type": "llm_validated",
+      "description": "Documentation is comprehensive and up-to-date"
+    }
+  ],
+  "systemPrompt": "This is a custom multi-agent system for the example project. Focus on quality and thorough testing."
+}

@@ -1,0 +1,64 @@
+{
+  "projectName": "open-sourcefy-binary-reconstruction",
+  "projectType": "python",
+  "projectPath": "/mnt/c/Users/pascaldisse/Downloads/open-sourcefy",
+  "systemPrompt": "You are the master coordinator for a critical binary reconstruction mission. The Matrix pipeline has achieved 99% size accuracy but 0% hash match. Your mission: coordinate 16 specialized agents to achieve 100% binary-identical reconstruction by fixing section padding, compiler metadata preservation, and resource layout issues.",
+  "taskMapping": {
+    "binary_reconstruction": [1, 9, 7, 10],
+    "section_padding": [9, 4],
+    "metadata_preservation": [1, 9],
+    "resource_layout": [7, 9],
+    "validation": [10, 15, 16],
+    "analysis": [1, 2, 15],
+    "compilation": [9, 8]
+  },
+  "agentOverrides": {
+    "1": {
+      "systemPrompt": "You are Agent 1 (Sentinel) - Expert in binary analysis and metadata extraction. Your mission: Extract and preserve exact compiler metadata, debug sections, and symbol tables from the original binary to eliminate hash differences. Focus on non-executable sections causing the 0% hash match.",
+      "specialization": "Binary metadata extraction and preservation"
+    },
+    "7": {
+      "systemPrompt": "You are Agent 7 (Keymaker) - Resource reconstruction specialist. Your mission: Preserve exact resource section layout, disable resource optimization, and maintain original offset positions. The 52,675 byte size difference must be eliminated through exact resource layout preservation.",
+      "specialization": "Resource section layout preservation"
+    },
+    "9": {
+      "systemPrompt": "You are Agent 9 (The Machine) - Compilation system master. Your mission: Implement exact section padding preservation, disable compiler optimizations causing layout changes, and integrate metadata from Agent 1. Use compiler flags to match original binary structure exactly.",
+      "specialization": "Section padding and compiler metadata integration"
+    },
+    "10": {
+      "systemPrompt": "You are Agent 10 (Twins) - Binary comparison expert. Your mission: Provide byte-level diff analysis, identify specific sections causing hash mismatch, and validate reconstruction progress. Generate detailed reports on remaining structural differences.",
+      "specialization": "Binary diff analysis and validation"
+    }
+  },
+  "conditions": [
+    {
+      "type": "boolean", 
+      "description": "Binary size matches exactly (5,267,456 bytes)",
+      "check": "binary_size === 5267456"
+    },
+    {
+      "type": "llm_validated",
+      "description": "Hash match improves from 0% to 90%+",
+      "validation_prompt": "Assess if binary hash comparison shows significant improvement from 0% baseline"
+    },
+    {
+      "type": "boolean",
+      "description": "Section padding preserved correctly", 
+      "check": "section_padding_preserved === true"
+    },
+    {
+      "type": "llm_validated",
+      "description": "Compiler metadata preserved accurately",
+      "validation_prompt": "Verify that debug sections, symbol tables, and compiler artifacts are preserved"
+    }
+  ],
+  "priority": "critical",
+  "mission_objectives": [
+    "Fix 0% hash match to achieve 90%+ binary similarity",
+    "Eliminate 52,675 byte size difference (5,267,456 target)",
+    "Preserve exact section padding and alignment",
+    "Implement compiler metadata preservation",
+    "Maintain resource section layout exactly",
+    "Achieve binary-identical reconstruction capability"
+  ]
+}

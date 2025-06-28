@@ -1,0 +1,73 @@
+{
+  "projectName": "Source Code Modification & Windows Execution Mission",
+  "projectType": "source_modification_execution",
+  "projectPath": "/mnt/c/Users/pascaldisse/Downloads/open-sourcefy",
+  "systemPrompt": "Modify source code with logging and Matrix EULA, recompile clean, copy to C:\\\\Mac\\\\Home\\\\Downloads\\\\MxO_7.6005, and execute with verification. Ensure all steps work perfectly.",
+  "taskMapping": {
+    "source_modification": [
+      7,
+      9
+    ],
+    "compilation": [
+      9
+    ],
+    "deployment": [
+      8
+    ],
+    "execution": [
+      8,
+      15
+    ],
+    "logging": [
+      15
+    ],
+    "eula_verification": [
+      10,
+      15
+    ],
+    "debugging": [
+      3
+    ]
+  },
+  "agentOverrides": {
+    "3": {
+      "systemPrompt": "Debug any issues with source modification, compilation, or execution. Fix all problems until perfect functionality.",
+      "specialization": "Complete debugging and issue resolution"
+    },
+    "7": {
+      "systemPrompt": "Review and modify source code to add comprehensive logging and Matrix EULA. Ensure code quality and functionality.",
+      "specialization": "Source code modification and review"
+    },
+    "8": {
+      "systemPrompt": "Manage deployment to C:\\\\Mac\\\\Home\\\\Downloads\\\\MxO_7.6005 and execution. Ensure proper environment and execution success.",
+      "specialization": "Deployment and execution management"
+    },
+    "9": {
+      "systemPrompt": "Recompile source code with clean build. Ensure perfect compilation with all logging and EULA modifications.",
+      "specialization": "Clean compilation and build management"
+    },
+    "10": {
+      "systemPrompt": "Verify Matrix EULA appears correctly during execution. Monitor security and EULA display functionality.",
+      "specialization": "EULA verification and security monitoring"
+    },
+    "15": {
+      "systemPrompt": "Monitor all logging output and execution traces. Verify debug logs and EULA logs are generated correctly.",
+      "specialization": "Comprehensive logging and execution monitoring"
+    }
+  },
+  "execution_steps": [
+    "Modify source code with logging and Matrix EULA",
+    "Recompile with clean build",
+    "Copy to C:\\\\Mac\\\\Home\\\\Downloads\\\\MxO_7.6005",
+    "Execute and verify logging",
+    "Verify Matrix EULA display"
+  ],
+  "success_criteria": {
+    "source_modified": true,
+    "clean_compilation": true,
+    "proper_deployment": true,
+    "successful_execution": true,
+    "logs_generated": true,
+    "eula_displayed": true
+  }
+}

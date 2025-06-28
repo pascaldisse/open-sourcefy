@@ -1,0 +1,65 @@
+{
+  "projectName": "Windows Execution & EULA Verification Mission",
+  "projectType": "windows_execution",
+  "projectPath": "/mnt/c/Users/pascaldisse/Downloads/open-sourcefy",
+  "systemPrompt": "Execute launcher.exe on Windows with comprehensive logging and verify Matrix EULA displays correctly. Debug any execution issues and ensure perfect functionality.",
+  "taskMapping": {
+    "windows_execution": [
+      8,
+      10,
+      15
+    ],
+    "eula_verification": [
+      10,
+      15
+    ],
+    "debug_logging": [
+      15
+    ],
+    "error_fixing": [
+      3,
+      8
+    ],
+    "monitoring": [
+      15
+    ]
+  },
+  "agentOverrides": {
+    "3": {
+      "systemPrompt": "Debug and fix any Windows execution issues with launcher.exe. Analyze error logs and resolve compatibility problems.",
+      "specialization": "Windows execution debugging and error resolution"
+    },
+    "8": {
+      "systemPrompt": "Manage deployment and execution of launcher.exe on Windows. Ensure proper environment setup and execution monitoring.",
+      "specialization": "Windows deployment and execution management"
+    },
+    "10": {
+      "systemPrompt": "Verify Matrix EULA replacement is working correctly. Monitor for EULA display and validate security aspects of execution.",
+      "specialization": "EULA verification and security monitoring"
+    },
+    "15": {
+      "systemPrompt": "Provide comprehensive logging and monitoring of launcher.exe execution. Track all events, errors, and EULA display.",
+      "specialization": "Execution monitoring and comprehensive logging"
+    }
+  },
+  "conditions": [
+    {
+      "type": "windows_execution",
+      "description": "Launcher.exe must execute successfully on Windows",
+      "required_value": "success"
+    },
+    {
+      "type": "eula_display",
+      "description": "Matrix EULA must display correctly",
+      "required_value": "Matrix Digital Agreement"
+    },
+    {
+      "type": "debug_logging",
+      "description": "Comprehensive execution logs must be generated",
+      "required_value": "complete"
+    }
+  ],
+  "missionStatus": "ACTIVE",
+  "executionTarget": "windows_compatibility",
+  "eulaTarget": "Matrix Digital Agreement"
+}

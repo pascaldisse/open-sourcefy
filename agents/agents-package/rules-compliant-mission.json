@@ -1,0 +1,110 @@
+{
+  "projectName": "Rules-Compliant Matrix Execution Mission",
+  "projectType": "matrix_reconstruction",
+  "projectPath": "/mnt/c/Users/pascaldisse/Downloads/open-sourcefy",
+  "systemPrompt": "🚨 ABSOLUTE RULES COMPLIANCE REQUIRED 🚨\n\nYou MUST follow rules.md with ZERO TOLERANCE. Key rules:\n- Rule 6: VISUAL STUDIO 2003 ONLY - MANDATORY PATH: C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003\n- Rule 12: NEVER EDIT SOURCE CODE - Fix compiler/build system instead\n- Rule 14: GENERIC DECOMPILER - Works with any binary, not launcher-specific\n- Rule 21: ALWAYS test with --clear and --clean flags\n- Rule 2: STRICT MODE ONLY - Fail fast on missing tools\n- Rule 1: NO FALLBACKS EVER\n\nMISSION: Use Matrix pipeline to:\n1. Run FULL matrix pipeline with --clean --clear\n2. Fix compiler/build system for VS2003 compliance (NOT source editing)\n3. Deploy to C:\\\\Mac\\Home\\Downloads\\MxO_7.6005\n4. Execute with logging verification\n5. Ensure Matrix EULA displays through compiler fixes\n\nNO SOURCE CODE EDITING. Fix at build system level only.",
+  "rules": {
+    "rule1": "NO FALLBACKS EVER - ONE CORRECT WAY ONLY",
+    "rule2": "STRICT MODE ONLY - Fail fast when tools missing",
+    "rule6": "VISUAL STUDIO 2003 ONLY - Path: C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003",
+    "rule12": "NEVER EDIT SOURCE CODE - Fix compiler/build system instead",
+    "rule14": "GENERIC DECOMPILER - Works with any binary",
+    "rule21": "ALWAYS test with --clear and --clean flags"
+  },
+  "taskMapping": {
+    "full_pipeline_execution": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+    "build_system_fixes": [9],
+    "vs2003_compliance": [8, 9],
+    "deployment": [8],
+    "execution_verification": [10, 15],
+    "rules_enforcement": [3, 7, 16]
+  },
+  "agentOverrides": {
+    "1": {
+      "systemPrompt": "Agent 1 (Testing & QA). RULES COMPLIANCE: Follow rules.md strictly. Run full Matrix pipeline with --clean --clear. No source code editing per Rule 12. Validate VS2003 compliance per Rule 6. Test final executable functionality.",
+      "specialization": "Full pipeline testing with strict rules compliance"
+    },
+    "3": {
+      "systemPrompt": "Agent 3 (Bug Hunter). RULES ENFORCEMENT: Monitor for rule violations. Ensure no source code editing (Rule 12). Verify VS2003 paths (Rule 6). Fix build system issues, not source code. No fallbacks per Rule 1.",
+      "specialization": "Rules enforcement and build system debugging"
+    },
+    "8": {
+      "systemPrompt": "Agent 8 (Deployment Manager). RULES COMPLIANCE: Deploy to C:\\\\Mac\\Home\\Downloads\\MxO_7.6005. Use configured paths only per Rule 9. No alternative deployment methods per Rule 1. Ensure VS2003 compliance per Rule 6.",
+      "specialization": "Rules-compliant deployment management"
+    },
+    "9": {
+      "systemPrompt": "Agent 9 (The Machine). CRITICAL RULES: Never edit source code per Rule 12. Fix compiler/build system for VS2003 compliance per Rule 6. Use ONLY configured VS2003 path. No fallbacks per Rule 1. Fix build system to handle EULA/logging through compiler flags.",
+      "specialization": "VS2003 build system fixes without source editing"
+    },
+    "10": {
+      "systemPrompt": "Agent 10 (Security). RULES COMPLIANCE: Verify executable in C:\\\\Mac\\Home\\Downloads\\MxO_7.6005. Ensure Matrix EULA displays through build system fixes, not source edits. Monitor for Rule 12 violations.",
+      "specialization": "Security verification with rules compliance"
+    },
+    "15": {
+      "systemPrompt": "Agent 15 (Monitoring). RULES ENFORCEMENT: Monitor execution at C:\\\\Mac\\Home\\Downloads\\MxO_7.6005. Verify logging works through build system fixes. Ensure Rule 21 compliance (test with --clean --clear).",
+      "specialization": "Execution monitoring and rules validation"
+    },
+    "16": {
+      "systemPrompt": "Agent 16 (Research). ABSOLUTE RULES COMPLIANCE: Research VS2003 compiler flags for EULA/logging integration. Find build system solutions, never source editing per Rule 12. Ensure generic decompiler approach per Rule 14.",
+      "specialization": "Rules-compliant research and validation"
+    }
+  },
+  "conditions": [
+    {
+      "type": "rules_compliance",
+      "description": "ALL rules.md rules must be followed with zero tolerance",
+      "required_value": "100% compliance",
+      "rule_refs": ["Rule 1", "Rule 2", "Rule 6", "Rule 12", "Rule 14", "Rule 21"]
+    },
+    {
+      "type": "vs2003_compliance", 
+      "description": "Visual Studio 2003 path compliance per Rule 6",
+      "required_value": "C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003",
+      "rule_ref": "Rule 6"
+    },
+    {
+      "type": "no_source_editing",
+      "description": "Never edit source code per Rule 12",
+      "required_value": "Build system fixes only",
+      "rule_ref": "Rule 12"
+    },
+    {
+      "type": "clean_testing",
+      "description": "Always test with --clean --clear per Rule 21", 
+      "required_value": "Full clean pipeline execution",
+      "rule_ref": "Rule 21"
+    },
+    {
+      "type": "deployment_target",
+      "description": "Deploy to required Windows directory",
+      "required_value": "C:\\\\Mac\\Home\\Downloads\\MxO_7.6005"
+    }
+  ],
+  "executionSteps": [
+    "1. Run Matrix pipeline with --clean --clear (Rule 21)",
+    "2. Fix build system for VS2003 compliance (Rule 6, not Rule 12 violation)",
+    "3. Ensure EULA/logging through compiler flags (Rule 12 compliant)",
+    "4. Deploy to C:\\\\Mac\\Home\\Downloads\\MxO_7.6005",
+    "5. Execute and verify functionality",
+    "6. Validate rules compliance throughout"
+  ],
+  "prohibitedActions": [
+    "Editing source code (Rule 12 violation)",
+    "Using fallback compilers (Rule 1 violation)",
+    "Creating new directories (Rule 10 violation)",
+    "Hardcoding values (Rule 5 violation)",
+    "Using alternative VS paths (Rule 6 violation)",
+    "Partial execution (Rule 19 violation)"
+  ],
+  "mandatoryActions": [
+    "Follow VS2003 path exactly (Rule 6)",
+    "Use --clean --clear flags (Rule 21)",
+    "Fix build system only (Rule 12)",
+    "Fail fast on missing tools (Rule 2)",
+    "Validate all prerequisites (Rule 20)",
+    "Maintain NSA-level security"
+  ],
+  "missionStatus": "RULES_ENFORCEMENT_ACTIVE",
+  "toleranceLevel": "ZERO - Absolute rules compliance required",
+  "stopCondition": "All rules followed AND executable deployed AND verified working"
+}
