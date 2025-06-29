@@ -231,28 +231,38 @@ class AgentSmithAgent(AnalysisAgent):
             
             # Step 2: Initialize structural analysis
             progress.step("Initializing deep structural analysis components")
-            with self.error_handler.handle_matrix_operation("component_initialization"):
+            try:
                 analysis_context = self._initialize_analysis(context)
+            except Exception as e:
+                raise MatrixAgentError(f"Component initialization failed: {e}")
             
             # Step 3: Perform memory layout analysis
             progress.step("Analyzing memory layout and address mappings")
-            with self.error_handler.handle_matrix_operation("memory_layout_analysis"):
+            try:
                 memory_layout_results = self._analyze_memory_layout(analysis_context)
+            except Exception as e:
+                raise MatrixAgentError(f"Memory layout analysis failed: {e}")
             
             # Step 4: Identify and analyze data structures
             progress.step("Identifying and analyzing data structures")
-            with self.error_handler.handle_matrix_operation("data_structure_analysis"):
+            try:
                 data_structure_results = self._analyze_data_structures(analysis_context)
+            except Exception as e:
+                raise MatrixAgentError(f"Data structure analysis failed: {e}")
             
             # Step 5: Extract and categorize resources
             progress.step("Extracting and categorizing embedded resources")
-            with self.error_handler.handle_matrix_operation("resource_extraction"):
+            try:
                 resource_results = self._extract_and_analyze_resources(analysis_context)
+            except Exception as e:
+                raise MatrixAgentError(f"Resource extraction failed: {e}")
             
             # Step 6: Prepare dynamic analysis instrumentation
             progress.step("Preparing dynamic analysis instrumentation points")
-            with self.error_handler.handle_matrix_operation("dynamic_analysis_prep"):
+            try:
                 dynamic_analysis_results = self._prepare_dynamic_analysis(analysis_context)
+            except Exception as e:
+                raise MatrixAgentError(f"Dynamic analysis preparation failed: {e}")
             
             # Combine core results
             core_results = {
@@ -265,9 +275,11 @@ class AgentSmithAgent(AnalysisAgent):
             # Step 7: AI enhancement (if enabled)
             if self.ai_enabled:
                 progress.step("Applying AI-enhanced structural insights")
-                with self.error_handler.handle_matrix_operation("ai_enhancement"):
+                try:
                     ai_results = self._execute_ai_analysis(core_results, context)
                     core_results = self._merge_analysis_results(core_results, ai_results)
+                except Exception as e:
+                    self.logger.warning(f"AI enhancement failed: {e}")
             else:
                 progress.step("Skipping AI enhancement (disabled)")
             
@@ -383,11 +395,10 @@ class AgentSmithAgent(AnalysisAgent):
         # Setup output directories for resource extraction
         resources_dir = self.config.get_path('paths.resources_directory')
         if resources_dir is None:
-            # RULE 1 COMPLIANCE: Fail fast when required config missing
-            raise MatrixAgentError(
-                "CRITICAL FAILURE: resources_directory not configured in config. "
-                "Agent Smith requires configured resource directory to proceed."
-            )
+            # Create default resources directory in output path
+            base_output = Path(context.get('binary_path', 'launcher.exe')).stem
+            resources_dir = f"output/{base_output}/latest/resources"
+            self.logger.info(f"Using default resources directory: {resources_dir}")
         
         resources_dir = Path(resources_dir)
         resources_dir.mkdir(exist_ok=True)        

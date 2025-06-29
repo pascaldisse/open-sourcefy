@@ -100,8 +100,12 @@ class GhidraHeadless:
         """
         Get the path to analyzeHeadless script
         """
-        script_name = "analyzeHeadless.bat" if os.name == 'nt' else "analyzeHeadless"
-        return os.path.join(self.ghidra_home, "support", script_name)
+        if os.name == 'nt':
+            # Windows path structure
+            return os.path.join(self.ghidra_home, "Ghidra", "RuntimeScripts", "Windows", "support", "analyzeHeadless.bat")
+        else:
+            # Linux/Unix path structure
+            return os.path.join(self.ghidra_home, "Ghidra", "RuntimeScripts", "Linux", "support", "analyzeHeadless")
 
     def _setup_community_scripts(self) -> str:
         """

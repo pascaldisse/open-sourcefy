@@ -7,8 +7,8 @@
 # STRICT MODE ONLY - FAIL FAST WHEN TOOLS ARE MISSING
 
 build_system:
-  # PRIMARY BUILD CONFIGURATION - Visual Studio 2022 Preview
-  default_system: "msbuild_vs2022"
+  # PRIMARY BUILD CONFIGURATION - Visual Studio .NET 2003 (MANDATORY PER RULE 6)
+  default_system: "vs2003"
   enforce_default: true  # Never use fallbacks - NO FALLBACKS EVER
   allow_fallbacks: false  # Strict mode - NO FALLBACKS, NO ALTERNATIVES, NO DEGRADATION
   
@@ -50,40 +50,39 @@ build_system:
         - "/mnt/c/Program Files (x86)/Windows Kits/10/Lib/10.0.26100.0/um/x86"
   
   # VISUAL STUDIO 2003 PATHS (PRIMARY COMPILER FOR 100% FUNCTIONAL IDENTITY)
-  # MANDATORY PATH: C:\Users\pascaldisse\Downloads\Visual Studio .NET 2003
-  # ABSOLUTE REQUIREMENT: C:\Users\pascaldisse\Downloads\Visual Studio .NET 2003
-  # NO ALTERNATIVES: C:\Users\pascaldisse\Downloads\Visual Studio .NET 2003
+  # MANDATORY PATH: Check C:\Program Files\Microsoft Visual Studio .NET 2003
+  # NOTE: VS2003 installation required, not just installer files
   visual_studio_2003:
     version: "2003"
-    base_path: "C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003\\Visual Studio .NET 2003\\Program Files\\Microsoft Visual Studio .NET 2003"
-    vc7_tools_path: "C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003\\Visual Studio .NET 2003\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7"
+    base_path: "C:\\Program Files\\Microsoft Visual Studio .NET 2003"
+    vc7_tools_path: "C:\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7"
     framework_path: "C:\\WINDOWS\\Microsoft.NET\\Framework\\v1.1.4322"
     
     # COMPILER PATHS (VS2003) - PRIMARY FOR EXACT BINARY REPRODUCTION
     compiler:
-      x86: "C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003\\Visual Studio .NET 2003\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\bin\\cl.exe"
+      x86: "C:\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\bin\\cl.exe"
       # Note: VS2003 only supports x86, no x64 target
     
     # LINKER PATHS (VS2003)
     linker:
-      x86: "C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003\\Visual Studio .NET 2003\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\bin\\link.exe"
+      x86: "C:\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\bin\\link.exe"
     
     # ANALYSIS TOOLS (VS2003) 
     tools:
-      dumpbin: "C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003\\Visual Studio .NET 2003\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\bin\\dumpbin.exe"
+      dumpbin: "C:\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\bin\\dumpbin.exe"
     
     # INCLUDE DIRECTORIES (VS2003)
     includes:
-      - "C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003\\Visual Studio .NET 2003\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\include"
-      - "C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003\\Visual Studio .NET 2003\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\atlmfc\\include"
-      - "C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003\\Visual Studio .NET 2003\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\PlatformSDK\\Include"
+      - "C:\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\include"
+      - "C:\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\atlmfc\\include"
+      - "C:\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\PlatformSDK\\Include"
     
     # LIBRARY DIRECTORIES (VS2003)
     libraries:
       x86:
-        - "C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003\\Visual Studio .NET 2003\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\lib"
-        - "C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003\\Visual Studio .NET 2003\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\atlmfc\\lib"
-        - "C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003\\Visual Studio .NET 2003\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\PlatformSDK\\Lib"
+        - "C:\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\lib"
+        - "C:\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\atlmfc\\lib"
+        - "C:\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\PlatformSDK\\Lib"
   
   # BUILD SYSTEM CONFIGURATION
   msbuild:
@@ -95,8 +94,8 @@ build_system:
   
   # VS2003 BUILD SYSTEM (USES DEVENV, NOT MSBUILD)
   vs2003_build:
-    devenv_path: "C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003\\Visual Studio .NET 2003\\Program Files\\Microsoft Visual Studio .NET 2003\\Common7\\IDE\\devenv.com"
-    nmake_path: "C:\\Users\\pascaldisse\\Downloads\\Visual Studio .NET 2003\\Visual Studio .NET 2003\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\bin\\nmake.exe"
+    devenv_path: "C:\\Program Files\\Microsoft Visual Studio .NET 2003\\Common7\\IDE\\devenv.com"
+    nmake_path: "C:\\Program Files\\Microsoft Visual Studio .NET 2003\\Vc7\\bin\\nmake.exe"
     
     # MSBuild Configuration
     default_configuration: "Release"

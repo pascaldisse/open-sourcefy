@@ -31,6 +31,7 @@ paths:
   temp_directory: "./temp"
   output_directory: "./output"
   ghidra_home: "./ghidra"
+  resources_directory: "./output/resources"
 
 # Ghidra Configuration
 ghidra:
@@ -38,6 +39,9 @@ ghidra:
   timeout: 600
   headless_script_timeout: 300
   java_heap_size: "4G"
+  # Windows-specific paths
+  analyzeHeadless_script: "./ghidra/Ghidra/RuntimeScripts/Windows/support/analyzeHeadless.bat"
+  support_directory: "./ghidra/Ghidra/RuntimeScripts/Windows/support"
 
 # Build System Configuration - REFERENCES build_config.yaml
 build:

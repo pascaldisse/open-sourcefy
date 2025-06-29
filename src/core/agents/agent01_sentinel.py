@@ -959,6 +959,51 @@ Provide:
                 self.matrix_character.value, 
                 results
             )
+        else:
+            # Create cache files directly for downstream agents
+            self._create_cache_files(results, context)
+
+    def _create_cache_files(self, results: Dict[str, Any], context: Dict[str, Any]) -> None:
+        """Create cache files directly when output manager is not available"""
+        try:
+            import json
+            from pathlib import Path
+            
+            # Create output directory structure
+            output_dir = Path("output/launcher/latest/agents/agent_01")
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Save main results file
+            results_file = output_dir / "agent_01_results.json"
+            with open(results_file, 'w') as f:
+                json.dump(results, f, indent=2, default=str)
+            
+            # Save specific cache files that Agent 2 looks for
+            binary_metadata = results.get('binary_metadata')
+            if binary_metadata:
+                binary_cache = {
+                    'binary_format': binary_metadata.format_type,
+                    'architecture': binary_metadata.architecture,
+                    'file_size': binary_metadata.file_size,
+                    'entry_point': binary_metadata.entry_point,
+                    'base_address': binary_metadata.base_address
+                }
+                
+                binary_file = output_dir / "binary_analysis_cache.json"
+                with open(binary_file, 'w') as f:
+                    json.dump(binary_cache, f, indent=2)
+            
+            # Save import analysis cache
+            import_data = results.get('import_analysis', {})
+            if import_data:
+                import_file = output_dir / "import_analysis_cache.json"
+                with open(import_file, 'w') as f:
+                    json.dump(import_data, f, indent=2)
+            
+            self.logger.info(f"Created cache files in {output_dir}")
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to create cache files: {e}")
     
     def _populate_shared_memory(self, results: Dict[str, Any], context: Dict[str, Any]) -> None:
         """Populate shared memory with Sentinel analysis for other agents"""

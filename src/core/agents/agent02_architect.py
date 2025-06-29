@@ -350,8 +350,12 @@ class ArchitectAgent(AnalysisAgent):
         if 'binary_metadata' not in shared_memory:
             shared_memory['binary_metadata'] = {}
         
-        # Validate dependencies using cache-based approach
-        dependency_met = self._load_sentinel_cache_data(context)
+        # Check shared_memory first, then fall back to cache files
+        dependency_met = self._check_shared_memory_data(context)
+        
+        if not dependency_met:
+            # Try loading from cache files as fallback
+            dependency_met = self._load_sentinel_cache_data(context)
         
         if not dependency_met:
             # RULE 1 COMPLIANCE: Fail fast when dependencies not met
@@ -847,6 +851,31 @@ class ArchitectAgent(AnalysisAgent):
             'architect_confidence': results['architect_metadata']['quality_score']
         }
     
+    def _check_shared_memory_data(self, context: Dict[str, Any]) -> bool:
+        """Check if Sentinel data is available in shared memory"""
+        try:
+            shared_memory = context.get('shared_memory', {})
+            
+            # Check if Agent 1 results are in shared memory
+            analysis_results = shared_memory.get('analysis_results', {})
+            if 1 in analysis_results:
+                self.logger.info("Found Agent 1 data in shared memory")
+                return True
+            
+            # Check if binary_metadata has discovery data from Agent 1
+            binary_metadata = shared_memory.get('binary_metadata', {})
+            discovery_data = binary_metadata.get('discovery', {})
+            
+            if discovery_data and 'binary_info' in discovery_data:
+                self.logger.info("Found Agent 1 discovery data in shared memory")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to check shared memory data: {e}")
+            return False
+
     def _load_sentinel_cache_data(self, context: Dict[str, Any]) -> bool:
         """Load Sentinel cache data from output directory"""
         try:

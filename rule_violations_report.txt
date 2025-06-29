@@ -1,0 +1,2803 @@
+🚨 RULE 13 VIOLATIONS DETECTED 🚨
+============================================================
+Found violations in 173 files
+
+Total violations: 808
+
+Violation Summary by Type:
+------------------------------
+  \btodo\b: 173 occurrences
+  \bmock\b: 168 occurrences
+  \bplaceholder\b: 118 occurrences
+  \bmock_\w+: 75 occurrences
+  \bstub\b: 51 occurrences
+  \bfixme\b: 39 occurrences
+  bypass: 28 occurrences
+  \bsimulat[e|ion]\b: 28 occurrences
+  \bdummy\b: 26 occurrences
+  workaround: 18 occurrences
+  \bfake\b: 18 occurrences
+  NotImplemented: 18 occurrences
+  raise NotImplementedError: 15 occurrences
+  \bplaceholder_\w+: 12 occurrences
+  \bstub_\w+: 9 occurrences
+  return.*mock: 9 occurrences
+  \bdummy_\w+: 2 occurrences
+  #.*placeholder: 1 occurrences
+
+Detailed Violations:
+------------------------------
+
+📁 CLAUDE.md (1 violations)
+  Line  232: 3. ✅ Check current todo list status
+             Pattern: \btodo\b
+
+
+📁 agents-extracted/agents-package/docs/DEPLOYMENT.md (1 violations)
+  Line  428: proxy_cache_bypass $http_upgrade;
+             Pattern: bypass
+
+
+📁 agents-extracted/agents-package/examples/10-custom-conditions.js (3 violations)
+  Line   70: // Since we don't have a code generation agent, we'll simulate with Agent 3
+             Pattern: \bsimulat[e|ion]\b
+
+  Line   73: type: 'bug_fixing' // Using bug hunter to simulate
+             Pattern: \bsimulat[e|ion]\b
+
+  Line  129: // Simulate context for condition evaluation
+             Pattern: \bsimulat[e|ion]\b
+
+
+📁 agents-extracted/agents-package/examples/13-dashboard-demo.js (1 violations)
+  Line   50: // Simulate various activities for dashboard visualization
+             Pattern: \bsimulat[e|ion]\b
+
+
+📁 agents-extracted/agents-package/examples/14-learning-demo.js (1 violations)
+  Line  148: // Simulate performance degradation and adaptation
+             Pattern: \bsimulat[e|ion]\b
+
+
+📁 agents-extracted/agents-package/src/agents/agent-1.js (1 violations)
+  Line   78: - Mock external dependencies appropriately
+             Pattern: \bmock\b
+
+
+📁 agents-extracted/agents-package/src/agents/agent-4.js (1 violations)
+  Line   76: - TODO/FIXME Comments: Future improvements and known issues
+             Pattern: \btodo\b
+
+
+📁 agents-extracted/agents-package/src/core/intervention-system.js (1 violations)
+  Line  657: // Placeholder methods for remaining recovery steps
+             Pattern: \bplaceholder\b
+
+
+📁 agents/agents-package/docs/DEPLOYMENT.md (1 violations)
+  Line  428: proxy_cache_bypass $http_upgrade;
+             Pattern: bypass
+
+
+📁 agents/agents-package/examples/10-custom-conditions.js (3 violations)
+  Line   70: // Since we don't have a code generation agent, we'll simulate with Agent 3
+             Pattern: \bsimulat[e|ion]\b
+
+  Line   73: type: 'bug_fixing' // Using bug hunter to simulate
+             Pattern: \bsimulat[e|ion]\b
+
+  Line  129: // Simulate context for condition evaluation
+             Pattern: \bsimulat[e|ion]\b
+
+
+📁 agents/agents-package/examples/13-dashboard-demo.js (1 violations)
+  Line   50: // Simulate various activities for dashboard visualization
+             Pattern: \bsimulat[e|ion]\b
+
+
+📁 agents/agents-package/examples/14-learning-demo.js (1 violations)
+  Line  148: // Simulate performance degradation and adaptation
+             Pattern: \bsimulat[e|ion]\b
+
+
+📁 agents/agents-package/src/agents/agent-1.js (1 violations)
+  Line   78: - Mock external dependencies appropriately
+             Pattern: \bmock\b
+
+
+📁 agents/agents-package/src/agents/agent-4.js (1 violations)
+  Line   76: - TODO/FIXME Comments: Future improvements and known issues
+             Pattern: \btodo\b
+
+
+📁 agents/agents-package/src/core/intervention-system.js (1 violations)
+  Line  657: // Placeholder methods for remaining recovery steps
+             Pattern: \bplaceholder\b
+
+
+📁 auto_pipeline_fixer.py (1 violations)
+  Line  235: - NO MOCK IMPLEMENTATIONS - real solutions only
+             Pattern: \bmock\b
+
+
+📁 build_config.yaml (1 violations)
+  Line    6: # NEVER USE FALLBACK PATHS, MOCK IMPLEMENTATIONS, OR WORKAROUNDS
+             Pattern: \bmock\b
+
+
+📁 direct_matrix_launcher.py (3 violations)
+  Line    3: Direct Matrix launcher creation - bypass agents and create manually
+             Pattern: bypass
+
+  Line   87: // Simulate application initialization
+             Pattern: \bsimulat[e|ion]\b
+
+  Line   99: // Simulate main application logic
+             Pattern: \bsimulat[e|ion]\b
+
+
+📁 docs/Developer-Guide.md (2 violations)
+  Line  146: raise NotImplementedError("Agents must implement execute_matrix_task")
+             Pattern: raise NotImplementedError
+
+  Line  150: raise NotImplementedError("Agents must implement _validate_prerequisites")
+             Pattern: raise NotImplementedError
+
+
+📁 docs/Security-Standards.md (1 violations)
+  Line   93: b'This program cannot be run in DOS mode',  # DOS stub
+             Pattern: \bstub\b
+
+
+📁 enhance_binary_padding.py (2 violations)
+  Line   21: debug_data.extend(struct.pack("<I", 0x0))   # Virtual address (placeholder)
+             Pattern: \bplaceholder\b
+
+  Line   23: debug_data.extend(struct.pack("<I", 0x0))   # Pointer to raw data (placeholder)
+             Pattern: \bplaceholder\b
+
+
+📁 find_violations.py (27 violations)
+  Line    4: Searches the entire Matrix pipeline for violations of Rule 13 (No Placeholder Code)
+             Pattern: \bplaceholder\b
+
+  Line    5: and other mock/fake/placeholder implementations.
+             Pattern: \bmock\b
+
+  Line   30: # Simulation/bypass patterns
+             Pattern: bypass
+
+  Line   34: r'bypass',
+             Pattern: bypass
+
+  Line   35: r'workaround',
+             Pattern: workaround
+
+  Line   37: # Return value patterns that suggest placeholders
+             Pattern: #.*placeholder
+
+  Line   38: r'return 0;?\s*//.*placeholder',
+             Pattern: \bplaceholder\b
+
+  Line   39: r'return 1;?\s*//.*placeholder',
+             Pattern: \bplaceholder\b
+
+  Line   40: r'return.*success.*placeholder',
+             Pattern: \bplaceholder\b
+
+  Line   41: r'return.*fake',
+             Pattern: \bfake\b
+
+  Line   42: r'return.*mock',
+             Pattern: \bmock\b
+
+  Line   45: r'//.*placeholder',
+             Pattern: \bplaceholder\b
+
+  Line   46: r'//.*mock',
+             Pattern: \bmock\b
+
+  Line   47: r'//.*fake',
+             Pattern: \bfake\b
+
+  Line   48: r'//.*stub',
+             Pattern: \bstub\b
+
+  Line   49: r'//.*todo',
+             Pattern: \btodo\b
+
+  Line   50: r'//.*fixme',
+             Pattern: \bfixme\b
+
+  Line   51: r'#.*placeholder',
+             Pattern: \bplaceholder\b
+
+  Line   52: r'#.*mock',
+             Pattern: \bmock\b
+
+  Line   53: r'#.*fake',
+             Pattern: \bfake\b
+
+  Line   63: r'raise NotImplementedError',
+             Pattern: raise NotImplementedError
+
+  Line   64: r'pass\s*#.*placeholder',
+             Pattern: \bplaceholder\b
+
+  Line   65: r'pass\s*#.*todo',
+             Pattern: \btodo\b
+
+  Line   66: r'NotImplemented',
+             Pattern: NotImplemented
+
+  Line  134: return "✅ No Rule 13 violations found! All placeholder/mock/fake code has been eliminated."
+             Pattern: \bmock\b
+
+  Line  173: report.append("Rule 13: NO PLACEHOLDER CODE - no mock/fake/stub implementations")
+             Pattern: \bmock\b
+
+  Line  185: print("Searching for: mock, fake, placeholder, stub, simulation patterns...")
+             Pattern: \bmock\b
+
+
+📁 ghidra/DevGuide.md (2 violations)
+  Line  101: access to the editable PyGhidra module, as well as the typing/stub information. From Eclipse
+             Pattern: \bstub\b
+
+  Line  406: if a non-English system locale is being used. As a workaround, set the following environment
+             Pattern: workaround
+
+
+📁 ghidra/GPL/DemanglerGnu/src/demangler_gnu_v2_24/c/alloca.c (4 violations)
+  Line  113: static char *addr = NULL;	/* Address of first `dummy', once known.  */
+             Pattern: \bdummy\b
+
+  Line  114: auto char dummy;		/* To get stack address.  */
+             Pattern: \bdummy\b
+
+  Line  118: addr = ADDRESS_FUNCTION (dummy);
+             Pattern: \bdummy\b
+
+  Line  125: if (ADDRESS_FUNCTION (dummy) > addr)
+             Pattern: \bdummy\b
+
+
+📁 ghidra/GPL/DemanglerGnu/src/demangler_gnu_v2_24/c/cp-demangle.c (8 violations)
+  Line  203: FIXME: Is this really a valid reason?  This comes from the original
+             Pattern: \bfixme\b
+
+  Line 1944: /* We don't display the offset.  FIXME: We should display
+             Pattern: \bfixme\b
+
+  Line 2026: We don't display the offset information anywhere.  FIXME: We should
+             Pattern: \bfixme\b
+
+  Line 2206: FIXME: The ABI says that order-insensitive vendor qualifiers
+             Pattern: \bfixme\b
+
+  Line 2594: FIXME: We should print it in verbose mode.  */
+             Pattern: \bfixme\b
+
+  Line 3229: /* Workaround for G++ bug; see comment in write_template_arg.  */
+             Pattern: workaround
+
+  Line 3340: We demangle the discriminator, but we don't print it out.  FIXME:
+             Pattern: \bfixme\b
+
+  Line 5012: to deal with it here.  FIXME.  */
+             Pattern: \bfixme\b
+
+
+📁 ghidra/GPL/DemanglerGnu/src/demangler_gnu_v2_24/c/cplus-dem.c (8 violations)
+  Line   96: marker symbol (FIXME).  */
+             Pattern: \bfixme\b
+
+  Line 1208: string_prepend (&decl, "import stub for ");
+             Pattern: \bstub\b
+
+  Line 2051: /* FIXME: Pointer-to-member constants should get a
+             Pattern: \bfixme\b
+
+  Line 2404: /* FIXME: maybe this should fail and return null */
+             Pattern: \bfixme\b
+
+  Line 2450: /* FIXME: We handle only numeric literals for HP cfront */
+             Pattern: \bfixme\b
+
+  Line 3263: Numeric conversion is ASCII dependent (FIXME).
+             Pattern: \bfixme\b
+
+  Line 4081: /* FIXME? Some day we may have 64-bit (or larger :-) ) constants
+             Pattern: \bfixme\b
+
+  Line 4941: static const char *program_version = "1";//TODO ???? VERSION;
+             Pattern: \btodo\b
+
+
+📁 ghidra/GPL/DemanglerGnu/src/demangler_gnu_v2_24/c/safe-ctype.c (1 violations)
+  Line  255: #error "FIXME: write tables for EBCDIC"
+             Pattern: \bfixme\b
+
+
+📁 ghidra/GPL/DemanglerGnu/src/demangler_gnu_v2_24/headers/ansidecl.h (1 violations)
+  Line  431: FIXME: provide a complete autoconf test for buggy enum bitfields.  */
+             Pattern: \bfixme\b
+
+
+📁 ghidra/GPL/DemanglerGnu/src/demangler_gnu_v2_24/headers/demangle.h (2 violations)
+  Line   82: is ARM style. (FIXME?) */
+             Pattern: \bfixme\b
+
+  Line  144: /* Note: This sets global state.  FIXME if you care about multi-threading. */
+             Pattern: \bfixme\b
+
+
+📁 ghidra/GPL/DemanglerGnu/src/demangler_gnu_v2_41/c/alloca.c (4 violations)
+  Line  112: static char *addr = NULL;	/* Address of first `dummy', once known.  */
+             Pattern: \bdummy\b
+
+  Line  113: auto char dummy;		/* To get stack address.  */
+             Pattern: \bdummy\b
+
+  Line  117: addr = ADDRESS_FUNCTION (dummy);
+             Pattern: \bdummy\b
+
+  Line  124: if (ADDRESS_FUNCTION (dummy) > addr)
+             Pattern: \bdummy\b
+
+
+📁 ghidra/GPL/DemanglerGnu/src/demangler_gnu_v2_41/c/cp-demangle.c (11 violations)
+  Line  214: FIXME: Is this really a valid reason?  This comes from the original
+             Pattern: \bfixme\b
+
+  Line 2214: /* We don't display the offset.  FIXME: We should display
+             Pattern: \bfixme\b
+
+  Line 2309: We don't display the offset information anywhere.  FIXME: We should
+             Pattern: \bfixme\b
+
+  Line 2528: FIXME: The ABI says that order-insensitive vendor qualifiers
+             Pattern: \bfixme\b
+
+  Line 2983: /* FIXME: There ought to be a way to report
+             Pattern: \bfixme\b
+
+  Line 2995: FIXME: We should print it in verbose mode.  */
+             Pattern: \bfixme\b
+
+  Line 3734: /* Workaround for G++ bug; see comment in write_template_arg.  */
+             Pattern: workaround
+
+  Line 3869: We demangle the discriminator, but we don't print it out.  FIXME:
+             Pattern: \bfixme\b
+
+  Line 4447: /* FIXME: There ought to be a way to report to the
+             Pattern: \bfixme\b
+
+  Line 6314: to deal with it here.  FIXME.  */
+             Pattern: \bfixme\b
+
+  Line 6762: /* FIXME: We need a way to indicate that a stack limit has been reached.  */
+             Pattern: \bfixme\b
+
+
+📁 ghidra/GPL/DemanglerGnu/src/demangler_gnu_v2_41/c/d-demangle.c (2 violations)
+  Line 1052: the same mangled name.  To make the mangled names unique, a fake parent in
+             Pattern: \bfake\b
+
+  Line 1062: /* Skip over the fake parent.  */
+             Pattern: \bfake\b
+
+
+📁 ghidra/GPL/DemanglerGnu/src/demangler_gnu_v2_41/c/rust-demangle.c (5 violations)
+  Line  688: /* FIXME: There ought to be a way to report
+             Pattern: \bfixme\b
+
+  Line  899: /* FIXME: There ought to be a way to report
+             Pattern: \bfixme\b
+
+  Line 1094: /* FIXME: There ought to be a way to report
+             Pattern: \bfixme\b
+
+  Line 1176: /* FIXME: There ought to be a way to report
+             Pattern: \bfixme\b
+
+  Line 1197: /* Placeholder. */
+             Pattern: \bplaceholder\b
+
+
+📁 ghidra/GPL/DemanglerGnu/src/demangler_gnu_v2_41/c/safe-ctype.c (1 violations)
+  Line  254: #error "FIXME: write tables for EBCDIC"
+             Pattern: \bfixme\b
+
+
+📁 ghidra/GPL/DemanglerGnu/src/demangler_gnu_v2_41/headers/ansidecl.h (1 violations)
+  Line  312: FIXME: provide a complete autoconf test for buggy enum bitfields.  */
+             Pattern: \bfixme\b
+
+
+📁 ghidra/GPL/DemanglerGnu/src/demangler_gnu_v2_41/headers/demangle.h (2 violations)
+  Line   85: is ARM style. (FIXME?) */
+             Pattern: \bfixme\b
+
+  Line  132: /* Note: This sets global state.  FIXME if you care about multi-threading. */
+             Pattern: \bfixme\b
+
+
+📁 ghidra/GPL/GnuDisassembler/src/gdis/c/disasm_1.c (2 violations)
+  Line  361: return 0; // finished! #TODO
+             Pattern: \btodo\b
+
+  Line  383: // TODO:
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Configurations/Public_Release/src/global/docs/ChangeHistory.md (6 violations)
+  Line   35: * _Importer:Mach-O_. Fixed an issue with processing Mach-O stub functions that could result in the w
+             Pattern: \bstub\b
+
+  Line  542: * _PDB_. Reduced number of data type conflicts by delaying the resolve step in the multi-phased reso
+             Pattern: \bplaceholder\b
+
+  Line  861: * _Decompiler_. Removed the limitation preventing the Decompiler from analyzing functions where the 
+             Pattern: \bplaceholder\b
+
+  Line  962: * _Extensions_. Updated Extension installation to allow users to bypass the version compatibility ch
+             Pattern: bypass
+
+  Line 1563: * _CParser_. C-Parser now defines a placeholder structure name early in parsing. (GP-2692, Issue #35
+             Pattern: \bplaceholder\b
+
+  Line 2437: * _Graphing_. Improved graphing where it did not navigate when clicking on external function nodes. 
+             Pattern: \bfake\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-dbgeng/data/support/kernel-dbgeng.py (1 violations)
+  Line   54: # TODO: HACK
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-dbgeng/data/support/local-dbgeng-attach.py (1 violations)
+  Line   45: # TODO: HACK
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-dbgeng/data/support/local-dbgeng-ext.py (1 violations)
+  Line   60: # TODO: HACK
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-dbgeng/data/support/local-dbgeng-trace.py (1 violations)
+  Line   49: # TODO: HACK
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-dbgeng/data/support/local-dbgeng.py (1 violations)
+  Line   52: # TODO: HACK
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-dbgeng/data/support/standalone_listener.py (1 violations)
+  Line   56: # TODO: HACK
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-dbgeng/data/support/svrcx-dbgeng.py (1 violations)
+  Line   49: # TODO: HACK
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-dbgeng/src/main/py/src/ghidradbg/arch.py (1 violations)
+  Line  246: # TODO: this seems half-baked
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-dbgeng/src/main/py/src/ghidradbg/commands.py (5 violations)
+  Line   86: # TODO: Symbols
+             Pattern: \btodo\b
+
+  Line  181: # TODO: Can we get version info from the DLL?
+             Pattern: \btodo\b
+
+  Line  955: # TODO: I'm not sure about the engine id
+             Pattern: \btodo\b
+
+  Line 1254: # TODO:  would be nice to list sections, but currently we have no API for
+             Pattern: \btodo\b
+
+  Line 1307: # TODO: I'm not sure about the engine id
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-dbgeng/src/main/py/src/ghidradbg/dbgmodel/imodelobject.py (1 violations)
+  Line  276: # TODO: forcing kind to 0 because we can't GetTypeKind
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-dbgeng/src/main/py/src/ghidradbg/hooks.py (2 violations)
+  Line  141: return 0  # TODO: Print a warning?
+             Pattern: \btodo\b
+
+  Line  303: commands.put_processes()  # TODO: Could just delete the one....
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-dbgeng/src/main/py/src/ghidradbg/methods.py (3 violations)
+  Line  649: # SetInterrupt is reentrant, so bypass the thread checks
+             Pattern: bypass
+
+  Line  704: # TODO: The address may need mapping.
+             Pattern: \btodo\b
+
+  Line  730: # TODO: Escape?
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-dbgeng/src/main/py/src/ghidradbg/util.py (14 violations)
+  Line  289: # TODO: Remove this check?
+             Pattern: \btodo\b
+
+  Line  370: # TODO: Contribute fix upstream (check_hr -> check_err)
+             Pattern: \btodo\b
+
+  Line  383: # TODO: upstream?
+             Pattern: \btodo\b
+
+  Line  391: # TODO: upstream?
+             Pattern: \btodo\b
+
+  Line  572: # TODO: Ideally this should get the data offset from the id and then call
+             Pattern: \btodo\b
+
+  Line  583: # TODO: Ideally this should get the data offset from the id and then call
+             Pattern: \btodo\b
+
+  Line  606: # TODO: This could be contributed upstream
+             Pattern: \btodo\b
+
+  Line  650: # TODO: This could be contributed upstream?
+             Pattern: \btodo\b
+
+  Line  667: # TODO: upstream?
+             Pattern: \btodo\b
+
+  Line  683: # TODO: upstream?
+             Pattern: \btodo\b
+
+  Line  696: # TODO: upstream?
+             Pattern: \btodo\b
+
+  Line  709: # TODO: upstream?
+             Pattern: \btodo\b
+
+  Line  880: # TODO: Implement GetProcessIdBySystemId and replace this logic
+             Pattern: \btodo\b
+
+  Line  905: # TODO: Implement GetThreadIdBySystemId and replace this logic
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-drgn/src/main/py/src/ghidradrgn/commands.py (2 violations)
+  Line  166: # TODO: Can we get version info from the DLL?
+             Pattern: \btodo\b
+
+  Line  220: # TODO: Is adding an attribute like this recommended in Python?
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-drgn/src/main/py/src/ghidradrgn/hooks.py (1 violations)
+  Line  108: commands.put_processes()  # TODO: Could put just the one....
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-drgn/src/main/py/src/ghidradrgn/methods.py (1 violations)
+  Line  430: #     # SetInterrupt is reentrant, so bypass the thread checks
+             Pattern: bypass
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-gdb/src/main/py/src/ghidragdb/commands.py (9 violations)
+  Line  186: # TODO: This is a bit of a hack, but it works nicely
+             Pattern: \btodo\b
+
+  Line  489: # TODO: A convenience var for the current snapshot
+             Pattern: \btodo\b
+
+  Line  644: # TODO: Memorize registers that failed for this arch, and omit later.
+             Pattern: \btodo\b
+
+  Line  843: # TODO: Array of C strings?
+             Pattern: \btodo\b
+
+  Line  868: # TODO: path and key are two separate parameters.... This is mostly to
+             Pattern: \btodo\b
+
+  Line 1028: # TODO: Distinguish INACTIVE from TERMINATED
+             Pattern: \btodo\b
+
+  Line 1049: # TODO: Attributes like _exit_code, _state?
+             Pattern: \btodo\b
+
+  Line 1074: # TODO: Compared to -list-thread-groups --available:
+             Pattern: \btodo\b
+
+  Line 1134: # TODO: "_threads"?
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-gdb/src/main/py/src/ghidragdb/hooks.py (6 violations)
+  Line  145: return 0  # TODO: Print a warning?
+             Pattern: \btodo\b
+
+  Line  184: commands.put_inferiors()  # TODO: Could put just the one....
+             Pattern: \btodo\b
+
+  Line  209: commands.put_inferiors()  # TODO: Could just delete the one....
+             Pattern: \btodo\b
+
+  Line  218: # TODO: Syscall clone/exit to detect thread destruction?
+             Pattern: \btodo\b
+
+  Line  277: # TODO: How do I get the descriptor from the number?
+             Pattern: \btodo\b
+
+  Line  529: # TODO: Checks and workarounds for events missing in gdb 9
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-gdb/src/main/py/src/ghidragdb/methods.py (6 violations)
+  Line  227: # TODO: gdb appears to be case sensitive, but until we encounter a
+             Pattern: \btodo\b
+
+  Line  237: # TODO: If len exceeds some threshold, use binary search?
+             Pattern: \btodo\b
+
+  Line  424: # TODO: Groups?
+             Pattern: \btodo\b
+
+  Line  496: # TODO: Separate method for each of core, exec, remote, etc...?
+             Pattern: \btodo\b
+
+  Line  676: # TODO: Escape?
+             Pattern: \btodo\b
+
+  Line  691: # TODO: Escape?
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-gdb/src/main/py/src/ghidragdb/parameters.py (1 violations)
+  Line   18: # TODO: I don't know how to register a custom parameter prefix. I would rather
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-gdb/src/main/py/src/ghidragdb/util.py (1 violations)
+  Line  272: # TODO: This may not work for Harvard architectures
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-lldb/src/main/py/src/ghidralldb/commands.py (6 violations)
+  Line  380: # TODO: Is adding an attribute like this recommended in Python?
+             Pattern: \btodo\b
+
+  Line  878: # TODO: Memorize registers that failed for this arch, and omit later.
+             Pattern: \btodo\b
+
+  Line 1128: # TODO: This seems like a bit of a hack
+             Pattern: \btodo\b
+
+  Line 1209: # TODO: path and key are two separate parameters.... This is mostly to
+             Pattern: \btodo\b
+
+  Line 1808: # TODO: This does not seem to work - currently supplanted by proc.is_running
+             Pattern: \btodo\b
+
+  Line 2042: hooks.on_stop(None)  # Pass a fake event
+             Pattern: \bfake\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-lldb/src/main/py/src/ghidralldb/hooks.py (3 violations)
+  Line  385: commands.put_processes()  # TODO: Could put just the one....
+             Pattern: \btodo\b
+
+  Line  409: commands.put_processes()  # TODO: Could just delete the one....
+             Pattern: \btodo\b
+
+  Line  417: # TODO: Syscall clone/exit to detect thread destruction?
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-lldb/src/main/py/src/ghidralldb/methods.py (7 violations)
+  Line  164: # TODO: If len exceeds some threshold, use binary search?
+             Pattern: \btodo\b
+
+  Line  188: # TODO: If len exceeds some threshold, use binary search?
+             Pattern: \btodo\b
+
+  Line  315: # TODO: Check for eCommandInterpreterResultQuitRequested?
+             Pattern: \btodo\b
+
+  Line  389: # TODO: Groups?
+             Pattern: \btodo\b
+
+  Line  415: # TODO
+             Pattern: \btodo\b
+
+  Line  580: # TODO: Escape?
+             Pattern: \btodo\b
+
+  Line  595: # TODO: Escape?
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-agent-lldb/src/main/py/src/ghidralldb/util.py (2 violations)
+  Line   91: # TODO: This may not be the module base, depending on headers
+             Pattern: \btodo\b
+
+  Line  166: # TODO: This may not work for Harvard architectures
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Debug/Debugger-rmi-trace/src/main/py/src/ghidratrace/client.py (3 violations)
+  Line  141: at this. TODO: We might need another flag to indicate the kind of
+             Pattern: \btodo\b
+
+  Line 1170: # TODO: An actual SchemaContext class?
+             Pattern: \btodo\b
+
+  Line 1385: # TODO: Add a field to error for stacktrace, log it at front-end
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Extensions/SleighDevTools/pcodetest/c_src/types.h (1 violations)
+  Line  252: /* Simulate float.h assumes IEEE standard format and 4 8 10 byte formats (FLT_, DBL_, LDBL_) (FLT_ m
+             Pattern: \bsimulat[e|ion]\b
+
+
+📁 ghidra/Ghidra/Features/Base/ghidra_scripts/RecursiveStringFinder.py (3 violations)
+  Line   28: raise NotImplementedError("Must sub-class")
+             Pattern: raise NotImplementedError
+
+  Line   30: raise NotImplementedError("")
+             Pattern: raise NotImplementedError
+
+  Line   39: raise NotImplementedError("")
+             Pattern: raise NotImplementedError
+
+
+📁 ghidra/Ghidra/Features/Base/src/test/resources/ghidra/app/util/cparser/CParserTest.h (3 violations)
+  Line  203: char dummy;
+             Pattern: \bdummy\b
+
+  Line  242: #pragma pack(push, PlaceHolder)
+             Pattern: \bplaceholder\b
+
+  Line  263: #pragma pack(pop, PlaceHolder)
+             Pattern: \bplaceholder\b
+
+
+📁 ghidra/Ghidra/Features/Base/src/test/resources/ghidra/app/util/cparser/PreProcessorTest.h (1 violations)
+  Line  419: unsigned int    dummy[2];      /* dummy funcs */
+             Pattern: \bdummy\b
+
+
+📁 ghidra/Ghidra/Features/Decompiler/src/decompile/zlib/deflate.c (2 violations)
+  Line 1671: /* Make a dummy stored block in pending to get the header bytes,
+             Pattern: \bdummy\b
+
+  Line 1677: /* Replace the lengths in the dummy stored block with len. */
+             Pattern: \bdummy\b
+
+
+📁 ghidra/Ghidra/Features/Decompiler/src/decompile/zlib/inflate.c (1 violations)
+  Line  910: #ifndef PKZIP_BUG_WORKAROUND
+             Pattern: workaround
+
+
+📁 ghidra/Ghidra/Features/Decompiler/src/decompile/zlib/inftrees.c (1 violations)
+  Line  182: base = extra = work;    /* dummy value--not used */
+             Pattern: \bdummy\b
+
+
+📁 ghidra/Ghidra/Features/Decompiler/src/decompile/zlib/zlib.h (1 violations)
+  Line 1211: 20: PKZIP_BUG_WORKAROUND -- slightly more permissive inflate
+             Pattern: workaround
+
+
+📁 ghidra/Ghidra/Features/Decompiler/src/decompile/zlib/zutil.c (1 violations)
+  Line   86: #ifdef PKZIP_BUG_WORKAROUND
+             Pattern: workaround
+
+
+📁 ghidra/Ghidra/Features/FileFormats/src/lzfse/c/lzfse_encode_base.c (1 violations)
+  Line  553: // Create a fake match with M=0, D=1
+             Pattern: \bfake\b
+
+
+📁 ghidra/Ghidra/Features/Jython/jython-src/jintrospect.py (5 violations)
+  Line   74: # TODO fix in future because getCallTip runs eval() again
+             Pattern: \btodo\b
+
+  Line   99: # TODO consider getting modifiers since Jython can access
+             Pattern: \btodo\b
+
+  Line  109: # TODO consider list comprehension
+             Pattern: \btodo\b
+
+  Line  111: # TODO translate [B to byte[], C to char[], etc.
+             Pattern: \btodo\b
+
+  Line  155: #                    # TODO improve message format
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Features/PDB/src/pdb/cpp/find.cpp (2 violations)
+  Line   68: // 20190716: TODO: Investigate... This function appears to be only called by
+             Pattern: \btodo\b
+
+  Line  127: // 20190716: TODO: Investigate... This code appears to be unused.  Also see
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Features/PDB/src/pdb/cpp/iterate.cpp (2 violations)
+  Line  253: //TODO
+             Pattern: \btodo\b
+
+  Line  536: //TODO
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Features/PDB/src/pdb/cpp/main.cpp (1 violations)
+  Line   38: // This workaround has been implemented since there appears to be some problem with the call to "fin
+             Pattern: workaround
+
+
+📁 ghidra/Ghidra/Features/PDB/src/pdb/cpp/print.cpp (3 violations)
+  Line   44: swprintf_s(variant, blen, L"%I64d", (ULONGLONG) v.parray);//TODO
+             Pattern: \btodo\b
+
+  Line   47: swprintf_s(variant, blen, L"%I64d", (ULONGLONG) v.cVal);//TODO
+             Pattern: \btodo\b
+
+  Line  117: //TODO
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/Features/PyGhidra/src/main/py/src/pyghidra/__init__.py (1 violations)
+  Line   18: # stub for documentation and typing
+             Pattern: \bstub\b
+
+
+📁 ghidra/Ghidra/Features/PyGhidra/src/main/py/src/pyghidra/core.py (1 violations)
+  Line  179: script.set(state, TaskMonitor.DUMMY, PrintWriter(System.out))
+             Pattern: \bdummy\b
+
+
+📁 ghidra/Ghidra/Features/PyGhidra/src/main/py/src/pyghidra/launcher.py (2 violations)
+  Line  764: def dummy_timer(timer, info):
+             Pattern: \bdummy_\w+
+
+  Line  769: timer = CFRunLoopTimerCreate(kCFAllocatorDefault, INF_TIME, FIRE_ONCE, 0, 0, dummy_timer, NULL)
+             Pattern: \bdummy_\w+
+
+
+📁 ghidra/Ghidra/Features/PyGhidra/src/main/py/tests/test_argparser.py (1 violations)
+  Line   25: PROJECT_NAME = "stub_name"
+             Pattern: \bstub_\w+
+
+
+📁 ghidra/Ghidra/Processors/RISCV/scripts/binutil.py (27 violations)
+  Line 2220: print("#TODO  32 64")
+             Pattern: \btodo\b
+
+  Line 2234: print("#TODO  32 64")
+             Pattern: \btodo\b
+
+  Line 2238: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2241: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2252: print("#TODO  32 64")
+             Pattern: \btodo\b
+
+  Line 2257: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2284: print("#TODO  64 128")
+             Pattern: \btodo\b
+
+  Line 2298: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2301: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2304: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2316: print("#TODO  64 128")
+             Pattern: \btodo\b
+
+  Line 2320: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2323: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2333: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2352: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2355: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2358: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2369: print("#TODO  32 64")
+             Pattern: \btodo\b
+
+  Line 2391: print("#TODO  32 64")
+             Pattern: \btodo\b
+
+  Line 2396: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2423: print("#TODO  64 128")
+             Pattern: \btodo\b
+
+  Line 2439: print("#TODO  64 128")
+             Pattern: \btodo\b
+
+  Line 2443: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2446: print("#TODO  %s %s" % (op.display, ' & '.join(op.bitpattern)))
+             Pattern: \btodo\b
+
+  Line 2641: dummy style just added as they got added"""
+             Pattern: \bdummy\b
+
+  Line 2839: print("#TODO  MACRO")
+             Pattern: \btodo\b
+
+  Line 2846: print("#TODO ALIAS")
+             Pattern: \btodo\b
+
+
+📁 ghidra/Ghidra/RuntimeScripts/Common/server/svrREADME.md (2 violations)
+  Line  830: intended.  The best workaround we have found for systems which exhibit this problem is to install
+             Pattern: workaround
+
+  Line  838: workaround, this is rather drastic and is not considered desirable since it will allow any Java
+             Pattern: workaround
+
+
+📁 ghidra/GhidraBuild/BuildFiles/Doclets/support/GhidraStubs_README.md (3 violations)
+  Line    4: [Ghidra API](https://github.com/NationalSecurityAgency/ghidra). The stub files can be used to
+             Pattern: \bstub\b
+
+  Line   23: exist in the generated `ghidra_builtins` stub. Since it is not a real Python module, importing it at
+             Pattern: \bstub\b
+
+  Line   50: [pep-0561]: https://www.python.org/dev/peps/pep-0561/#stub-only-packages
+             Pattern: \bstub\b
+
+
+📁 ghidra/GhidraBuild/IDAPro/Python/6xx/loaders/xmlldr.py (3 violations)
+  Line 1276: # TODO: import_memory_reference - add code to store reference
+             Pattern: \btodo\b
+
+  Line 1289: # TODO: import_memory_section - handle overlays?
+             Pattern: \btodo\b
+
+  Line 1396: # TODO: this needs to be on "end" event for PROGRAM
+             Pattern: \btodo\b
+
+
+📁 ghidra/GhidraBuild/IDAPro/Python/6xx/plugins/xmlexp.py (4 violations)
+  Line  710: #TODO consider using GetTrueNameEx and Demangle
+             Pattern: \btodo\b
+
+  Line  722: #TODO export_data: add DISPLAY_SETTINGS
+             Pattern: \btodo\b
+
+  Line  728: #TODO export_data - check this
+             Pattern: \btodo\b
+
+  Line 1026: # workaround for tag_remove bug is to add space
+             Pattern: workaround
+
+
+📁 ghidra/GhidraBuild/IDAPro/Python/7xx/python/idaxml.py (16 violations)
+  Line  347: # TODO: Test decompiler comments in batch and gui modes
+             Pattern: \btodo\b
+
+  Line  746: #TODO consider using GetTrueNameEx and Demangle
+             Pattern: \btodo\b
+
+  Line  750: # TODO: How to handle print_type for data mangled names?
+             Pattern: \btodo\b
+
+  Line  756: #TODO export_data: add DISPLAY_SETTINGS
+             Pattern: \btodo\b
+
+  Line  962: # workaround for tag_remove bug is to add space
+             Pattern: workaround
+
+  Line 1012: # TODO: How to handle print_type for function typeinfo cmts
+             Pattern: \btodo\b
+
+  Line 1086: # TODO: Ask about OPND_ALL and retrieving additional manual operands
+             Pattern: \btodo\b
+
+  Line 1130: # TODO: How to handle get_date_type_size for structure members
+             Pattern: \btodo\b
+
+  Line 1504: # TODO:How to handle opnd.type for stack references
+             Pattern: \btodo\b
+
+  Line 1508: # TODO:How to handle op_t_get_addr for stack references
+             Pattern: \btodo\b
+
+  Line 1566: # TODO: How to handle get_data_type_size (for stack vars)
+             Pattern: \btodo\b
+
+  Line 2807: # TODO: import_description: decide what to do with DESCRIPTION
+             Pattern: \btodo\b
+
+  Line 2988: # TODO: auto_wait is probably not needed...
+             Pattern: \btodo\b
+
+  Line 3002: # TODO: TYPECMTs
+             Pattern: \btodo\b
+
+  Line 3233: # TODO: import_memory_reference: store refs? maybe only user-defined?
+             Pattern: \btodo\b
+
+  Line 3251: # TODO: import_memory_section - handle overlays?
+             Pattern: \btodo\b
+
+
+📁 ghidra/GhidraDocs/GhidraClass/BSim/BSimTutorial_Evaluating_Matches.md (1 violations)
+  Line   72: Instead, empty placeholder structures are created.
+             Pattern: \bplaceholder\b
+
+
+📁 ghidra/GhidraDocs/GhidraClass/Debugger/A1-GettingStarted.md (1 violations)
+  Line  250: We have provided a stub utility called `anyptracer`.
+             Pattern: \bstub\b
+
+
+📁 ghidra/GhidraDocs/GhidraClass/Debugger/B2-Emulation.md (9 violations)
+  Line    8: Do you need to simulate system calls?
+             Pattern: \bsimulat[e|ion]\b
+
+  Line    9: Do you need to simulate connected devices?
+             Pattern: \bsimulat[e|ion]\b
+
+  Line   22: The [Modeling](B4-Modeling.md) module discusses ways to implement or stub those userops in the emula
+             Pattern: \bstub\b
+
+  Line  152: The UI has some facilities to stub out dependencies, but if you find yourself creating and applying 
+             Pattern: \bstub\b
+
+  Line  189: Most likely, the target called an external function, causing the program counter to land in the fake
+             Pattern: \bfake\b
+
+  Line  262: This continues our lesson in state initialization, but we may also need to stub some external calls,
+             Pattern: \bstub\b
+
+  Line  316: This is unfortunate, because you no longer have motivation to stub external calls.
+             Pattern: \bstub\b
+
+  Line  338: 1. This is the fun part: you must now implement the function in Sleigh, or at least stub it well eno
+             Pattern: \bstub\b
+
+  Line  392: In contrast, the Ghidra loader immediately patches the table to point to a fake `<EXTERNAL>::strnlen
+             Pattern: \bfake\b
+
+
+📁 ghidra/GhidraDocs/GhidraClass/Debugger/B4-Modeling.md (14 violations)
+  Line   35: By providing common stubs in a userop library, the user can stub the external function by placing a 
+             Pattern: \bstub\b
+
+  Line   40: For example, to provide a stub for `strlen`:
+             Pattern: \bstub\b
+
+  Line   91: Here, we implement the stub using Java callbacks.
+             Pattern: \bstub\b
+
+  Line   92: This is more useful when modeling things outside of Ghidra's definition of machine state, e.g., to s
+             Pattern: \bsimulat[e|ion]\b
+
+  Line  259: // TODO: Initialize the emulator's memory from the current program
+             Pattern: \btodo\b
+
+  Line  261: // TODO: Initialize the thread's registers
+             Pattern: \btodo\b
+
+  Line  378: // TODO Auto-generated method stub
+             Pattern: \bstub\b
+
+  Line  547: // TODO: Handle overlaps / offcut gets and sets
+             Pattern: \btodo\b
+
+  Line  556: // TODO: Handle overlaps / offcut gets and sets
+             Pattern: \btodo\b
+
+  Line  753: // TODO: Initialize the machine
+             Pattern: \btodo\b
+
+  Line  758: // TODO: Initialize the thread
+             Pattern: \btodo\b
+
+  Line  811: // TODO: Ignore and/or clear non-entries
+             Pattern: \btodo\b
+
+  Line  817: return Unfinished.TODO();
+             Pattern: \btodo\b
+
+  Line  821: return Unfinished.TODO();
+             Pattern: \btodo\b
+
+
+📁 ghidra/GhidraDocs/GhidraClass/Debugger/B5-AddingDebuggers.md (2 violations)
+  Line  113: A lot of this code is not relevant to our current project, but at a minimum we want to implement (or
+             Pattern: \bfake\b
+
+  Line  130: In many cases (particularly when populating an object's children is expensive), you may want to defe
+             Pattern: \bplaceholder\b
+
+
+📁 ghidra/GhidraDocs/GhidraClass/ExerciseFiles/WinhelloCPP/source/stdafx.cpp (1 violations)
+  Line   23: // TODO: reference any additional headers you need in STDAFX.H
+             Pattern: \btodo\b
+
+
+📁 ghidra/GhidraDocs/GhidraClass/ExerciseFiles/WinhelloCPP/source/stdafx.h (1 violations)
+  Line   34: // TODO: reference additional headers your program requires here
+             Pattern: \btodo\b
+
+
+📁 main.py (4 violations)
+  Line   37: # Create dummy classes for missing components
+             Pattern: \bdummy\b
+
+  Line  533: # Create mock source and output directories
+             Pattern: \bmock\b
+
+  Line  540: decompiled_source=output_dir / "mock_source.c",
+             Pattern: \bmock_\w+
+
+  Line  635: # Mock benchmark results
+             Pattern: \bmock\b
+
+
+📁 matrix_launcher/matrix_launcher.c (2 violations)
+  Line   67: // Simulate application initialization
+             Pattern: \bsimulat[e|ion]\b
+
+  Line   79: // Simulate main application logic
+             Pattern: \bsimulat[e|ion]\b
+
+
+📁 matrix_launcher_demo.c (7 violations)
+  Line    6: #define SONY_EULA_BYPASSED 2
+             Pattern: bypass
+
+  Line   34: int eula_bypassed = 0;
+             Pattern: bypass
+
+  Line   37: eula_bypassed = 1;
+             Pattern: bypass
+
+  Line   38: printf("✅ Sony EULA successfully bypassed via -noeula flag\n");
+             Pattern: bypass
+
+  Line   44: if (!eula_bypassed) {
+             Pattern: bypass
+
+  Line   46: printf("🔧 Use -noeula flag to bypass Sony EULA and use Matrix Digital Agreement\n");
+             Pattern: bypass
+
+  Line   54: return eula_bypassed ? RED_PILL_CHOSEN : MATRIX_EULA_ACCEPTED;
+             Pattern: bypass
+
+
+📁 missing_sections_analysis.py (2 violations)
+  Line  105: - DOS header with stub
+             Pattern: \bstub\b
+
+  Line  132: 2. Create stub implementations for all functions
+             Pattern: \bstub\b
+
+
+📁 pe_analysis_report.md (4 violations)
+  Line   50: - DOS header with compatibility stub
+             Pattern: \bstub\b
+
+  Line   78: - Create stub implementations or dummy functions
+             Pattern: \bstub\b
+
+  Line   86: - Create proper DOS header with stub
+             Pattern: \bstub\b
+
+  Line   96: 1. **Priority 1**: Extract and stub the .text section functions
+             Pattern: \bstub\b
+
+
+📁 prompts/CLAUDE.md (5 violations)
+  Line  144: 1. **NotImplementedError Exceptions**: Many advanced features throw NotImplementedError
+             Pattern: NotImplemented
+
+  Line  147: 2. **Dummy Code**: Some agents return placeholder data
+             Pattern: \bplaceholder\b
+
+  Line  201: 1. ✅ Remove all dummy code from agents
+             Pattern: \bdummy\b
+
+  Line  207: 1. 📋 Implement missing NotImplementedError functions
+             Pattern: NotImplemented
+
+  Line  258: - **prompts/agent_cleanup.md**: For cleaning up dummy code and refactoring
+             Pattern: \bdummy\b
+
+
+📁 prompts/agent_cleanup.md (44 violations)
+  Line    5: Clean up the entire open-sourcefy project according to STRICT rules.md compliance by removing ALL ve
+             Pattern: \bmock\b
+
+  Line   19: ### NO MOCK IMPLEMENTATIONS
+             Pattern: \bmock\b
+
+  Line   20: - **ZERO TOLERANCE**: No mock agents, mock AI engines, or mock implementations
+             Pattern: \bmock\b
+
+  Line   22: - **No Fallbacks**: Remove all mock fallback systems and dummy engines
+             Pattern: \bmock\b
+
+  Line   23: - **Production Only**: All code must be production-ready or properly raise NotImplementedError
+             Pattern: raise NotImplementedError
+
+  Line   37: - **No Placeholders**: Remove all TODO comments, placeholder functions, dummy returns
+             Pattern: \bplaceholder\b
+
+  Line   38: - **Real Implementation**: All functions must either work or raise NotImplementedError with detailed
+             Pattern: raise NotImplementedError
+
+  Line   44: ### 1. MANDATORY: Remove ALL Mock/Verbose/Complex Code
+             Pattern: \bmock\b
+
+  Line   46: - **Agents**: `src/core/agents/` - Remove placeholder implementations
+             Pattern: \bplaceholder\b
+
+  Line   48: - **Utilities**: `src/utils/` - Remove stub implementations
+             Pattern: \bstub\b
+
+  Line   49: - **ML Components**: `src/ml/` - Replace placeholder algorithms
+             Pattern: \bplaceholder\b
+
+  Line   50: - **Configuration**: Root level config files with dummy values
+             Pattern: \bdummy\b
+
+  Line   51: - **Utils**: Any utility modules with placeholder functionality
+             Pattern: \bplaceholder\b
+
+  Line   54: - **Mock Implementations**: Any class/function containing "Mock", "Dummy", "Fake", "Stub"
+             Pattern: \bmock\b
+
+  Line   58: - **Complex Test Mocks**: Overly elaborate test fixtures and mock systems
+             Pattern: \bmock\b
+
+  Line   59: - **Placeholder Values**: Hardcoded confidence scores, fake data structures
+             Pattern: \bfake\b
+
+  Line   60: - **TODO Comments**: Unimplemented features without clear implementation plans
+             Pattern: \btodo\b
+
+  Line   62: **Replacement Strategy**: Replace with `NotImplementedError` exceptions that clearly explain:
+             Pattern: NotImplemented
+
+  Line   70: # BEFORE (dummy code)
+             Pattern: \bdummy\b
+
+  Line   80: raise NotImplementedError(
+             Pattern: raise NotImplementedError
+
+  Line   90: - **❌ Mock AI Engines**: Remove all `test_mock_ai_engine_available()` and mock AI components
+             Pattern: \bmock\b
+
+  Line   92: - **❌ Complex Mock Systems**: Simplify overly elaborate test mocking
+             Pattern: \bmock\b
+
+  Line  117: - **Placeholder Files**: Remove empty or minimal placeholder files
+             Pattern: \bplaceholder\b
+
+  Line  177: # Either real implementation or NotImplementedError
+             Pattern: NotImplemented
+
+  Line  248: - **Agent 3**: Merovingian (Function Detection) - Has placeholder patterns
+             Pattern: \bplaceholder\b
+
+  Line  249: - **Agent 4**: Agent Smith (Structure Analysis) - Contains mock elements
+             Pattern: \bmock\b
+
+  Line  291: ### Common Dummy Code Patterns to Remove Project-Wide:
+             Pattern: \bdummy\b
+
+  Line  296: # Empty placeholder returns
+             Pattern: \bplaceholder\b
+
+  Line  300: # Placeholder messages
+             Pattern: \bplaceholder\b
+
+  Line  303: # TODO comments without plans
+             Pattern: \btodo\b
+
+  Line  304: # TODO: Add real implementation
+             Pattern: \btodo\b
+
+  Line  306: # Fake data structures
+             Pattern: \bfake\b
+
+  Line  311: # Placeholder function implementations (from recent linter changes detected)
+             Pattern: \bplaceholder\b
+
+  Line  321: # Generated placeholder functions
+             Pattern: \bplaceholder\b
+
+  Line  323: return f"// Placeholder function {name}"
+             Pattern: \bplaceholder\b
+
+  Line  328: # Placeholder analysis results
+             Pattern: \bplaceholder\b
+
+  Line  330: 'program_analysis': 'Placeholder analysis result'
+             Pattern: \bplaceholder\b
+
+  Line  336: - [ ] **Zero Dummy Code**: All placeholder implementations replaced with proper NotImplementedError 
+             Pattern: \bplaceholder\b
+
+  Line  337: - [ ] **No Hardcoded Values**: Remove all hardcoded confidence scores, thresholds, and fake data
+             Pattern: \bfake\b
+
+  Line  360: 1. **Mock Code Elimination**: Remove ALL mock implementations system-wide
+             Pattern: \bmock\b
+
+  Line  404: ### Manual Finding Dummy Code (when automation isn't sufficient)
+             Pattern: \bdummy\b
+
+  Line  406: # Search for common dummy patterns
+             Pattern: \bdummy\b
+
+  Line  409: grep -r "TODO.*implementation" src/
+             Pattern: \btodo\b
+
+  Line  410: grep -r "placeholder" src/
+             Pattern: \bplaceholder\b
+
+
+📁 prompts/code_quality_checker.md (1 violations)
+  Line   51: - [ ] **Mock Testing**: External dependencies properly mocked
+             Pattern: \bmock\b
+
+
+📁 prompts/comprehensive_cleanup.md (6 violations)
+  Line    9: - **NO MOCK IMPLEMENTATIONS** - real implementations only
+             Pattern: \bmock\b
+
+  Line  107: ├── API-Reference.md (4 lines - minimal stub)
+             Pattern: \bstub\b
+
+  Line  108: ├── Agent-Execution-Report.md (4 lines - minimal stub)
+             Pattern: \bstub\b
+
+  Line  109: ├── Source-Code-Analysis.md (4 lines - minimal stub)
+             Pattern: \bstub\b
+
+  Line  110: ├── Technical-Specifications.md (4 lines - minimal stub)
+             Pattern: \bstub\b
+
+  Line  111: ├── README.md (125 lines - generated placeholder, superseded by main CLAUDE.md)
+             Pattern: \bplaceholder\b
+
+
+📁 prompts/documentation_validator.md (5 violations)
+  Line   10: 4. Ensure NO MOCK IMPLEMENTATIONS - only real code
+             Pattern: \bmock\b
+
+  Line   16: - **NO MOCK IMPLEMENTATIONS** - real implementations only
+             Pattern: \bmock\b
+
+  Line  240: ### 1. No Mock Documentation
+             Pattern: \bmock\b
+
+  Line  241: - Remove any documentation describing mock implementations
+             Pattern: \bmock\b
+
+  Line  243: - Eliminate placeholder or stub documentation
+             Pattern: \bplaceholder\b
+
+
+📁 prompts/fallback_removal_automation.md (3 violations)
+  Line    7: **No Fallbacks, Only Excellence**: When Ghidra fails, when AI is unavailable, when dependencies are 
+             Pattern: \bplaceholder\b
+
+  Line  320: - [ ] **Dependencies Enforced**: All agent dependencies strictly enforced with no workarounds
+             Pattern: workaround
+
+  Line  352: - **Quality assurance**: No degraded or placeholder results ever produced
+             Pattern: \bplaceholder\b
+
+
+📁 prompts/implementation_fixing.md (8 violations)
+  Line    4: Implement all missing functionality across the entire open-sourcefy project to create a fully workin
+             Pattern: NotImplemented
+
+  Line  299: ## Specific NotImplementedError Fixes
+             Pattern: NotImplemented
+
+  Line  303: # Current NotImplementedErrors to fix:
+             Pattern: NotImplemented
+
+  Line  316: # Current NotImplementedErrors to fix:
+             Pattern: NotImplemented
+
+  Line  325: # Current NotImplementedErrors to fix:
+             Pattern: NotImplemented
+
+  Line  336: # Current NotImplementedErrors to fix:
+             Pattern: NotImplemented
+
+  Line  350: - [ ] All NotImplementedError exceptions resolved
+             Pattern: NotImplemented
+
+  Line  407: # Identify which NotImplementedErrors are hit first
+             Pattern: NotImplemented
+
+
+📁 prompts/link_validator.md (3 violations)
+  Line   10: 4. Ensure NO MOCK IMPLEMENTATIONS - only real code
+             Pattern: \bmock\b
+
+  Line   16: - **NO MOCK IMPLEMENTATIONS** - real implementations only
+             Pattern: \bmock\b
+
+  Line  381: - **NO MOCK** link validation - real HTTP requests only
+             Pattern: \bmock\b
+
+
+📁 prompts/master_prompt_executor.md (9 violations)
+  Line   10: 4. Ensure NO MOCK IMPLEMENTATIONS - only real code
+             Pattern: \bmock\b
+
+  Line   16: - **NO MOCK IMPLEMENTATIONS** - real implementations only
+             Pattern: \bmock\b
+
+  Line   36: - **Remove ALL mock implementations** system-wide
+             Pattern: \bmock\b
+
+  Line   54: - **Validate no mock systems remain**
+             Pattern: \bmock\b
+
+  Line   59: - **Fix all NotImplementedError exceptions** with real implementations
+             Pattern: NotImplemented
+
+  Line   60: - **Replace placeholder code** with authentic functionality
+             Pattern: \bplaceholder\b
+
+  Line  161: - [ ] **Zero Mock Implementations** remain in codebase
+             Pattern: \bmock\b
+
+  Line  162: - [ ] **All NotImplementedError exceptions** resolved
+             Pattern: NotImplemented
+
+  Line  223: - **Mock implementation scanning** and removal
+             Pattern: \bmock\b
+
+
+📁 prompts/unified_comprehensive_testing.md (2 violations)
+  Line    9: - **NO MOCK IMPLEMENTATIONS** - real implementations only
+             Pattern: \bmock\b
+
+  Line  259: - No workaround solutions
+             Pattern: workaround
+
+
+📁 prompts/unified_pipeline_compilation.md (3 violations)
+  Line    9: - **NO MOCK IMPLEMENTATIONS** - real implementations only
+             Pattern: \bmock\b
+
+  Line  159: - Real tools only (no mock implementations)
+             Pattern: \bmock\b
+
+  Line  454: - [ ] No mock implementations present
+             Pattern: \bmock\b
+
+
+📁 proper_source_modification.py (1 violations)
+  Line  119: // Simulate main application logic
+             Pattern: \bsimulat[e|ion]\b
+
+
+📁 reconstruct_missing.py (11 violations)
+  Line   75: # Simple stub: return 0 and exit
+             Pattern: \bstub\b
+
+  Line   76: stub_code = bytearray()
+             Pattern: \bstub_\w+
+
+  Line   83: stub_code.extend(entry_stub)
+             Pattern: \bstub_\w+
+
+  Line   86: padding_needed = original_size - len(stub_code)
+             Pattern: \bstub_\w+
+
+  Line   87: stub_code.extend(b'\xcc' * padding_needed)
+             Pattern: \bstub_\w+
+
+  Line   89: print(f"\nCode Stub Generation:")
+             Pattern: \bstub\b
+
+  Line   90: print(f"  Entry stub: {len(entry_stub)} bytes")
+             Pattern: \bstub\b
+
+  Line   92: print(f"  Total: {len(stub_code):,} bytes")
+             Pattern: \bstub_\w+
+
+  Line   94: return bytes(stub_code)
+             Pattern: \bstub_\w+
+
+  Line  106: # For stub code, we need minimal relocations
+             Pattern: \bstub\b
+
+  Line  116: # Add two dummy relocations (just to have some data)
+             Pattern: \bdummy\b
+
+
+📁 rules.md (19 violations)
+  Line   12: - **NEVER** create fallback systems, alternative paths, or workarounds
+             Pattern: workaround
+
+  Line   23: ### Rule 3: NO MOCK IMPLEMENTATIONS
+             Pattern: \bmock\b
+
+  Line   24: - **NEVER** create mock, fake, or stub implementations
+             Pattern: \bmock\b
+
+  Line   25: - **NEVER** simulate missing tools or dependencies
+             Pattern: \bsimulat[e|ion]\b
+
+  Line   26: - **NEVER** bypass missing functionality with placeholders
+             Pattern: bypass
+
+  Line   53: - **NEVER** simulate or mock compilation results
+             Pattern: \bmock\b
+
+  Line   87: - **FIX COMPILER/BUILD SYSTEM** instead of editing source as workaround
+             Pattern: workaround
+
+  Line   89: - **NO WORKAROUNDS** - fix the actual cause (agents/decompiler)
+             Pattern: workaround
+
+  Line   93: ### Rule 13: NO PLACEHOLDER CODE
+             Pattern: \bplaceholder\b
+
+  Line   94: - **NEVER** implement placeholder or stub implementations
+             Pattern: \bplaceholder\b
+
+  Line   95: - **NEVER** return fake or mock results
+             Pattern: \bmock\b
+
+  Line   96: - **NEVER** implement logic to bypass missing dependencies
+             Pattern: bypass
+
+  Line  125: ### Rule 18: NO MOCK DEPENDENCIES
+             Pattern: \bmock\b
+
+  Line  126: - **NEVER** mock missing dependencies
+             Pattern: \bmock\b
+
+  Line  127: - **NEVER** simulate unavailable tools
+             Pattern: \bsimulat[e|ion]\b
+
+  Line  128: - **NEVER** create fake implementations of real systems
+             Pattern: \bfake\b
+
+  Line  198: - Creating mock implementations
+             Pattern: \bmock\b
+
+  Line  204: - Creating placeholder implementations
+             Pattern: \bplaceholder\b
+
+  Line  240: **NO FALLBACKS EVER - NO NEW FOLDERS (DOCS ALLOWED) - NO NEW SCRIPTS - STRICT MODE ONLY - NO MOCK IM
+             Pattern: \bmock\b
+
+
+📁 scripts/binary_injection_research.py (1 violations)
+  Line  210: # Simulate successful injection
+             Pattern: \bsimulat[e|ion]\b
+
+
+📁 src/core/advanced_compiler_fingerprinting.py (1 violations)
+  Line   43: # Create dummy classes for type hints
+             Pattern: \bdummy\b
+
+
+📁 src/core/advanced_data_structure_recovery.py (1 violations)
+  Line   27: # Mock validation result for Phase 3
+             Pattern: \bmock\b
+
+
+📁 src/core/agents/agent01_sentinel.py (5 violations)
+  Line   29: # LangChain removed per rules.md - no fallbacks, no mock implementations
+             Pattern: \bmock\b
+
+  Line  392: raise NotImplementedError(
+             Pattern: raise NotImplementedError
+
+  Line  453: raise NotImplementedError(
+             Pattern: raise NotImplementedError
+
+  Line 1036: # Additional validation - DOS stub presence
+             Pattern: \bstub\b
+
+  Line 1038: confidence_factors.append(0.05)  # Small bonus for DOS stub
+             Pattern: \bstub\b
+
+
+📁 src/core/agents/agent03_merovingian.py (1 violations)
+  Line 1819: anomalies['suspicious_sections'] = True  # Placeholder for now
+             Pattern: \bplaceholder\b
+
+
+📁 src/core/agents/agent04_agent_smith.py (2 violations)
+  Line  716: # For now, just create placeholder files (real implementation would extract actual data)
+             Pattern: \bplaceholder\b
+
+  Line  731: 'extraction_method': 'placeholder'
+             Pattern: \bplaceholder\b
+
+
+📁 src/core/agents/agent05_neo_advanced_decompiler.py (5 violations)
+  Line  888: # Extract function calls that need stub implementations
+             Pattern: \bstub\b
+
+  Line 1715: f"Agent must fail when requirements not met. NO PLACEHOLDER CODE allowed per Rule #44."
+             Pattern: \bplaceholder\b
+
+  Line 1718: # Rule #44: NO PLACEHOLDER CODE - Ensure real source code generated
+             Pattern: \bplaceholder\b
+
+  Line 1724: f"violates Rule #44 (NO PLACEHOLDER CODE). Generated {len(source_code)} characters."
+             Pattern: \bplaceholder\b
+
+  Line 1779: # Create mock Merovingian result object for Neo with proper data structure
+             Pattern: \bmock\b
+
+
+📁 src/core/agents/agent06_trainman_assembly_analysis.py (3 violations)
+  Line  201: # Simple assembly extraction (placeholder for real implementation)
+             Pattern: \bplaceholder\b
+
+  Line  213: # This is a simplified placeholder - in production this would use
+             Pattern: \bplaceholder\b
+
+  Line  216: ; Basic assembly extraction placeholder
+             Pattern: \bplaceholder\b
+
+
+📁 src/core/agents/agent07_keymaker_resource_reconstruction.py (1 violations)
+  Line  716: # Create mock Architect result object for Keymaker with proper data structure
+             Pattern: \bmock\b
+
+
+📁 src/core/agents/agent09_the_machine.py (8 violations)
+  Line 2044: content = re.sub(r'if\s*\([^)]+\)\s*$', r'if (\1) { /* placeholder */ }', content, flags=re.MULTILIN
+             Pattern: \bplaceholder\b
+
+  Line 2742: # Step 1: Create minimal stub executable that can be enhanced
+             Pattern: \bstub\b
+
+  Line 2743: stub_success = self._create_minimal_stub_executable(output_file, context)
+             Pattern: \bstub_\w+
+
+  Line 2744: if not stub_success:
+             Pattern: \bstub_\w+
+
+  Line 2745: return False, "Failed to create minimal stub executable"
+             Pattern: \bstub\b
+
+  Line 2750: self.logger.warning("Component enhancement failed, using minimal stub")
+             Pattern: \bstub\b
+
+  Line 2876: self.logger.error(f"Failed to create minimal stub executable: {e}")
+             Pattern: \bstub\b
+
+  Line 2880: """Enhance the stub executable with reconstructed components to reach 99% size"""
+             Pattern: \bstub\b
+
+
+📁 src/core/agents/agent10_twins.py (2 violations)
+  Line  116: # TEMPORARY WORKAROUND: Skip validation to avoid VS2003 dumpbin path issues
+             Pattern: workaround
+
+  Line  117: # TODO: Fix VS2003 dumpbin execution in WSL environment
+             Pattern: \btodo\b
+
+
+📁 src/core/agents/agent10_twins_binary_diff.py (4 violations)
+  Line  827: # Placeholder methods for analysis components
+             Pattern: \bplaceholder\b
+
+  Line 2208: # Create a mock AgentResult with cached data
+             Pattern: \bmock\b
+
+  Line 2211: mock_result = AgentResult(
+             Pattern: \bmock_\w+
+
+  Line 2226: context['agent_results'][agent_id] = mock_result
+             Pattern: \bmock_\w+
+
+
+📁 src/core/agents/agent12_link.py (3 violations)
+  Line 1290: # Create a mock AgentResult with cached data
+             Pattern: \bmock\b
+
+  Line 1293: mock_result = AgentResult(
+             Pattern: \bmock_\w+
+
+  Line 1308: context['agent_results'][agent_id] = mock_result
+             Pattern: \bmock_\w+
+
+
+📁 src/core/agents/agent13_agent_johnson.py (1 violations)
+  Line 1924: return 0.8  # Placeholder - could be enhanced with actual code analysis
+             Pattern: \bplaceholder\b
+
+
+📁 src/core/agents/agent14_the_cleaner.py (4 violations)
+  Line  518: # Remove TODO/FIXME/HACK comments from decompilation
+             Pattern: \btodo\b
+
+  Line  519: if re.search(r'//\s*(TODO|FIXME|HACK|XXX).*decompil', line, re.IGNORECASE):
+             Pattern: \btodo\b
+
+  Line  522: # Remove obvious placeholder comments
+             Pattern: \bplaceholder\b
+
+  Line  523: if re.search(r'//\s*(placeholder|dummy|temp|test)', line, re.IGNORECASE):
+             Pattern: \bplaceholder\b
+
+
+📁 src/core/agents/agent15_analyst.py (3 violations)
+  Line 1507: # Create a mock AgentResult with cached data
+             Pattern: \bmock\b
+
+  Line 1510: mock_result = AgentResult(
+             Pattern: \bmock_\w+
+
+  Line 1525: context['agent_results'][agent_id] = mock_result
+             Pattern: \bmock_\w+
+
+
+📁 src/core/agents/agent16_agent_brown.py (36 violations)
+  Line    7: - Strict Placeholder Detection: Enhanced rule compliance validation (rules.md #44, #47, #74)
+             Pattern: \bplaceholder\b
+
+  Line   67: placeholder_violations: List[Dict[str, Any]]
+             Pattern: \bplaceholder_\w+
+
+  Line  101: - Strict Placeholder Detection: Zero-tolerance rule compliance (rules.md #44, #47, #74)
+             Pattern: \bplaceholder\b
+
+  Line  305: 1. Strict Placeholder Detection with zero-tolerance rule compliance
+             Pattern: \bplaceholder\b
+
+  Line  320: # Phase 1: Strict Placeholder Detection (rules.md #44, #47, #74)
+             Pattern: \bplaceholder\b
+
+  Line  321: self.logger.info("Phase 1: Strict placeholder detection and rule compliance validation")
+             Pattern: \bplaceholder\b
+
+  Line  401: 'placeholder_violations': strict_validation.placeholder_violations,
+             Pattern: \bplaceholder_\w+
+
+  Line  461: """Perform strict placeholder detection and rule compliance validation"""
+             Pattern: \bplaceholder\b
+
+  Line  462: self.logger.info("🔍 STRICT VALIDATION: Checking for placeholder code violations...")
+             Pattern: \bplaceholder\b
+
+  Line  464: placeholder_violations=[],
+             Pattern: \bplaceholder_\w+
+
+  Line  756: # STRICT VALIDATION: Check for placeholder code violations (rules.md #44)
+             Pattern: \bplaceholder\b
+
+  Line  793: STRICT validation to ensure NO placeholder code exists (rules.md #44, #47, #74)
+             Pattern: \bplaceholder\b
+
+  Line  794: FAILS the entire pipeline if any TODO/placeholder code is found
+             Pattern: \bplaceholder\b
+
+  Line  796: self.logger.info("🔍 STRICT VALIDATION: Checking for placeholder code violations...")
+             Pattern: \bplaceholder\b
+
+  Line  798: # Check generated source files for placeholder patterns
+             Pattern: \bplaceholder\b
+
+  Line  806: placeholder_violations = []
+             Pattern: \bplaceholder_\w+
+
+  Line  808: '// TODO',
+             Pattern: \btodo\b
+
+  Line  809: '/* TODO',
+             Pattern: \btodo\b
+
+  Line  810: 'TODO:',
+             Pattern: \btodo\b
+
+  Line  811: '// FIXME',
+             Pattern: \bfixme\b
+
+  Line  812: '/* FIXME',
+             Pattern: \bfixme\b
+
+  Line  813: 'FIXME:',
+             Pattern: \bfixme\b
+
+  Line  816: 'throw new NotImplementedException',
+             Pattern: NotImplemented
+
+  Line  817: 'raise NotImplementedError',
+             Pattern: raise NotImplementedError
+
+  Line  837: placeholder_violations.append({
+             Pattern: \bplaceholder_\w+
+
+  Line  847: # FAIL FAST if any placeholder code found
+             Pattern: \bplaceholder\b
+
+  Line  848: if placeholder_violations:
+             Pattern: \bplaceholder_\w+
+
+  Line  851: for v in placeholder_violations[:10]  # Show first 10
+             Pattern: \bplaceholder_\w+
+
+  Line  854: total_violations = len(placeholder_violations)
+             Pattern: \bplaceholder_\w+
+
+  Line  858: raise Exception(f"STRICT MODE FAILURE: Found {total_violations} placeholder code violations. " +
+             Pattern: \bplaceholder\b
+
+  Line  859: f"Rules.md #44 NO PLACEHOLDER CODE: Never implement placeholder or stub implementations. " +
+             Pattern: \bplaceholder\b
+
+  Line  864: self.logger.info("✅ STRICT VALIDATION PASSED: No placeholder code violations found")
+             Pattern: \bplaceholder\b
+
+  Line 1099: 'placeholder_violations': result.strict_validation_result.placeholder_violations,
+             Pattern: \bplaceholder_\w+
+
+  Line 1232: # Create a mock AgentResult with cached data
+             Pattern: \bmock\b
+
+  Line 1235: mock_result = AgentResult(
+             Pattern: \bmock_\w+
+
+  Line 1250: context['agent_results'][agent_id] = mock_result
+             Pattern: \bmock_\w+
+
+
+📁 src/core/ai_engine_interface.py (1 violations)
+  Line   18: MOCK = "mock"
+             Pattern: \bmock\b
+
+
+📁 src/core/ai_setup.py (1 violations)
+  Line  228: raise NotImplementedError
+             Pattern: raise NotImplementedError
+
+
+📁 src/core/binary_comparison.py (12 violations)
+  Line  445: # NO MOCK IMPLEMENTATIONS - Rule #5 from rules.md
+             Pattern: \bmock\b
+
+  Line  530: # NO MOCK IMPLEMENTATIONS - Rule #5 from rules.md
+             Pattern: \bmock\b
+
+  Line  562: # NO MOCK IMPLEMENTATIONS - Rule #5 from rules.md
+             Pattern: \bmock\b
+
+  Line  997: # For now, return a placeholder structure
+             Pattern: \bplaceholder\b
+
+  Line 1024: return size_similarity * 0.8  # Base similarity with placeholder
+             Pattern: \bplaceholder\b
+
+  Line 1029: # Placeholder implementation
+             Pattern: \bplaceholder\b
+
+  Line 1035: # Placeholder implementation
+             Pattern: \bplaceholder\b
+
+  Line 1040: # Placeholder implementation - would use CFG analysis
+             Pattern: \bplaceholder\b
+
+  Line 1045: # Placeholder implementation - would use data flow analysis
+             Pattern: \bplaceholder\b
+
+  Line 1050: # Placeholder implementation - would analyze API calls
+             Pattern: \bplaceholder\b
+
+  Line 1238: # Mock validation result for now - would integrate with actual validation
+             Pattern: \bmock\b
+
+  Line 1264: # Mock comparison
+             Pattern: \bmock\b
+
+
+📁 src/core/binary_identical_reconstruction.py (1 violations)
+  Line  984: 'build_time': time.time(),  # Placeholder for actual build time
+             Pattern: \bplaceholder\b
+
+
+📁 src/core/build_system_manager.py (2 violations)
+  Line   12: NEVER USE FALLBACK PATHS OR MOCK IMPLEMENTATIONS
+             Pattern: \bmock\b
+
+  Line   50: NEVER USE FALLBACK PATHS, MOCK IMPLEMENTATIONS, OR WORKAROUNDS
+             Pattern: \bmock\b
+
+
+📁 src/core/deobfuscation/advanced_anti_obfuscation.py (2 violations)
+  Line  443: return []  # Placeholder for now
+             Pattern: \bplaceholder\b
+
+  Line  472: # Placeholder implementation
+             Pattern: \bplaceholder\b
+
+
+📁 src/core/deobfuscation/ml_enhanced_cfg.py (3 violations)
+  Line  434: predicted_targets = [jump_addr + 0x100, jump_addr + 0x200]  # Placeholder
+             Pattern: \bplaceholder\b
+
+  Line  566: # Placeholder implementation
+             Pattern: \bplaceholder\b
+
+  Line  577: # Placeholder implementation
+             Pattern: \bplaceholder\b
+
+
+📁 src/core/deobfuscation/modern_packer_detection.py (1 violations)
+  Line  695: "Bypass license checking",
+             Pattern: bypass
+
+
+📁 src/core/deobfuscation/obfuscation_detector.py (3 violations)
+  Line  990: 'bypass_recommendations': self._generate_bypass_recommendations(anti_analysis_indicators)
+             Pattern: bypass
+
+  Line  993: def _generate_bypass_recommendations(self, indicators: List[ObfuscationIndicator]) -> List[str]:
+             Pattern: bypass
+
+  Line  994: """Generate recommendations for bypassing anti-analysis."""
+             Pattern: bypass
+
+
+📁 src/core/deobfuscation/packer_detector.py (4 violations)
+  Line  195: name="UPX Stub Signature",
+             Pattern: \bstub\b
+
+  Line  201: description="UPX decompression stub"
+             Pattern: \bstub\b
+
+  Line  261: name="ASPack Stub",
+             Pattern: \bstub\b
+
+  Line  267: description="ASPack unpacking stub"
+             Pattern: \bstub\b
+
+
+📁 src/core/deobfuscation/phase1_integration.py (2 violations)
+  Line  320: bypass_recommendations = anti_analysis.get('bypass_recommendations', [])
+             Pattern: bypass
+
+  Line  321: recommendations.extend(bypass_recommendations)
+             Pattern: bypass
+
+
+📁 src/core/final_validation_orchestrator.py (1 violations)
+  Line  510: # TODO: Implement actual PE import table parsing
+             Pattern: \btodo\b
+
+
+📁 src/core/ghidra_advanced_analyzer.py (3 violations)
+  Line  431: return 0  # Placeholder
+             Pattern: \bplaceholder\b
+
+  Line  436: return 0  # Placeholder
+             Pattern: \bplaceholder\b
+
+  Line  441: return False  # Placeholder
+             Pattern: \bplaceholder\b
+
+
+📁 src/core/matrix_agents.py (2 violations)
+  Line   30: # Create stub classes for testing only
+             Pattern: \bstub\b
+
+  Line  167: # Testing mode - create stub agent
+             Pattern: \bstub\b
+
+
+📁 src/core/matrix_pipeline_orchestrator.py (8 violations)
+  Line  308: # Rule #26: NO FAKE COMPILATION - Never simulate or mock compilation results
+             Pattern: \bmock\b
+
+  Line  312: # Check if master agent attempted to bypass execution (VIOLATION)
+             Pattern: bypass
+
+  Line  314: # SECURITY FIX: Master agent bypass detected - this violates rules.md
+             Pattern: bypass
+
+  Line  315: bypass_agents = list(self.global_context['agent_results'].keys())
+             Pattern: bypass
+
+  Line  316: self.logger.error(f"🚨 RULES VIOLATION: Deus Ex Machina attempted to bypass agent execution for agent
+             Pattern: bypass
+
+  Line  317: self.logger.error("🚨 This violates rules.md Rule #26 (NO FAKE COMPILATION) and Rule #74 (ALL OR NOTH
+             Pattern: \bfake\b
+
+  Line  320: # Clear fake results and force proper execution
+             Pattern: \bfake\b
+
+  Line  322: self.logger.info("🔒 Cleared fake agent results, enforcing real execution")
+             Pattern: \bfake\b
+
+
+📁 src/core/phase2_integration.py (1 violations)
+  Line  634: # Mock validation result for Phase 2
+             Pattern: \bmock\b
+
+
+📁 src/core/pipeline_validator.py (7 violations)
+  Line  646: # For now, return a mock result based on syntax check
+             Pattern: \bmock\b
+
+  Line  656: # Mock compilation success based on syntax quality
+             Pattern: \bmock\b
+
+  Line  661: # Create mock compiled binary
+             Pattern: \bmock\b
+
+  Line  663: compiled_binary.write_bytes(b"MOCK_COMPILED_BINARY")
+             Pattern: \bmock_\w+
+
+  Line  878: # Mock agent results for testing
+             Pattern: \bmock\b
+
+  Line  879: mock_results = {
+             Pattern: \bmock_\w+
+
+  Line  896: agent_results=mock_results,
+             Pattern: \bmock_\w+
+
+
+📁 src/core/reconstruction_quality_scorer.py (12 violations)
+  Line  786: # Placeholder for CMake build attempt
+             Pattern: \bplaceholder\b
+
+  Line  795: # Placeholder for MSBuild attempt
+             Pattern: \bplaceholder\b
+
+  Line  804: # Placeholder for direct compilation attempt
+             Pattern: \bplaceholder\b
+
+  Line  824: """Extract function names from binary (placeholder)"""
+             Pattern: \bplaceholder\b
+
+  Line  826: return ['main', 'init', 'cleanup']  # Placeholder
+             Pattern: \bplaceholder\b
+
+  Line  845: """Extract API calls from binary (placeholder)"""
+             Pattern: \bplaceholder\b
+
+  Line  847: return ['GetModuleHandle', 'LoadLibrary', 'GetProcAddress']  # Placeholder
+             Pattern: \bplaceholder\b
+
+  Line  894: """Estimate control flow preservation (placeholder)"""
+             Pattern: \bplaceholder\b
+
+  Line  896: return 0.7  # Placeholder estimate
+             Pattern: \bplaceholder\b
+
+  Line  900: """Estimate data structure accuracy (placeholder)"""
+             Pattern: \bplaceholder\b
+
+  Line  902: return 0.6  # Placeholder estimate
+             Pattern: \bplaceholder\b
+
+  Line 1124: # Mock assessment
+             Pattern: \bmock\b
+
+
+📁 src/core/resource_compilation_pipeline.py (2 violations)
+  Line  105: # Add placeholder for string resources
+             Pattern: \bplaceholder\b
+
+  Line  309: # Mock test with current output structure
+             Pattern: \bmock\b
+
+
+📁 src/core/semantic_analyzer.py (4 violations)
+  Line 1116: # TODO/FIXME comments
+             Pattern: \btodo\b
+
+  Line 1117: if re.search(r'//.*(?:TODO|FIXME|HACK)', code, re.IGNORECASE):
+             Pattern: \btodo\b
+
+  Line 1118: debt_indicators.append('TODO/FIXME comments present')
+             Pattern: \btodo\b
+
+  Line 1261: # Mock function structure for testing
+             Pattern: \bmock\b
+
+
+📁 src/core/semantic_decompiler.py (3 violations)
+  Line 1027: # Remove placeholder comments and enhance with semantic understanding
+             Pattern: \bplaceholder\b
+
+  Line 1035: if 'TODO' in line or 'Implementation' in line:
+             Pattern: \btodo\b
+
+  Line 1036: # Replace placeholder with semantic implementation
+             Pattern: \bplaceholder\b
+
+
+📁 src/core/shared_components.py (5 violations)
+  Line  516: # Check for placeholder patterns
+             Pattern: \bplaceholder\b
+
+  Line  517: placeholder_patterns = [
+             Pattern: \bplaceholder_\w+
+
+  Line  518: 'TODO', 'FIXME', 'placeholder', 'dummy',
+             Pattern: \bplaceholder\b
+
+  Line  522: for pattern in placeholder_patterns:
+             Pattern: \bplaceholder_\w+
+
+  Line  524: issues.append(f'Contains placeholder: {pattern}')
+             Pattern: \bplaceholder\b
+
+
+📁 src/core/validate_pipeline.py (1 violations)
+  Line  378: # Mock performance benchmarks
+             Pattern: \bmock\b
+
+
+📁 src/core/validation_reporting_system.py (3 violations)
+  Line  808: # Placeholder for structural consistency analysis
+             Pattern: \bplaceholder\b
+
+  Line  814: # Placeholder for semantic alignment analysis
+             Pattern: \bplaceholder\b
+
+  Line 1080: # Mock validation report generation
+             Pattern: \bmock\b
+
+
+📁 src/ml/semantic_analyzer.py (5 violations)
+  Line  581: # Placeholder methods that would be expanded in full implementation
+             Pattern: \bplaceholder\b
+
+  Line  611: return 0.7  # Placeholder implementation
+             Pattern: \bplaceholder\b
+
+  Line  615: return 0.6  # Placeholder implementation
+             Pattern: \bplaceholder\b
+
+  Line  619: return 0.8  # Placeholder implementation
+             Pattern: \bplaceholder\b
+
+  Line  623: return 0.75  # Placeholder implementation
+             Pattern: \bplaceholder\b
+
+
+📁 src/utils/documentation_validator.py (17 violations)
+  Line    9: - NO MOCK IMPLEMENTATIONS - Authentic code verification
+             Pattern: \bmock\b
+
+  Line  272: - NO MOCK VALIDATION: Inspect authentic implementations
+             Pattern: \bmock\b
+
+  Line  506: """Validate that found evidence is authentic and not mock"""
+             Pattern: \bmock\b
+
+  Line  553: """Check if implementation is authentic (not mock/placeholder)"""
+             Pattern: \bmock\b
+
+  Line  564: # Check for mock/placeholder indicators
+             Pattern: \bmock\b
+
+  Line  565: mock_indicators = [
+             Pattern: \bmock_\w+
+
+  Line  566: 'NotImplementedError',
+             Pattern: NotImplemented
+
+  Line  567: 'TODO',
+             Pattern: \btodo\b
+
+  Line  568: 'placeholder',
+             Pattern: \bplaceholder\b
+
+  Line  569: 'mock',
+             Pattern: \bmock\b
+
+  Line  570: 'stub',
+             Pattern: \bstub\b
+
+  Line  588: mock_count = sum(1 for indicator in mock_indicators if indicator in implementation)
+             Pattern: \bmock_\w+
+
+  Line  591: # Require more authentic indicators than mock indicators
+             Pattern: \bmock\b
+
+  Line  592: return authentic_count > mock_count
+             Pattern: return.*mock
+
+  Line  925: # Check for NotImplementedError or TODOs
+             Pattern: NotImplemented
+
+  Line  926: has_placeholders = any(placeholder in content for placeholder in [
+             Pattern: \bplaceholder\b
+
+  Line  927: 'NotImplementedError', 'TODO', 'placeholder', 'pass  # Implementation'
+             Pattern: \bplaceholder\b
+
+
+📁 tasks.md (1 violations)
+  Line   43: - **Current State**: Basic resource stub (798,720 bytes vs 4,296,704 bytes needed)
+             Pattern: \bstub\b
+
+
+📁 tests/test_agent_individual.py (3 violations)
+  Line   12: from unittest.mock import Mock, patch, MagicMock
+             Pattern: \bmock\b
+
+  Line   68: def test_agent1_validate_prerequisites(self, mock_exists):
+             Pattern: \bmock_\w+
+
+  Line   70: mock_exists.return_value = True
+             Pattern: \bmock_\w+
+
+
+📁 tests/test_agent_output_validation.py (9 violations)
+  Line   15: from unittest.mock import patch, MagicMock
+             Pattern: \bmock\b
+
+  Line   42: # Create dummy classes for type hints when LangChain not available
+             Pattern: \bdummy\b
+
+  Line  457: # Populate shared memory with mock agent results for synthesis
+             Pattern: \bmock\b
+
+  Line  543: 3. Placeholder detection accuracy
+             Pattern: \bplaceholder\b
+
+  Line  586: # Create appropriate context for each agent with mock agent results
+             Pattern: \bmock\b
+
+  Line  589: # Add mock agent results for dependency validation
+             Pattern: \bmock\b
+
+  Line  593: # Mock successful Agent 1 and 2 results for agents that need them
+             Pattern: \bmock\b
+
+  Line  617: data={f'agent_{aid}_data': f'mock_data_{aid}'},
+             Pattern: \bmock_\w+
+
+  Line  799: # For now, return a mock validation result
+             Pattern: \bmock\b
+
+
+📁 tests/test_context_propagation.py (6 violations)
+  Line   12: from unittest.mock import Mock, patch, MagicMock
+             Pattern: \bmock\b
+
+  Line  100: # Simulate Agent 2's dependency check
+             Pattern: \bsimulat[e|ion]\b
+
+  Line  178: def test_agent1_sentinel_execution(self, mock_exists):
+             Pattern: \bmock_\w+
+
+  Line  180: mock_exists.return_value = True
+             Pattern: \bmock_\w+
+
+  Line  193: # Agent 1 should not crash on execution (even if it returns mock data)
+             Pattern: \bmock\b
+
+  Line  256: def test_orchestrator_initialization(self, mock_execute):
+             Pattern: \bmock_\w+
+
+
+📁 tests/test_integration_compilation.py (27 violations)
+  Line   14: from unittest.mock import Mock, patch, MagicMock
+             Pattern: \bmock\b
+
+  Line   51: # Create mock source code
+             Pattern: \bmock\b
+
+  Line   52: self.mock_source = self.test_dir / "mock_source.c"
+             Pattern: \bmock_\w+
+
+  Line   61: """Create mock source code for compilation testing"""
+             Pattern: \bmock\b
+
+  Line  217: self.mock_source.write_text(source_code)
+             Pattern: \bmock_\w+
+
+  Line  246: # Mock agent execution
+             Pattern: \bmock\b
+
+  Line  262: {'path': str(self.mock_source), 'type': 'main', 'size': self.mock_source.stat().st_size},
+             Pattern: \bmock_\w+
+
+  Line  295: 'source_files': [str(self.mock_source)],
+             Pattern: \bmock_\w+
+
+  Line  305: # Mock Agent 10 execution
+             Pattern: \bmock\b
+
+  Line  319: 'object_files': [str(self.compilation_dir / 'mock_source.obj')],
+             Pattern: \bmock_\w+
+
+  Line  361: 'source_files': [str(self.mock_source)],
+             Pattern: \bmock_\w+
+
+  Line  373: # Mock Agent 18 execution
+             Pattern: \bmock\b
+
+  Line  424: 'source_code': str(self.mock_source)
+             Pattern: \bmock_\w+
+
+  Line  434: # Mock Agent 11 execution
+             Pattern: \bmock\b
+
+  Line  515: # Mock Agent 12 execution
+             Pattern: \bmock\b
+
+  Line  585: 'source_path': str(self.mock_source),
+             Pattern: \bmock_\w+
+
+  Line  595: # Simulate complete compilation workflow
+             Pattern: \bsimulat[e|ion]\b
+
+  Line  601: 'source_code': str(self.mock_source),
+             Pattern: \bmock_\w+
+
+  Line  602: 'object_files': [str(self.compilation_dir / 'mock_source.obj')],
+             Pattern: \bmock_\w+
+
+  Line  710: 'source_code': str(self.mock_source),
+             Pattern: \bmock_\w+
+
+  Line  714: # Mock binary comparison validation
+             Pattern: \bmock\b
+
+  Line  719: mock_validation_result = {
+             Pattern: \bmock_\w+
+
+  Line  741: self.assertTrue(mock_validation_result['compilation_success'])
+             Pattern: \bmock_\w+
+
+  Line  742: self.assertTrue(mock_validation_result['functionality_preserved'])
+             Pattern: \bmock_\w+
+
+  Line  743: self.assertGreaterEqual(mock_validation_result['binary_match_score'], 0.7)
+             Pattern: \bmock_\w+
+
+  Line  744: self.assertGreaterEqual(mock_validation_result['quality_metrics']['overall_validation_score'], 0.8)
+             Pattern: \bmock_\w+
+
+  Line  747: execution_tests = mock_validation_result['execution_tests']
+             Pattern: \bmock_\w+
+
+
+📁 tests/test_integration_decompilation.py (9 violations)
+  Line   13: from unittest.mock import Mock, patch, MagicMock
+             Pattern: \bmock\b
+
+  Line   90: # Mock agent execution
+             Pattern: \bmock\b
+
+  Line  110: # Mock Agent 1 execution
+             Pattern: \bmock\b
+
+  Line  158: # Mock Agent 2 execution
+             Pattern: \bmock\b
+
+  Line  204: # Mock Agent 5 (Neo) execution
+             Pattern: \bmock\b
+
+  Line  313: # Mock Agent 7 (Trainman) execution
+             Pattern: \bmock\b
+
+  Line  387: # Mock Agent 14 (Cleaner) execution
+             Pattern: \bmock\b
+
+  Line  416: // TODO: Add proper initialization logic
+             Pattern: \btodo\b
+
+  Line  522: # Simulate complete decompilation workflow
+             Pattern: \bsimulat[e|ion]\b
+
+
+📁 tests/test_integration_matrix_online.py (29 violations)
+  Line   13: from unittest.mock import Mock, patch, MagicMock
+             Pattern: \bmock\b
+
+  Line   42: # Create mock output structure
+             Pattern: \bmock\b
+
+  Line   68: def test_full_pipeline_execution(self, mock_execute):
+             Pattern: \bmock_\w+
+
+  Line   70: # Mock successful pipeline execution
+             Pattern: \bmock\b
+
+  Line   71: mock_execute.return_value = {
+             Pattern: \bmock_\w+
+
+  Line   87: # Verify mock was called
+             Pattern: \bmock\b
+
+  Line   88: mock_execute.assert_called_once()
+             Pattern: \bmock_\w+
+
+  Line  103: # Mock context for decompilation
+             Pattern: \bmock\b
+
+  Line  119: # Simulate decompilation pipeline success
+             Pattern: \bsimulat[e|ion]\b
+
+  Line  125: # Create mock output files
+             Pattern: \bmock\b
+
+  Line  128: decompiled_file.write_text("// Mock decompiled code\nint main() { return 0; }")
+             Pattern: \bmock\b
+
+  Line  141: # Mock analysis results
+             Pattern: \bmock\b
+
+  Line  171: # Mock compilation context
+             Pattern: \bmock\b
+
+  Line  174: 'source_code': self.test_dir / "mock_source.c",
+             Pattern: \bmock_\w+
+
+  Line  179: # Create mock source code
+             Pattern: \bmock\b
+
+  Line  190: # Mock compilation success
+             Pattern: \bmock\b
+
+  Line  209: # Mock validation results
+             Pattern: \bmock\b
+
+  Line  301: # Create mock source file
+             Pattern: \bmock\b
+
+  Line  302: mock_source = self.test_dir / "mock_decompiled.c"
+             Pattern: \bmock_\w+
+
+  Line  303: mock_source.write_text("""
+             Pattern: \bmock_\w+
+
+  Line  307: // Mock Matrix Online decompiled code
+             Pattern: \bmock\b
+
+  Line  331: # Mock binary comparison test
+             Pattern: \bmock\b
+
+  Line  335: # This would normally run full validation, but we'll mock it
+             Pattern: \bmock\b
+
+  Line  336: mock_result = {
+             Pattern: \bmock_\w+
+
+  Line  348: # Verify mock validation results
+             Pattern: \bmock\b
+
+  Line  349: self.assertTrue(mock_result['compilation_success'])
+             Pattern: \bmock_\w+
+
+  Line  350: self.assertTrue(mock_result['functionality_preserved'])
+             Pattern: \bmock_\w+
+
+  Line  351: self.assertGreaterEqual(mock_result['binary_match_score'], 0.7)
+             Pattern: \bmock_\w+
+
+  Line  352: self.assertGreaterEqual(mock_result['quality_metrics']['overall_validation_score'], 0.75)
+             Pattern: \bmock_\w+
+
+
+📁 tests/test_missing_agent_validation.py (49 violations)
+  Line    4: Tests for agents that haven't been refactored yet using mock execution and AI validation
+             Pattern: \bmock\b
+
+  Line   33: """Mock agent executor for testing non-existent agents with realistic output"""
+             Pattern: \bmock\b
+
+  Line   41: """Execute mock analysis based on agent's expected functionality"""
+             Pattern: \bmock\b
+
+  Line   43: # Generate agent-specific mock output
+             Pattern: \bmock\b
+
+  Line   45: return self._mock_sentinel_output(context)
+             Pattern: return.*mock
+
+  Line   47: return self._mock_architect_output(context)
+             Pattern: return.*mock
+
+  Line   49: return self._mock_merovingian_output(context)
+             Pattern: return.*mock
+
+  Line   51: return self._mock_agent_smith_output(context)
+             Pattern: return.*mock
+
+  Line   53: return self._mock_neo_output(context)
+             Pattern: return.*mock
+
+  Line   55: return self._mock_commander_locke_output(context)
+             Pattern: return.*mock
+
+  Line   57: return self._mock_the_machine_output(context)
+             Pattern: return.*mock
+
+  Line   59: return self._generic_mock_output(context)
+             Pattern: return.*mock
+
+  Line   62: """Mock Sentinel (Agent 1) binary discovery output"""
+             Pattern: \bmock\b
+
+  Line  106: """Mock Architect (Agent 2) architecture analysis output"""
+             Pattern: \bmock\b
+
+  Line  150: """Mock Merovingian (Agent 3) function detection output"""
+             Pattern: \bmock\b
+
+  Line  194: """Mock Agent Smith (Agent 4) binary structure analysis output"""
+             Pattern: \bmock\b
+
+  Line  254: """Mock Neo (Agent 5) advanced decompilation output"""
+             Pattern: \bmock\b
+
+  Line  303: """Mock Commander Locke (Agent 9) critical import fixes output"""
+             Pattern: \bmock\b
+
+  Line  346: """Mock The Machine (Agent 10) build system generation output"""
+             Pattern: \bmock\b
+
+  Line  387: """Generic mock output for undefined agents"""
+             Pattern: \bmock\b
+
+  Line  392: 'mock_analysis': {
+             Pattern: \bmock_\w+
+
+  Line  398: 'placeholder_data': {
+             Pattern: \bplaceholder_\w+
+
+  Line  399: 'note': f'Mock output for Agent {self.agent_id} ({self.agent_name})',
+             Pattern: \bmock\b
+
+  Line  407: """Test missing agents using mock execution and AI validation"""
+             Pattern: \bmock\b
+
+  Line  432: """Test Agent 1 (Sentinel) mock execution and validation"""
+             Pattern: \bmock\b
+
+  Line  435: """Test Sentinel mock execution and output validation"""
+             Pattern: \bmock\b
+
+  Line  436: mock_executor = MockAgentExecutor(1, "Sentinel")
+             Pattern: \bmock_\w+
+
+  Line  437: result = mock_executor.execute_mock_analysis(self.test_context)
+             Pattern: \bmock_\w+
+
+  Line  453: mock_executor = MockAgentExecutor(1, "Sentinel")
+             Pattern: \bmock_\w+
+
+  Line  454: result = mock_executor.execute_mock_analysis(self.test_context)
+             Pattern: \bmock_\w+
+
+  Line  488: """Test Agent 9 (Commander Locke) critical import fixes mock execution"""
+             Pattern: \bmock\b
+
+  Line  492: mock_executor = MockAgentExecutor(9, "Commander Locke")
+             Pattern: \bmock_\w+
+
+  Line  493: result = mock_executor.execute_mock_analysis(self.test_context)
+             Pattern: \bmock_\w+
+
+  Line  536: mock_executor = MockAgentExecutor(9, "Commander Locke")
+             Pattern: \bmock_\w+
+
+  Line  537: result = mock_executor.execute_mock_analysis(self.test_context)
+             Pattern: \bmock_\w+
+
+  Line  552: """Test Agent 10 (The Machine) build system generation mock execution"""
+             Pattern: \bmock\b
+
+  Line  556: mock_executor = MockAgentExecutor(10, "The Machine")
+             Pattern: \bmock_\w+
+
+  Line  557: result = mock_executor.execute_mock_analysis(self.test_context)
+             Pattern: \bmock_\w+
+
+  Line  594: mock_executor = MockAgentExecutor(10, "The Machine")
+             Pattern: \bmock_\w+
+
+  Line  595: result = mock_executor.execute_mock_analysis(self.test_context)
+             Pattern: \bmock_\w+
+
+  Line  613: """Test integration between mock agents"""
+             Pattern: \bmock\b
+
+  Line  616: """Test mock pipeline flow through multiple agents"""
+             Pattern: \bmock\b
+
+  Line  632: mock_executor = MockAgentExecutor(agent_id, agent_name)
+             Pattern: \bmock_\w+
+
+  Line  633: result = mock_executor.execute_mock_analysis(self.test_context)
+             Pattern: \bmock_\w+
+
+  Line  640: self.assertEqual(len(pipeline_results), 7, "Should execute all mock agents")
+             Pattern: \bmock\b
+
+  Line  654: Evaluate this mock Matrix Pipeline execution flow:
+             Pattern: \bmock\b
+
+  Line  670: self.assertGreater(pipeline_score, 0.4, "Mock pipeline coherence should be acceptable")
+             Pattern: \bmock\b
+
+  Line  770: print("\n✅ Missing Agent Mock Validation: OPERATIONAL")
+             Pattern: \bmock\b
+
+  Line  772: print(f"\n⚠️  Missing Agent Mock Validation: {report['status']}")
+             Pattern: \bmock\b
+
+
+📁 tests/test_phase2_integration.py (2 violations)
+  Line   12: from unittest.mock import Mock, patch, MagicMock
+             Pattern: \bmock\b
+
+  Line   95: # This is a placeholder test since the actual Phase 2 modules
+             Pattern: \bplaceholder\b
+
+
+📁 tests/test_phase4_comprehensive.py (13 violations)
+  Line   13: from unittest.mock import patch, MagicMock
+             Pattern: \bmock\b
+
+  Line  249: # Simulate some work
+             Pattern: \bsimulat[e|ion]\b
+
+  Line  264: 'binary_path': str(self.test_binary_path) if self.test_binary_path.exists() else '/mock/path',
+             Pattern: \bmock\b
+
+  Line  281: """Test mock agent execution workflow"""
+             Pattern: \bmock\b
+
+  Line  282: # Simulate agent execution without actual processing
+             Pattern: \bsimulat[e|ion]\b
+
+  Line  283: mock_agent_result = {
+             Pattern: \bmock_\w+
+
+  Line  287: 'analysis_type': 'mock_test',
+             Pattern: \bmock_\w+
+
+  Line  297: # Validate mock result structure
+             Pattern: \bmock\b
+
+  Line  298: self.assertIn('agent_id', mock_agent_result)
+             Pattern: \bmock_\w+
+
+  Line  299: self.assertIn('status', mock_agent_result)
+             Pattern: \bmock_\w+
+
+  Line  300: self.assertIn('data', mock_agent_result)
+             Pattern: \bmock_\w+
+
+  Line  301: self.assertEqual(mock_agent_result['agent_id'], 1)
+             Pattern: \bmock_\w+
+
+  Line  321: self.assertGreater(overall_score, 0.7, "Mock quality should be reasonably high")
+             Pattern: \bmock\b
+
+
+📁 tests/test_pipeline_validation.py (5 violations)
+  Line   12: from unittest.mock import Mock, patch, MagicMock
+             Pattern: \bmock\b
+
+  Line  293: def test_data_integrity_validation(self, mock_exists):
+             Pattern: \bmock_\w+
+
+  Line  295: mock_exists.return_value = True
+             Pattern: \bmock_\w+
+
+  Line  438: def test_full_pipeline_validation_success(self, mock_exists):
+             Pattern: \bmock_\w+
+
+  Line  440: mock_exists.return_value = True
+             Pattern: \bmock_\w+
+
+
+📁 tests/test_regression.py (11 violations)
+  Line   14: from unittest.mock import Mock, patch, MagicMock
+             Pattern: \bmock\b
+
+  Line  167: # Mock current Agent 1 execution
+             Pattern: \bmock\b
+
+  Line  332: # Mock binary format detection results
+             Pattern: \bmock\b
+
+  Line  355: # Mock Ghidra integration results
+             Pattern: \bmock\b
+
+  Line  382: # Mock AI integration results
+             Pattern: \bmock\b
+
+  Line  384: 'mock_ai_available': True,
+             Pattern: \bmock_\w+
+
+  Line  392: self.assertTrue(ai_results['mock_ai_available'],
+             Pattern: \bmock_\w+
+
+  Line  393: "Mock AI integration has regressed")
+             Pattern: \bmock\b
+
+  Line  405: # Mock Windows-specific functionality
+             Pattern: \bmock\b
+
+  Line  419: # Mock different binary size handling
+             Pattern: \bmock\b
+
+  Line  433: # Mock error handling scenarios
+             Pattern: \bmock\b
+
+
+📁 wiki-repo/Developer-Guide.md (2 violations)
+  Line  146: raise NotImplementedError("Agents must implement execute_matrix_task")
+             Pattern: raise NotImplementedError
+
+  Line  150: raise NotImplementedError("Agents must implement _validate_prerequisites")
+             Pattern: raise NotImplementedError
+
+
+📁 wiki-repo/Security-Standards.md (1 violations)
+  Line   93: b'This program cannot be run in DOS mode',  # DOS stub
+             Pattern: \bstub\b
+
+
+📁 windows_execution_mission.py (1 violations)
+  Line  195: '-ExecutionPolicy', 'Bypass',
+             Pattern: bypass
+
+============================================================
+ACTION REQUIRED: Fix all violations to comply with Rule 13
+Rule 13: NO PLACEHOLDER CODE - no mock/fake/stub implementations
+============================================================

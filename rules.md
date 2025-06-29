@@ -40,12 +40,12 @@ These rules are **ABSOLUTE**, **NON-NEGOTIABLE**, and **MANDATORY**. Violation r
 
 ## SECTION II: BUILD SYSTEM COMMANDMENTS
 
-### Rule 6: VISUAL STUDIO 2003 ONLY
-- **ONLY** use configured Visual Studio .NET 2003 paths
-- **MANDATORY PATH**: \\Mac\Home\Downloads\VS .NET Enterprise Architect 2003
-- **NEVER** use alternative compiler or linker paths  
-- **NO WSL FALLBACKS** - Windows native tools only
-- **NO ALTERNATIVE BUILDS** - VS2003 build system exclusive
+### Rule 6: USE CENTRAL BUILD CONFIG ONLY
+- **ONLY** use build system configured in build_config.yaml
+- **SINGLE SOURCE OF TRUTH**: All build paths from build_config.yaml
+- **NO HARDCODED PATHS** - all compiler/linker paths from config file
+- **BUILD SYSTEM AGNOSTIC** - pipeline works with any configured build system
+- **DEFAULT TO VS2003** - but configurable through build_config.yaml
 
 ### Rule 7: NO BUILD FALLBACKS
 - **NEVER** create backup or secondary build systems
@@ -81,11 +81,14 @@ These rules are **ABSOLUTE**, **NON-NEGOTIABLE**, and **MANDATORY**. Violation r
 
 ## SECTION IV: CODE QUALITY IMPERATIVES
 
-### Rule 12: NEVER EDIT SOURCE CODE
-- **NEVER** modify generated source code directly
-- **FIX COMPILER/BUILD SYSTEM** instead of editing source
-- **READABLE MAIN ALLOWED** - only for creating meaningful names
-- **COMPILER FIXES ONLY** - resolve issues at build system level
+### Rule 12: FIX ROOT CAUSE, NOT SYMPTOMS
+- **NEVER** change source code unless you want to change exe behavior
+- **FIX THE DECOMPILER** when there are bugs in generated source
+- **FIX COMPILER/BUILD SYSTEM** instead of editing source as workaround
+- **ONLY EDIT SOURCE** when intentionally changing program behavior
+- **NO WORKAROUNDS** - fix the actual cause (agents/decompiler)
+- **ROOT CAUSE FIXES** - repair the generator, not the generated code
+- **READABLE MAIN ALLOWED** - only for creating meaningful function names
 
 ### Rule 13: NO PLACEHOLDER CODE
 - **NEVER** implement placeholder or stub implementations

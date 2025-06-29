@@ -412,16 +412,25 @@ class Agent9_TheMachine(ReconstructionAgent):
 
     def _extract_import_table_from_sentinel(self, context: Dict[str, Any]) -> List[ImportTableData]:
         """CRITICAL: Extract comprehensive import table data from Agent 1 (Sentinel)"""
-        agent_results = context.get('agent_results', {})
+        # PRIORITY 1: Check shared_memory first (live execution)
+        shared_memory = context.get('shared_memory', {})
+        analysis_results = shared_memory.get('analysis_results', {})
         
-        # CACHE-FIRST APPROACH: Try to load from cache files first
-        agent1_data = self._load_agent1_cache_data(context)
+        agent1_data = None
+        if 1 in analysis_results:
+            agent1_data = analysis_results[1]
+            
+        # PRIORITY 2: Try cache files if shared_memory not available
+        if not agent1_data:
+            agent1_data = self._load_agent1_cache_data(context)
         
-        # Try live agent results if cache not available
-        if not agent1_data and 1 in agent_results:
-            agent1_result = agent_results[1]
-            if hasattr(agent1_result, 'data'):
-                agent1_data = agent1_result.data
+        # PRIORITY 3: Try legacy agent_results if cache not available
+        if not agent1_data:
+            agent_results = context.get('agent_results', {})
+            if 1 in agent_results:
+                agent1_result = agent_results[1]
+                if hasattr(agent1_result, 'data'):
+                    agent1_data = agent1_result.data
         
         # STRICT: Agent 1 data is MANDATORY for import table data
         if not agent1_data:

@@ -224,21 +224,25 @@ class MatrixErrorHandler:
     @contextmanager
     def handle_matrix_operation(self, operation_name: str):
         """Context manager for handling Matrix operations with retry logic"""
-        while self.retry_count <= self.max_retries:
+        last_exception = None
+        local_retry_count = 0
+        
+        while local_retry_count <= self.max_retries:
             try:
                 yield
-                break  # Success, exit retry loop
+                return  # Success, exit completely
                 
             except Exception as e:
-                self.retry_count += 1
-                if self.retry_count <= self.max_retries:
+                last_exception = e
+                local_retry_count += 1
+                if local_retry_count <= self.max_retries:
                     self.logger.warning(
-                        f"⚠️ {operation_name} failed (attempt {self.retry_count}/{self.max_retries + 1}): {e}"
+                        f"⚠️ {operation_name} failed (attempt {local_retry_count}/{self.max_retries + 1}): {e}"
                     )
-                    time.sleep(min(2 ** self.retry_count, 10))  # Exponential backoff
+                    time.sleep(min(2 ** local_retry_count, 10))  # Exponential backoff
                 else:
                     self.logger.error(f"❌ {operation_name} failed after {self.max_retries + 1} attempts: {e}")
-                    raise
+                    raise last_exception
     
     def log_and_raise(self, message: str, exception_class: Exception = Exception) -> None:
         """Log error and raise exception"""
