@@ -1198,14 +1198,23 @@ This project was reconstructed from binary analysis by Neo Advanced Decompiler.
         memory_refs = set()
         for insn in assembly_instructions:
             op_str = insn.get('op_str', '')
-            # Extract memory references like mem_0x4a97bc
+            # Extract memory references like mem_0x4a97bc from original assembly
             import re
             mem_matches = re.findall(r'mem_0x[0-9a-fA-F]+', op_str)
             memory_refs.update(mem_matches)
+            
+            # Also pre-scan for memory references that will be generated during conversion
+            # Look for patterns like [eax], [0x4d23b4], etc. that become mem_ variables
+            bracket_matches = re.findall(r'\[([^]]+)\]', op_str)
+            for match in bracket_matches:
+                if match.startswith('0x'):
+                    memory_refs.add(f"mem_{match}")
+                elif match in ['eax', 'ebx', 'ecx', 'edx', 'esi', 'edi', 'esp', 'ebp']:
+                    memory_refs.add(f"mem_{match}")
         
         # Add memory reference variable declarations
         for mem_ref in sorted(memory_refs):
-            variables.append(f"int {mem_ref} = 0;")
+            variables.append(f"void* {mem_ref} = NULL;")
         
         return variables
     
@@ -1251,12 +1260,19 @@ This project was reconstructed from binary analysis by Neo Advanced Decompiler.
                     return f"{dst} = (void*){src};"
                 return f"{dst} = {src};"
         
-        # Arithmetic operations
+        # Arithmetic operations - FIXED: Handle void pointer arithmetic correctly
         elif mnemonic == 'add':
             parts = op_str.split(', ')
             if len(parts) == 2:
                 dst = self._convert_operand_to_c(parts[0].strip(), c_variables)
                 src = self._convert_operand_to_c(parts[1].strip(), c_variables)
+                # Fix: Cast void pointers to intptr_t for arithmetic
+                if dst.startswith('reg_'):
+                    if src.startswith('reg_'):
+                        return f"{dst} = (void*)((intptr_t){dst} + (intptr_t){src});"
+                    else:
+                        # Adding immediate value to void pointer 
+                        return f"{dst} = (void*)((intptr_t){dst} + {src});"
                 return f"{dst} += {src};"
         
         elif mnemonic == 'sub':
@@ -1264,6 +1280,13 @@ This project was reconstructed from binary analysis by Neo Advanced Decompiler.
             if len(parts) == 2:
                 dst = self._convert_operand_to_c(parts[0].strip(), c_variables)
                 src = self._convert_operand_to_c(parts[1].strip(), c_variables)
+                # Fix: Cast void pointers to intptr_t for arithmetic
+                if dst.startswith('reg_'):
+                    if src.startswith('reg_'):
+                        return f"{dst} = (void*)((intptr_t){dst} - (intptr_t){src});"
+                    else:
+                        # Subtracting immediate value from void pointer
+                        return f"{dst} = (void*)((intptr_t){dst} - {src});"
                 return f"{dst} -= {src};"
         
         # Control flow - convert to C control structures (commented out to avoid undefined labels)
@@ -1277,7 +1300,15 @@ This project was reconstructed from binary analysis by Neo Advanced Decompiler.
         
         # Function calls
         elif mnemonic == 'call':
-            func_name = self._convert_operand_to_c(op_str.strip(), c_variables)
+            operand = op_str.strip()
+            # Check if calling through a register (indirect call)
+            if operand in c_variables:
+                reg_var = c_variables[operand]
+                if reg_var.startswith('reg_'):
+                    return f"((void(*)()){reg_var})();"  # Cast void* to function pointer and call
+            
+            # Direct function call
+            func_name = self._convert_operand_to_c(operand, c_variables)
             valid_func_name = self._make_valid_c_identifier(func_name)
             return f"{valid_func_name}();"
         

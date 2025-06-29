@@ -2638,11 +2638,13 @@ typedef struct FILE FILE;
             self.logger.info(f"🔧 Stderr: {result.stderr}")
             
             if result.returncode != 0:
-                error_msg = f"COMPILATION FAILED: {result.stderr}"
+                error_msg = f"COMPILATION FAILED: Return code {result.returncode}"
+                if result.stderr:
+                    error_msg += f" - STDERR: {result.stderr}"
+                if result.stdout:
+                    error_msg += f" - STDOUT: {result.stdout}"
                 self.logger.error(error_msg)
-                self.logger.error(f"Return code: {result.returncode}")
-                self.logger.error(f"Stdout: {result.stdout}")
-                self.logger.error(f"Command: {' '.join(compile_cmd)}")
+                self.logger.error(f"Full command: {' '.join(compile_cmd)}")
                 raise MatrixAgentError(error_msg)
             
             if not output_file.exists():
