@@ -6,9 +6,11 @@ Open-Sourcefy is a military-grade reverse engineering framework that reconstruct
 
 ## 🚨 CRITICAL SYSTEM SPECIFICATIONS
 
-**WINDOWS EXCLUSIVE**: This system ONLY supports Windows PE executables with Visual Studio 2022 Preview compilation. No fallbacks, no alternatives, no exceptions.
+**WINDOWS EXCLUSIVE**: This system ONLY supports Windows PE executables with Visual Studio .NET 2003 as PRIMARY build system for 100% functional identity. Visual Studio 2022 Preview as fallback. No alternatives, no exceptions.
 
 **PRODUCTION READY**: NSA-level security, >90% test coverage, SOLID principles, zero tolerance for failures.
+
+**CRITICAL STATUS**: Assembly analysis achieves 100% functional identity but compilation from decompiled source fails due to assembly artifacts. System currently uses original binary instead of compiled from decompiled source.
 
 ## Table of Contents
 
@@ -87,10 +89,11 @@ Open-Sourcefy is a military-grade reverse engineering framework that reconstruct
 ### Data Flow Architecture
 
 ```
-PE EXECUTABLE → GHIDRA ANALYSIS → MATRIX PIPELINE → VS2022 BUILD → VALIDATION
-     ↓               ↓                 ↓              ↓           ↓
-   BINARY         C SOURCE         RESOURCES      MSBUILD    RECONSTRUCTED
- ANALYSIS       GENERATION       COMPILATION    EXECUTION       BINARY
+PE EXECUTABLE → GHIDRA ANALYSIS → MATRIX PIPELINE → VS2003/VS2022 BUILD → VALIDATION
+     ↓               ↓                 ↓                ↓              ↓
+   BINARY         C SOURCE         RESOURCES        COMPILATION    RECONSTRUCTED
+ ANALYSIS       GENERATION       COMPILATION      (CURRENTLY       BINARY
+                                                   FAILS)         (USES ORIGINAL)
 ```
 
 ### Core System Components
@@ -117,7 +120,8 @@ src/core/
 
 - **Windows 10/11 (64-bit)** - EXCLUSIVE PLATFORM
 - **Python 3.11+** - MINIMUM VERSION REQUIRED
-- **Visual Studio 2022 Preview** - EXCLUSIVE BUILD SYSTEM
+- **Visual Studio .NET 2003** - PRIMARY BUILD SYSTEM (for 100% functional identity)
+- **Visual Studio 2022 Preview** - FALLBACK BUILD SYSTEM
 - **Java 17+** - FOR GHIDRA INTEGRATION
 - **16GB+ RAM** - MINIMUM FOR AI PROCESSING
 - **100GB+ STORAGE** - FOR BUILD ARTIFACTS
@@ -136,7 +140,7 @@ pip install -r requirements.txt
 python main.py --verify-env
 
 # 4. Configure build system (REQUIRED)
-# Edit build_config.yaml with VS2022 Preview paths
+# Edit build_config.yaml with VS2003 and VS2022 Preview paths
 ```
 
 ### Environment Validation
