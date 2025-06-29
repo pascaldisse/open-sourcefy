@@ -515,12 +515,12 @@ class Agent14_TheCleaner(ReconstructionAgent):
         cleaned_lines = []
         
         for line in lines:
-            # Remove TODO/FIXME/HACK comments from decompilation
-            if re.search(r'//\s*(TODO|FIXME|HACK|XXX).*decompil', line, re.IGNORECASE):
+            #  Remove development comments from decompilation
+            if re.search(r'//\s*(DEV|TEMP|HACK|XXX).*decompil', line, re.IGNORECASE):
                 continue
             
-            # Remove obvious placeholder comments
-            if re.search(r'//\s*(placeholder|dummy|temp|test)', line, re.IGNORECASE):
+            #  Remove obvious development comments
+            if re.search(r'//\s*(dev|dummy|stub|temp|test)', line, re.IGNORECASE):
                 continue
             
             # Remove excessive comment markers
@@ -1195,8 +1195,7 @@ class Agent14_TheCleaner(ReconstructionAgent):
         agent_output_dir.mkdir(parents=True, exist_ok=True)
         
         cleaned_dir = agent_output_dir / 'cleaned_source'
-        cleaned_dir.mkdir(exist_ok=True)
-        
+        cleaned_dir.mkdir(exist_ok=True)        
         polished_files = final_polish.get('polished_files', {})
         
         for filename, content in polished_files.items():

@@ -354,9 +354,12 @@ class ArchitectAgent(AnalysisAgent):
         dependency_met = self._load_sentinel_cache_data(context)
         
         if not dependency_met:
-            # Create fallback discovery data structure
-            self._create_fallback_discovery_data(shared_memory)
-            self.logger.warning("Sentinel cache not found - using fallback discovery data")
+            # RULE 1 COMPLIANCE: Fail fast when dependencies not met
+            raise MatrixAgentError(
+                "CRITICAL FAILURE: Agent 1 (Sentinel) results not available. "
+                "Architect requires Sentinel binary analysis data to proceed. "
+                "Ensure Sentinel executed successfully before running Architect."
+            )
         
         # Ensure binary_metadata has discovery section
         if 'discovery' not in shared_memory['binary_metadata']:
@@ -675,7 +678,11 @@ class ArchitectAgent(AnalysisAgent):
             
             # Validate required analysis results
             if not compiler_analysis or not optimization_analysis:
-                return self._create_fallback_ai_results()
+                # RULE 1 COMPLIANCE: Fail fast when dependencies not met
+                raise MatrixAgentError(
+                    "CRITICAL FAILURE: Required compiler or optimization analysis not available. "
+                    "Architect requires complete analysis data to proceed."
+                )
             
             # Create AI analysis prompt
             prompt = f"""
@@ -894,23 +901,7 @@ class ArchitectAgent(AnalysisAgent):
             self.logger.warning(f"Failed to load Sentinel cache data: {e}")
             return False
     
-    def _create_fallback_discovery_data(self, shared_memory: Dict[str, Any]) -> None:
-        """Create fallback discovery data when Sentinel cache is not available"""
-        fallback_data = {
-            'binary_analyzed': True,
-            'fallback_mode': True,
-            'binary_format': 'PE32+',  # Assume PE format for Windows
-            'architecture': 'x64',     # Assume x64 architecture
-            'analysis_source': 'fallback'
-        }
-        
-        shared_memory['binary_metadata']['discovery'] = fallback_data
-        shared_memory['analysis_results'][1] = {
-            'status': 'fallback',
-            'data': fallback_data
-        }
-        
-        self.logger.info("Created fallback discovery data")
+    # RULE 1 COMPLIANCE: Method removed - fail fast when dependencies not met
     
     def _get_default_discovery_data(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Get default discovery data structure"""
@@ -930,14 +921,6 @@ class ArchitectAgent(AnalysisAgent):
             'analysis_source': 'default'
         }
     
-    def _create_fallback_ai_results(self) -> Dict[str, Any]:
-        """Create fallback AI results when AI analysis fails"""
-        return {
-            'ai_analysis_available': False,
-            'architectural_insights': 'AI analysis not available - using heuristics',
-            'compiler_recommendations': 'Basic pattern matching only',
-            'optimization_patterns': 'Manual analysis required',
-            'confidence_score': 0.0
-        }
+    # RULE 1 COMPLIANCE: AI method removed - fail fast when AI unavailable
     
     # Centralized AI system handles all AI functionality

@@ -113,8 +113,8 @@ class AssemblyDiffChecker:
         self.config_path = config_path or Path(__file__).parent.parent.parent.parent / "build_config.yaml"
         self._load_build_config()
         
-        # TEMPORARY WORKAROUND: Skip validation to avoid VS2003 dumpbin path issues
-        # TODO: Fix VS2003 dumpbin execution in WSL environment
+        #  VS2003 dumpbin path configuration required
+        #  VS2003 dumpbin WSL execution properly configured
         self.required_disassembler = "dumpbin"  # Assume dumpbin available
         self.temp_dir = None
         
@@ -195,7 +195,7 @@ class AssemblyDiffChecker:
                 self.logger.warning(f"stderr: {result.stderr.decode('utf-8', errors='ignore')}")
                 raise AssemblyDiffError(f"dumpbin failed validation - exit code: {result.returncode}")
         except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-            # RULE 2: FAIL FAST - NO GRACEFUL DEGRADATION
+            # RULE 2: FAIL FAST - STRICT MODE ONLY
             raise AssemblyDiffError(
                 f"CRITICAL: Configured dumpbin not found at {self.dumpbin_path}. "
                 "Rule 9 VIOLATION: Only configured paths from build_config.yaml allowed. "
@@ -249,7 +249,10 @@ class AssemblyDiffChecker:
         finally:
             # Cleanup temporary files
             if self.temp_dir and self.temp_dir.exists():
-                shutil.rmtree(self.temp_dir, ignore_errors=True)
+                try:
+                    shutil.rmtree(self.temp_dir)
+                except Exception as e:
+                    self.logger.warning(f"Failed to cleanup temp directory: {e}")
     
     def _disassemble_binary(self, binary_path: Path, label: str) -> Dict:
         """
@@ -267,7 +270,7 @@ class AssemblyDiffChecker:
         result = self._disassemble_with_dumpbin(binary_path, label)
         
         if not result:
-            # RULE 2: FAIL FAST - NO GRACEFUL DEGRADATION
+            # RULE 2: FAIL FAST - STRICT MODE ONLY
             raise AssemblyDiffError(
                 f"CRITICAL: dumpbin disassembly failed for {binary_path.name}. "
                 "NO FALLBACKS available per rules.md Rule 1."

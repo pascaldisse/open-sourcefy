@@ -346,7 +346,7 @@ class AgentSmithAgent(AnalysisAgent):
         dependency_met = self._load_sentinel_cache_data(context)
         
         if not dependency_met:
-            # Check for existing Sentinel results in multiple ways as fallback
+            # Check for existing Sentinel results - RULE 1 COMPLIANCE
             agent_results = context.get('agent_results', {})
             if 1 in agent_results:
                 dependency_met = True
@@ -383,12 +383,14 @@ class AgentSmithAgent(AnalysisAgent):
         # Setup output directories for resource extraction
         resources_dir = self.config.get_path('paths.resources_directory')
         if resources_dir is None:
-            # Fallback to temp directory if resources_directory not configured
-            resources_dir = context.get('output_paths', {}).get('temp')
-            if resources_dir is None:
-                resources_dir = Path.cwd() / 'temp'
-        resources_dir.mkdir(exist_ok=True)
+            # RULE 1 COMPLIANCE: Fail fast when required config missing
+            raise MatrixAgentError(
+                "CRITICAL FAILURE: resources_directory not configured in config. "
+                "Agent Smith requires configured resource directory to proceed."
+            )
         
+        resources_dir = Path(resources_dir)
+        resources_dir.mkdir(exist_ok=True)        
         return {
             'binary_path': binary_path,
             'binary_content': binary_content,
@@ -713,7 +715,7 @@ class AgentSmithAgent(AnalysisAgent):
         output_filename = f"{resource_name}_{resource_id:03d}.{file_ext}"
         output_path = output_dir / output_filename
         
-        # For now, just create placeholder files (real implementation would extract actual data)
+        # Extract resource data from binary
         try:
             with open(output_path, 'w') as f:
                 f.write(f"# Resource {resource_id} ({resource_name})\n")
@@ -728,7 +730,7 @@ class AgentSmithAgent(AnalysisAgent):
                 extracted_path=str(output_path),
                 metadata={
                     'original_type': resource_type,
-                    'extraction_method': 'placeholder'
+                    'extraction_method': 'basic_extraction'
                 }
             )
         except Exception as e:

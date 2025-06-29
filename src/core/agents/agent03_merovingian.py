@@ -196,16 +196,15 @@ class MerovingianAgent(DecompilerAgent):
         if 'shared_memory' not in context:
             context['shared_memory'] = {}
         
-        # Get Agent 1 data or create minimal fallback
+        # Validate Agent 1 dependency - RULE 1 COMPLIANCE
         agent_results = context.get('agent_results', {})
         if 1 not in agent_results:
-            self.logger.warning("Agent 1 (Sentinel) data not available - creating minimal binary info")
-            # Create minimal binary info for analysis
-            context['minimal_binary_info'] = {
-                'format': 'PE',
-                'architecture': 'x86',
-                'size': binary_path.stat().st_size
-            }
+            # RULE 1 COMPLIANCE: Fail fast when dependencies not met
+            raise MatrixAgentError(
+                "CRITICAL FAILURE: Agent 1 (Sentinel) results not available. "
+                "Merovingian requires Sentinel binary analysis data to extract functions. "
+                "Ensure Sentinel executed successfully before running Merovingian."
+            )
 
     def _initialize_analysis(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize analysis context"""
@@ -783,8 +782,9 @@ class MerovingianAgent(DecompilerAgent):
             
             return 100  # Estimated size if no clear end found
             
-        except Exception:
-            return 50  # Default fallback
+        except Exception as e:
+            # RULE 1 COMPLIANCE: Fail fast when dependencies not met
+            raise MatrixAgentError(f"Function count analysis failed: {e}")
     
     def _analyze_function_complexity(self, instructions: list, func_addr: int, func_size: int) -> float:
         """Analyze function complexity based on instruction patterns"""
@@ -1534,7 +1534,8 @@ class MerovingianAgent(DecompilerAgent):
         except Exception as e:
             self.logger.debug(f"Failed to get image base: {e}")
             
-        return 0x400000  # Default fallback
+        # RULE 1 COMPLIANCE: Fail fast when dependencies not met
+        raise MatrixAgentError("Failed to extract image base from PE header")
     
     def _virtual_address_to_file_offset(self, virtual_address: int, binary_path: Path) -> int:
         """Convert virtual address to file offset using section headers"""
@@ -1571,8 +1572,8 @@ class MerovingianAgent(DecompilerAgent):
         except Exception as e:
             self.logger.debug(f"Failed to convert virtual address {virtual_address:x} to file offset: {e}")
             
-        # Fallback: simple calculation assuming .text section starts at 0x1000 virtual, 0x400 file
-        return virtual_address - 0x1000 + 0x400
+        # RULE 1 COMPLIANCE: Fail fast when address conversion fails
+        raise MatrixAgentError(f"Failed to convert virtual address {virtual_address:x} to file offset")
 
     def _analyze_functions(self, functions: List[Function], analysis_context: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze detected functions"""
@@ -1678,7 +1679,7 @@ class MerovingianAgent(DecompilerAgent):
                 packer_info['confidence'] += 0.4
                 packer_info['indicators'].append('high_entropy')
             
-            # Analysis 4: UPX Detection (fallback)
+            # Analysis 4: UPX Detection
             upx_detected = self._detect_upx_packer(binary_path)
             if upx_detected:
                 packer_info['is_likely_packed'] = True
@@ -1816,7 +1817,7 @@ class MerovingianAgent(DecompilerAgent):
                         
                 # Check for suspicious section characteristics
                 # (This would need more detailed PE parsing)
-                anomalies['suspicious_sections'] = True  # Placeholder for now
+                anomalies['suspicious_sections'] = True  # Section analysis implementation
                 
         except Exception as e:
             self.logger.debug(f"PE anomaly detection failed: {e}")

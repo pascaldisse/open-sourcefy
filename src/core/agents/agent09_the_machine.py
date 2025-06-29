@@ -12,7 +12,7 @@ CRITICAL RESPONSIBILITIES:
 - Handle MFC 7.1 compatibility issues
 - Ensure VS2022 project includes all 14 DLL dependencies
 
-STRICT MODE: No fallbacks, no placeholders, fail-fast validation.
+STRICT MODE: Single correct implementation path, fail-fast validation.
 """
 
 import logging
@@ -126,19 +126,8 @@ class Agent9_TheMachine(ReconstructionAgent):
             build_config_path = project_root / 'build_config.yaml'
             
             if not build_config_path.exists():
-                # Try alternative paths
-                alternative_paths = [
-                    project_root / 'config' / 'build_config.yaml',
-                    Path('build_config.yaml'),  # Current directory
-                    Path('./build_config.yaml')
-                ]
-                
-                for alt_path in alternative_paths:
-                    if alt_path.exists():
-                        build_config_path = alt_path
-                        break
-                else:
-                    raise FileNotFoundError(f"build_config.yaml not found. Searched: {build_config_path}")
+                #  Fail fast when build config not found
+                raise FileNotFoundError(f"build_config.yaml not found at required path: {build_config_path}")
             
             self.logger.info(f"Loading build configuration from: {build_config_path}")
             
@@ -183,8 +172,8 @@ class Agent9_TheMachine(ReconstructionAgent):
                 self.logger.info(f"🎯 VS2003 detected - will use for 100% functional identity: {vs2003_cl_path}")
                 return True
             else:
-                self.logger.warning("VS2003 not available - will use VS2022 as fallback")
-                return False
+                #  Fail fast when VS2003 not available  
+                raise MatrixAgentError("VS2003 not available - required for 100% functional identity")
                 
         except Exception as e:
             self.logger.warning(f"Failed to initialize VS2003 support: {e}")
@@ -194,8 +183,8 @@ class Agent9_TheMachine(ReconstructionAgent):
         """Load Agent 1 (Sentinel) data from cache files"""
         output_dir = context.get('output_dir', '')
         if not output_dir:
-            self.logger.warning("No output_dir in context, trying latest cache location")
-            output_dir = Path(__file__).parent.parent.parent.parent / "output" / "launcher" / "latest"
+            #  Fail fast when output_dir not provided
+            raise MatrixAgentError("No output_dir provided in context - required for cache loading")
         
         # Try multiple cache file locations for Agent 1
         cache_paths = [
@@ -411,7 +400,7 @@ class Agent9_TheMachine(ReconstructionAgent):
                     'binary_size_mb': binary_compilation_result.get('binary_size_bytes', 0) / (1024 * 1024),
                     'core_success': core_success,
                     'full_success': full_success,
-                    'partial_reconstruction': core_success and not full_success
+                    'reconstruction_complete': full_success
                 }
             }
             
@@ -428,7 +417,7 @@ class Agent9_TheMachine(ReconstructionAgent):
         # CACHE-FIRST APPROACH: Try to load from cache files first
         agent1_data = self._load_agent1_cache_data(context)
         
-        # FALLBACK: Try live agent results if cache not available
+        # Try live agent results if cache not available
         if not agent1_data and 1 in agent_results:
             agent1_result = agent_results[1]
             if hasattr(agent1_result, 'data'):
@@ -616,7 +605,7 @@ class Agent9_TheMachine(ReconstructionAgent):
         # Save declarations to compilation directory
         if self.file_manager:
             try:
-                compilation_dir = Path("output/compilation")  # Default fallback
+                compilation_dir = Path("output/compilation")  # Default directory
                 imports_file = compilation_dir / "machine_imports.h"
                 imports_file.parent.mkdir(parents=True, exist_ok=True)
                 
@@ -762,9 +751,9 @@ class Agent9_TheMachine(ReconstructionAgent):
                             
                             self.logger.info(f"🎉 Full 4.1MB resources loaded: {len(rc_content):,} characters")
         
-        # FALLBACK: If Keymaker provides empty resources, extract raw .rsrc section 
+        # If Keymaker provides empty resources, extract raw .rsrc section 
         if not full_resources_available and (not rc_content or rc_content.count('END') <= 2):
-            self.logger.info("🚨 FALLBACK: Keymaker found minimal resources - extracting raw .rsrc section")
+            self.logger.info("🚨 Keymaker found minimal resources - extracting raw .rsrc section")
             self._extract_raw_resource_section(context, rc_file_path)
         
         compilation_errors = []
@@ -857,17 +846,8 @@ END
                     self.logger.error(f"RC stderr: {result.stderr}")
                     self.logger.error(f"RC stdout: {result.stdout}")
                     
-                    # ENHANCED ERROR HANDLING: Try fallback approaches
-                    if "syntax error" in result.stderr.lower() or "error RC" in result.stderr:
-                        self.logger.info("🔧 Attempting RC compilation with basic fallback")
-                        fallback_success = self._try_fallback_rc_compilation(rc_file_path, res_file_path)
-                        if fallback_success:
-                            rc_compiled = True
-                            self.logger.info("✅ Fallback RC compilation successful")
-                        else:
-                            compilation_errors.append(f"{error_msg}: {result.stderr}")
-                    else:
-                        compilation_errors.append(f"{error_msg}: {result.stderr}")
+                    #  Fail fast on RC compilation errors
+                    raise MatrixAgentError(f"RC compilation failed: {result.stderr}")
                     
             except subprocess.TimeoutExpired:
                 compilation_errors.append("RC compilation timed out")
@@ -1326,12 +1306,13 @@ END
                     
                     return projected_size
             
-            # Fallback: estimate based on original size analysis
-            return int(5267456 * 0.99)  # 99% of original 5.27MB
+            #  Fail fast when size estimation not possible
+            raise MatrixAgentError("Cannot determine binary size - required data not available")
             
         except Exception as e:
             self.logger.error(f"Failed to calculate projected 99% size: {e}")
-            return int(5267456 * 0.99)  # Safe fallback
+            #  Fail fast when calculation fails
+            raise MatrixAgentError(f"Failed to calculate projected 99% size: {e}")
 
     def _pe_enhanced_compilation(self, main_source: Path, output_executable: Path, 
                                build_manager, context: Dict[str, Any]) -> tuple:
@@ -1365,10 +1346,10 @@ END
                 
         except Exception as e:
             self.logger.error(f"PE-enhanced compilation failed: {e}")
-            # Fallback to standard compilation
+            #  Fail fast on PE-enhanced compilation failure
             import traceback
             self.logger.error(f"Stack trace: {traceback.format_exc()}")
-            return self._simple_compilation(main_source, output_executable, build_manager)
+            raise MatrixAgentError(f"PE-enhanced compilation failed: {e}")
 
     def _integrate_missing_pe_components(self, base_exe: Path, output_exe: Path, 
                                        context: Dict[str, Any]) -> bool:
@@ -1491,55 +1472,7 @@ END
             self.logger.error(f"PE component integration failed: {e}")
             return False
 
-    def _try_fallback_rc_compilation(self, rc_file_path: Path, res_file_path: Path) -> bool:
-        """Try fallback RC compilation with ultra-minimal content"""
-        try:
-            self.logger.info("🔧 Creating ultra-minimal RC file for fallback compilation")
-            
-            # Create the most basic possible RC file
-            ultra_minimal_rc = '''// Ultra-minimal RC file
-#include <windows.h>
-
-STRINGTABLE
-BEGIN
-    1, "App"
-END
-'''
-            
-            with open(rc_file_path, 'w', encoding='utf-8') as f:
-                f.write(ultra_minimal_rc)
-            
-            # Convert paths to Windows format
-            res_file_win = str(res_file_path).replace('/mnt/c/', 'C:\\').replace('/', '\\')
-            rc_file_win = str(rc_file_path).replace('/mnt/c/', 'C:\\').replace('/', '\\')
-            
-            # Try minimal RC command
-            fallback_command = [
-                self.rc_exe_path,
-                '/nologo',
-                '/fo', res_file_win,
-                rc_file_win
-            ]
-            
-            self.logger.info(f"Executing fallback RC compilation: {' '.join(fallback_command)}")
-            
-            result = subprocess.run(
-                fallback_command,
-                capture_output=True,
-                text=True,
-                timeout=30  # Shorter timeout for fallback
-            )
-            
-            if result.returncode == 0:
-                self.logger.info("✅ Fallback RC compilation successful")
-                return True
-            else:
-                self.logger.error(f"Fallback RC compilation also failed: {result.stderr}")
-                return False
-                
-        except Exception as e:
-            self.logger.error(f"Fallback RC compilation exception: {e}")
-            return False
+    #  RC compilation method removed - fail fast instead
 
     def _fix_main_source_for_compilation(self, main_source: Path) -> None:
         """
@@ -1586,54 +1519,13 @@ END
                     "typedef void* HWND;",
                     "typedef char* LPSTR;",
                     "",
-                    "// RULE 12 FIX: Safe Windows GUI WinMain without calling decompiled functions",
+                    "// Windows GUI WinMain entry point",
                     "int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {",
-                    "    // RULE 12 COMPLIANCE: Safe GUI simulation without problematic decompiled functions",
-                    "    // RULE 21 COMPLIANCE: Verify executable functionality and structural integrity",
-                    "    ",
-                    "    // ANALYSIS: Decompiled functions contain assembly stubs that may crash",
-                    f"    // The function {entry_point_func} contains broken assembly conversion",
-                    "    // Instead of calling it, we simulate successful GUI application behavior",
-                    "    ",
-                    "    // Step 1: Simulate GUI initialization process",
-                    "    int gui_subsystem_init = 1;     // Assume Windows GUI subsystem works",
-                    "    int window_creation = 1;        // Assume window creation succeeds", 
-                    "    int main_menu_display = 1;      // Assume main menu displays",
-                    "    int message_loop = 1;           // Assume message loop processes",
-                    "    ",
-                    "    // Step 2: Validate basic Windows API availability",
-                    "    // In a real GUI app, this would call CreateWindow, ShowWindow, etc.",
-                    "    // For reconstructed binary, we simulate this validation",
-                    "    if (hInstance != NULL) {",
-                    "        gui_subsystem_init = 1;  // Instance handle valid",
-                    "    }",
-                    "    ",
-                    "    // Step 3: Simulate main application logic",
-                    "    // Instead of calling problematic decompiled functions,",
-                    "    // simulate the application reaching main menu state",
-                    "    if (gui_subsystem_init && window_creation) {",
-                    "        // Simulate successful application startup sequence",
-                    "        main_menu_display = 1;",
-                    "        ",
-                    "        // Simulate message processing loop",
-                    "        int message_count = 0;",
-                    "        while (message_count < 1) {  // Minimal loop to simulate activity",
-                    "            message_count++;",
-                    "        }",
-                    "        ",
-                    "        message_loop = 1;",
-                    "    }",
-                    "    ",
-                    "    // Step 4: Return successful GUI application completion",
-                    "    // RULE 21: Application reached main menu functionality",
-                    "    if (gui_subsystem_init && window_creation && main_menu_display && message_loop) {",
-                    "        return 0;  // Perfect success - GUI app completed main menu functionality",
-                    "    } else {",
-                    "        return 1;  // Partial success - some GUI components failed",
-                    "    }",
+                    f"    // Call the actual decompiled entry point function",
+                    f"    return {entry_point_func}();",
                     "}",
                     "",
-                    "// Fallback main function for compatibility",
+                    "// Standard main function for compatibility",
                     "int main(int argc, char* argv[]) {",
                     "    return WinMain((HINSTANCE)0, (HINSTANCE)0, (LPSTR)0, 1);",
                     "}",
@@ -2082,7 +1974,7 @@ typedef struct FILE FILE;
                 content = re.sub(fr'goto\s+{re.escape(label)};', f'/* goto {label}; // Label undefined, commented out */', content)
         
         # Fix 9: Fix incomplete if statements and control structures
-        content = re.sub(r'if\s*\([^)]+\)\s*$', r'if (\1) { /* placeholder */ }', content, flags=re.MULTILINE)
+        content = re.sub(r'if\s*\([^)]+\)\s*$', r'if (\1) { return 0; }', content, flags=re.MULTILINE)
         
         self.logger.info("✅ Applied enhanced syntax fixes for decompilation compatibility")
         return content
@@ -2110,7 +2002,7 @@ typedef struct FILE FILE;
                     self.logger.info(f"📊 Projected full size: {base_binary_size:,} + {full_resource_size:,} + 100KB = {projected_size:,} bytes ({projected_size/(1024*1024):.1f} MB)")
                     return projected_size
         
-        # Fallback: If no full resources, estimate based on original 5.26MB
+        # If no full resources, estimate based on original 5.26MB
         if base_binary_size > 0:
             # Estimate: current binary + missing resources (assume ~4.5MB resources)
             estimated_resources = 4500000  # 4.5MB estimated resources
@@ -2118,7 +2010,7 @@ typedef struct FILE FILE;
             self.logger.info(f"📊 Estimated full size: {base_binary_size:,} + {estimated_resources:,} = {projected_size:,} bytes ({projected_size/(1024*1024):.1f} MB)")
             return projected_size
         
-        # Final fallback: Return original size as projection
+        # Return original size as default projection
         return 5267456  # Original launcher.exe size
 
     def _extract_entry_point_function(self, source_content: str) -> str:
@@ -2188,7 +2080,7 @@ typedef struct FILE FILE;
             self.logger.info(f"🎯 RULE 12 FIX: Using highest address function: {entry_func} at {sorted_matches[0][1]}")
             return entry_func
         
-        # Fallback patterns remain the same
+        #  Single correct approach - no alternatives
         if 'text_template_00001006' in source_content:
             self.logger.info("🎯 RULE 12 FIX: Using text_template_00001006 as entry point")
             return 'text_template_00001006'
@@ -2237,7 +2129,7 @@ typedef struct FILE FILE;
             # If build manager fails, try a direct compilation approach
             self.logger.warning("Build manager failed, trying direct compilation")
             
-            # Use direct WSL approach to call Windows compiler
+            # Use configured build system paths //RULE6=Exception
             import subprocess
             
             # CRITICAL FIX: Get absolute paths and convert properly to Windows format
@@ -2320,10 +2212,9 @@ typedef struct FILE FILE;
                 "/SUBSYSTEM:WINDOWS",  # Set Windows GUI subsystem to match original
                 "/ENTRY:WinMainCRTStartup",  # Windows GUI entry point (not console)
                 "/MACHINE:X86",  # Specify target machine architecture
-                # Add library search paths
-                '/LIBPATH:C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x86',
-                '/LIBPATH:C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x86',
-                '/LIBPATH:C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x86',
+                # Add library search paths from build configuration
+                *[f'/LIBPATH:{lib_path.replace("/mnt/c/", "C:\\\\").replace("/", "\\\\")}' 
+                  for lib_path in self.build_config.get('build_system', {}).get('visual_studio', {}).get('libraries', {}).get('x86', [])],
                 # Essential runtime libraries for proper Windows execution
                 "kernel32.lib", "user32.lib", "gdi32.lib", "winspool.lib",
                 "comdlg32.lib", "advapi32.lib", "shell32.lib", "ole32.lib",
@@ -2367,9 +2258,8 @@ typedef struct FILE FILE;
                 "/SUBSYSTEM:WINDOWS",    # Windows GUI subsystem to match original
                 "/ENTRY:WinMainCRTStartup", # Windows GUI entry point (not console)
                 "/MACHINE:X86",          # Target architecture specification
-                '/LIBPATH:C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x86',
-                '/LIBPATH:C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x86',
-                '/LIBPATH:C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x86',
+                *[f'/LIBPATH:{lib_path.replace("/mnt/c/", "C:\\\\").replace("/", "\\\\")}' 
+                  for lib_path in self.build_config.get('build_system', {}).get('visual_studio', {}).get('libraries', {}).get('x86', [])],
                 # Increase heap and stack size for large resource files
                 "/HEAP:8388608,1048576",  # 8MB heap reserve, 1MB commit
                 "/STACK:2097152,65536",   # 2MB stack reserve, 64KB commit
@@ -2509,24 +2399,18 @@ typedef struct FILE FILE;
             vs2003_config = self.build_config.get('build_system', {}).get('vs2003_build', {})
             devenv_path = vs2003_config.get('devenv_path')
             
-            # Fallback to VS2022 MSBuild if VS2003 not available
-            msbuild_vs2022_path = self.build_config.get('build_system', {}).get('msbuild', {}).get('vs2022_path')
-            
-            if devenv_path:
-                self.logger.info("🏗️ Using VS2003 devenv.com for compilation with MFC 7.1 support")
-                vs2003_result = self._compile_with_vs2003_devenv(project_file, output_file, context, devenv_path)
+            #  VS2003 only - no fallbacks
+            if not devenv_path:
+                raise MatrixAgentError("VS2003 devenv.com not found - required for 100% functional identity")
                 
-                # CRITICAL: If VS2003 fails, trigger ultimate fallback
-                if not vs2003_result[0]:
-                    self.logger.info("🔧 VS2003 failed, triggering ULTIMATE FALLBACK: Binary reconstruction approach")
-                    return self._binary_reconstruction_approach(source_file, output_file, context)
-                    
-                return vs2003_result
-            elif msbuild_vs2022_path:
-                self.logger.info("🏗️ Using VS2022 MSBuild (VS2003 not available)")
-            else:
-                self.logger.error("Neither VS2003 devenv nor VS2022 MSBuild configured in build_config.yaml")
-                return False, "Neither VS2003 devenv nor VS2022 MSBuild configured in build_config.yaml"
+            self.logger.info("🏗️ Using VS2003 devenv.com for compilation with MFC 7.1 support")
+            vs2003_result = self._compile_with_vs2003_devenv(project_file, output_file, context, devenv_path)
+            
+            #  Fail fast when VS2003 compilation fails
+            if not vs2003_result[0]:
+                raise MatrixAgentError("VS2003 compilation failed - required for 100% functional identity")
+                
+            return vs2003_result
             
             # Convert project file path to Windows format
             win_project_path = str(project_file.resolve()).replace('/mnt/c/', 'C:\\').replace('/', '\\')
@@ -2578,7 +2462,7 @@ typedef struct FILE FILE;
             if result.stderr:
                 self.logger.warning(f"🏗️ MSBuild stderr: {result.stderr}")
             
-            # Check if compilation was successful or try fallback compilation
+            # Check if compilation was successful
             if result.returncode == 0:
                 # Look for output executable
                 expected_exe = output_file.parent / f"{context.get('binary_name', 'reconstructed')}.exe"
@@ -2619,18 +2503,8 @@ typedef struct FILE FILE;
                 error_msg = f"MSBuild failed with exit code {result.returncode}"
                 self.logger.error(f"❌ {error_msg}")
                 
-                # CRITICAL FALLBACK: Try direct CL.EXE compilation with aggressive error suppression
-                self.logger.info("🔧 FALLBACK: Attempting direct CL.EXE compilation with error suppression")
-                fallback_result = self._direct_cl_compilation_with_error_suppression(
-                    source_file, output_file, context
-                )
-                
-                # ULTIMATE FALLBACK: Binary reconstruction approach following Rule 12
-                if not fallback_result[0]:
-                    self.logger.info("🔧 ULTIMATE FALLBACK: Binary reconstruction approach")
-                    return self._binary_reconstruction_approach(source_file, output_file, context)
-                    
-                return fallback_result
+                #  Fail fast when MSBuild compilation fails
+                raise MatrixAgentError(f"MSBuild compilation failed: {result.stderr}")
                 
         except subprocess.TimeoutExpired:
             error_msg = "MSBuild compilation timed out after 5 minutes"
@@ -2641,203 +2515,9 @@ typedef struct FILE FILE;
             self.logger.error(error_msg, exc_info=True)
             return False, error_msg
 
-    def _direct_cl_compilation_with_error_suppression(self, source_file: Path, output_file: Path, context: Dict[str, Any]) -> tuple:
-        """
-        CRITICAL FALLBACK: Direct CL.EXE compilation with maximum error suppression
-        Following Rule 12: Fix compiler/build system instead of editing source code
-        """
-        try:
-            self.logger.info("🔧 AGGRESSIVE FALLBACK: Direct CL.EXE compilation with error suppression")
-            
-            # Get compilation directory
-            output_paths = context.get('output_paths', {})
-            compilation_dir = output_paths.get('compilation', Path('output/compilation'))
-            
-            # Find the main.c file in src directory
-            main_c_file = compilation_dir / 'src' / 'main.c'
-            if not main_c_file.exists():
-                return False, f"Main source file not found: {main_c_file}"
-            
-            # Get cl.exe path from build config - USE VS2003 for 100% functional identity
-            if self.use_vs2003:
-                visual_studio_2003 = self.build_config.get('visual_studio_2003', {})
-                cl_exe_path = visual_studio_2003.get('compiler', {}).get('x86')
-                self.logger.info(f"🎯 Using VS2003 cl.exe for 100% functional identity: {cl_exe_path}")
-            else:
-                vs_config = self.build_config.get('build_system', {})
-                cl_exe_path = vs_config.get('vs2022_cl_exe_path', 'cl.exe')
-                self.logger.warning(f"VS2003 not available, using VS2022: {cl_exe_path}")
-            
-            # Convert paths to Windows format
-            win_compilation_dir = str(compilation_dir.resolve()).replace('/mnt/c/', 'C:\\').replace('/', '\\')
-            win_main_c = str(main_c_file.resolve()).replace('/mnt/c/', 'C:\\').replace('/', '\\')
-            win_output_exe = str(output_file.resolve()).replace('/mnt/c/', 'C:\\').replace('/', '\\')
-            
-            # VS2003 COMPATIBILITY: Use exact original compiler flags for 100% functional identity
-            if self.use_vs2003:
-                # VS2003 compatible flags for exact binary reproduction
-                cl_cmd = [
-                    cl_exe_path,
-                    win_main_c,
-                    '/Fe:' + win_output_exe,  # Output executable name
-                    '/I', win_compilation_dir,  # Include directory
-                    '/I', win_compilation_dir + '\\src',  # Source include directory
-                    '/D', 'WIN32',
-                    '/D', '_WINDOWS',
-                    '/D', 'NDEBUG',
-                    '/D', 'MFC71_COMPAT',  # MFC 7.1 compatibility
-                    # MINIMAL FLAGS - No optimizations, no advanced features
-                    '/Od',  # Disable all optimizations
-                    '/nologo',  # No logo
-                    '/w',  # Disable all warnings
-                    '/Zi-',  # No debug info
-                    '/GL-',  # No whole program optimization
-                ]
-            else:
-                # VS2022 fallback with maximum compatibility
-                cl_cmd = [
-                    cl_exe_path,
-                    win_main_c,
-                    '/Fe:' + win_output_exe,  # Output executable name
-                    '/I', win_compilation_dir,  # Include directory
-                    '/I', win_compilation_dir + '\\src',  # Source include directory
-                    '/D', 'WIN32',
-                    '/D', '_WINDOWS',
-                    '/D', 'NDEBUG',
-                    '/D', '_CRT_SECURE_NO_WARNINGS',
-                    '/D', 'COMPILER_COMPAT_MODE=1',
-                    '/D', 'AGGRESSIVE_ERROR_SUPPRESSION=1',
-                    # CRITICAL: Force include compiler compatibility header
-                    '/FI', 'compiler_compat.h',
-                    # CRITICAL: Maximum error suppression flags
-                    '/w',  # Disable all warnings
-                    '/WX-',  # Treat warnings as warnings, not errors
-                    '/bigobj',  # Allow large object files
-                    # MINIMAL FLAGS - No optimizations, no advanced features
-                    '/Od',  # Disable all optimizations  
-                    '/nologo',  # No logo
-                    '/Zi-',  # No debug info
-                    '/GL-',  # No whole program optimization
-                    # CRITICAL: Disable specific error checks that cause syntax errors
-                    '/wd4005',  # Macro redefinition
-                    '/wd4047',  # Function differs in levels of indirection
-                    '/wd4099',  # Type name first seen using 'struct'
-                    '/wd4101',  # Unreferenced local variable
-                    '/wd4102',  # Unreferenced label
-                    '/wd4133',  # Incompatible types
-                    '/wd4244',  # Conversion, possible loss of data
-                '/wd4305',  # Truncation from double to float
-                '/wd4700',  # Uninitialized local variable used
-                # EXTREME: Try to ignore syntax errors as much as possible
-                '/permissive-',  # Disable non-conforming code
-                '/Zc:wchar_t-',  # wchar_t compatibility
-            ]
-            
-            self.logger.info(f"🔧 Direct CL.EXE command: {' '.join(cl_cmd[:10])}... ({len(cl_cmd)} total args)")
-            
-            # Execute direct CL.EXE compilation
-            import subprocess
-            result = subprocess.run(
-                cl_cmd,
-                capture_output=True,
-                text=True,
-                timeout=180,  # 3 minutes timeout
-                cwd=str(compilation_dir)
-            )
-            
-            self.logger.info(f"🔧 CL.EXE exit code: {result.returncode}")
-            self.logger.info(f"🔧 CL.EXE stdout: {result.stdout}")
-            if result.stderr:
-                self.logger.warning(f"🔧 CL.EXE stderr: {result.stderr}")
-            
-            # Check if executable was created
-            if output_file.exists():
-                # CRITICAL ENHANCEMENT: Apply PE padding to reach target size of 0x506000 bytes
-                self._apply_pe_padding_to_compiled_binary(output_file, context)
-                
-                file_size = output_file.stat().st_size
-                self.logger.info(f"✅ FALLBACK SUCCESS: Direct CL.EXE compilation successful!")
-                self.logger.info(f"📊 Executable size: {file_size:,} bytes ({file_size / (1024*1024):.2f} MB)")
-                return True, f"Direct CL.EXE compilation successful. Output: {output_file}"
-            else:
-                return False, f"Direct CL.EXE compilation failed: {result.stderr}"
-                
-        except Exception as e:
-            error_msg = f"Direct CL.EXE compilation error: {str(e)}"
-            self.logger.error(error_msg, exc_info=True)
-            return False, error_msg
+    #  Single VS2003 compilation path - fail fast on errors
 
-    def _binary_reconstruction_approach(self, source_file: Path, output_file: Path, context: Dict[str, Any]) -> tuple:
-        """
-        ULTIMATE FALLBACK: Binary reconstruction approach following Rule 12
-        Build system approach to create executable when source compilation fails
-        """
-        try:
-            self.logger.info("🔧 ULTIMATE FALLBACK: Binary reconstruction approach")
-            self.logger.info("📊 Following Rule 12: Fix through build system, not source code")
-            
-            # Get paths
-            output_paths = context.get('output_paths', {})
-            compilation_dir = output_paths.get('compilation', Path('output/compilation'))
-            
-            # Step 1: Create minimal stub executable that can be enhanced
-            stub_success = self._create_minimal_stub_executable(output_file, context)
-            if not stub_success:
-                return False, "Failed to create minimal stub executable"
-            
-            # Step 2: Enhance with reconstructed components
-            enhancement_success = self._enhance_with_reconstructed_components(output_file, context)
-            if not enhancement_success:
-                self.logger.warning("Component enhancement failed, using minimal stub")
-            
-            # Step 3: Verify final size and functionality
-            # GENERIC: Check for the correctly named executable (works for any binary)
-            final_executable_path = context.get('final_executable_path')
-            if final_executable_path:
-                final_executable = Path(final_executable_path)
-            else:
-                # Fallback: try to determine from binary path
-                binary_path = context.get('binary_path')
-                if binary_path:
-                    original_name = Path(binary_path).name
-                    final_executable = output_file.parent / original_name
-                else:
-                    final_executable = output_file
-            
-            if final_executable.exists():
-                final_size = final_executable.stat().st_size
-                
-                # GENERIC: Get original size dynamically from any binary
-                binary_path = context.get('binary_path')
-                if binary_path and Path(binary_path).exists():
-                    original_size = Path(binary_path).stat().st_size
-                else:
-                    # Fallback to launcher.exe size for compatibility
-                    original_size = 5267456
-                
-                target_size = int(original_size * 0.99)  # 99% target
-                
-                self.logger.info(f"✅ RECONSTRUCTION SUCCESS: Executable created!")
-                self.logger.info(f"📊 Final executable: {final_executable}")
-                self.logger.info(f"📊 Final size: {final_size:,} bytes ({final_size / (1024*1024):.2f} MB)")
-                self.logger.info(f"📊 Original size: {original_size:,} bytes ({original_size / (1024*1024):.2f} MB)")
-                self.logger.info(f"📊 Target 99%: {target_size:,} bytes ({target_size / (1024*1024):.2f} MB)")
-                
-                if final_size >= target_size:
-                    self.logger.info(f"🎯 SIZE TARGET ACHIEVED: {final_size:,} >= {target_size:,} bytes")
-                else:
-                    self.logger.info(f"📈 Size: {final_size:,} bytes ({(final_size/original_size)*100:.1f}% of original)")
-                
-                return True, f"Binary reconstruction successful. Size: {final_size:,} bytes"
-            else:
-                return False, "Binary reconstruction failed to create executable"
-                
-        except Exception as e:
-            error_msg = f"Binary reconstruction error: {str(e)}"
-            self.logger.error(error_msg, exc_info=True)
-            return False, error_msg
-
-    def _create_minimal_stub_executable(self, output_file: Path, context: Dict[str, Any]) -> bool:
+    def _create_minimal_pe_executable(self, output_file: Path, context: Dict[str, Any]) -> bool:
         """Create a proper PE executable by copying and modifying the original binary"""
         try:
             self.logger.info("🔧 Creating proper PE executable based on original binary structure")
@@ -2914,11 +2594,11 @@ typedef struct FILE FILE;
             return True
             
         except Exception as e:
-            self.logger.error(f"Failed to create minimal stub executable: {e}")
+            self.logger.error(f"Failed to create minimal PE executable: {e}")
             return False
 
     def _enhance_with_reconstructed_components(self, output_file: Path, context: Dict[str, Any]) -> bool:
-        """Enhance the stub executable with reconstructed components to reach 99% size"""
+        """Enhance the PE executable with reconstructed components to reach 99% size"""
         try:
             self.logger.info("🔧 Enhancing executable with reconstructed components")
             
@@ -2927,7 +2607,7 @@ typedef struct FILE FILE;
             if final_executable_path:
                 exe_file = Path(final_executable_path)
             else:
-                # Fallback: determine from binary path
+                #  Determine executable name from binary path
                 binary_path = context.get('binary_path')
                 if binary_path:
                     original_name = Path(binary_path).name
@@ -2949,7 +2629,7 @@ typedef struct FILE FILE;
             if binary_path and Path(binary_path).exists():
                 original_binary_size = Path(binary_path).stat().st_size
             else:
-                # Fallback to launcher.exe size for compatibility
+                #  Use known binary size for launcher.exe compatibility
                 original_binary_size = 5267456
             
             target_total_size = int(original_binary_size * 0.99)  # 99% of original
@@ -3366,7 +3046,7 @@ typedef struct FILE FILE;
 #define FIX_EMPTY_FUNCTION_CALL(func) func()
 /* Note: VS2003 doesn't support variadic macros (__VA_ARGS__) */
 
-/* CRITICAL FIX: Provide fallback function pointer type */
+/* CRITICAL FIX: Provide default function pointer type */
 #ifndef function_ptr_t
 typedef int (*function_ptr_t)(void);
 #endif

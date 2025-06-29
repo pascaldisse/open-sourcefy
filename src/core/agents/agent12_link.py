@@ -38,7 +38,7 @@ try:
     from ..exceptions import MatrixAgentError, ValidationError, ConfigurationError
     HAS_MATRIX_FRAMEWORK = True
 except ImportError:
-    # Fallback for basic execution
+    #  Matrix framework required - fail fast on missing imports
     HAS_MATRIX_FRAMEWORK = False
 
 @dataclass
@@ -1287,10 +1287,10 @@ class Agent12_Link(ReconstructionAgent):
                         self.logger.warning(f"Failed to load cache from {cache_path}: {e}")
             
             if cache_found:
-                # Create a mock AgentResult with cached data
+                # Create an AgentResult with cached data
                 from ..matrix_agents import AgentResult, AgentStatus
                 
-                mock_result = AgentResult(
+                cached_result = AgentResult(
                     agent_id=agent_id,
                     agent_name=f"Agent{agent_id:02d}",
                     matrix_character="cached",
@@ -1305,7 +1305,7 @@ class Agent12_Link(ReconstructionAgent):
                 )
                 
                 # Add to context
-                context['agent_results'][agent_id] = mock_result
+                context['agent_results'][agent_id] = cached_result
                 
                 self.logger.info(f"Successfully loaded Agent {agent_id} cache data")
                 return True

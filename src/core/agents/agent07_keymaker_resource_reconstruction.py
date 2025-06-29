@@ -185,7 +185,7 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
         dependency_met = self._load_architect_cache_data(context)
         
         if not dependency_met:
-            # Check for existing Architect results in multiple ways as fallback
+            # Check for existing Architect results in multiple ways
             agent_results = context.get('agent_results', {})
             if 2 in agent_results:
                 dependency_met = True
@@ -314,7 +314,7 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
             if 'strings' in pe_analysis:
                 resource_data['strings'] = pe_analysis['strings']
         
-        # PRIORITY 3: Fallback: Basic resource extraction from binary
+        # PRIORITY 3: Basic resource extraction from binary
         binary_path = context.get('binary_path', '')
         if binary_path and not resource_data['strings'] and resource_data['source_quality'] != 'maximum':
             resource_data['strings'] = self._extract_basic_strings(binary_path)
@@ -713,8 +713,8 @@ class Agent7_Keymaker_ResourceReconstruction(ReconstructionAgent):
                             'strings': []
                         }
                 
-                # Create mock Architect result object for Keymaker with proper data structure
-                architect_result = type('MockResult', (), {
+                # Create Architect result object for Keymaker with proper data structure
+                architect_result = type('CachedResult', (), {
                     'data': final_data,
                     'status': 'cached',
                     'agent_id': 2

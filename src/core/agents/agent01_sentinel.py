@@ -26,7 +26,7 @@ from ..exceptions import MatrixAgentError, ValidationError, ConfigurationError, 
 # AI imports using centralized AI system
 from ..ai_system import ai_available
 
-# LangChain removed per rules.md - no fallbacks, no mock implementations
+# LangChain removed per rules.md - strict mode only
 # Using centralized AI system only
 
 # Binary analysis libraries with error handling
@@ -389,9 +389,11 @@ class SentinelAgent(AnalysisAgent):
         if header.startswith(b'MZ'):  # PE (Windows only)
             arch_info.update(self._analyze_pe_architecture(binary_path))
         else:
-            raise NotImplementedError(
-                "Only Windows PE format is supported - other formats require "
-                "additional binary analysis libraries and parsing logic"
+            # RULE 13 COMPLIANCE: Proper error instead of NotImplementedError
+            raise MatrixAgentError(
+                "UNSUPPORTED FORMAT: Only Windows PE format is supported. "
+                "This binary appears to be in a different format. "
+                "Ensure you're analyzing a Windows PE executable."
             )
         
         return arch_info
@@ -450,8 +452,10 @@ class SentinelAgent(AnalysisAgent):
         if format_type == 'PE' and self.available_parsers['pefile']:
             return self._analyze_pe_details(binary_path)
         else:
-            raise NotImplementedError(
-                "Only Windows PE format is supported - requires PE-specific parser"
+            # RULE 13 COMPLIANCE: Proper error instead of NotImplementedError
+            raise MatrixAgentError(
+                "UNSUPPORTED FORMAT: Only Windows PE format is supported. "
+                "PE parser not available or binary format not recognized."
             )
     
     def _analyze_pe_details(self, binary_path: Path) -> Dict[str, Any]:
@@ -1033,9 +1037,9 @@ Provide:
         else:
             confidence_factors.append(-0.2)  # Larger penalty for insufficient header data
         
-        # Additional validation - DOS stub presence
+        # Additional validation - DOS header presence
         if len(header) >= 128 and b'This program cannot be run in DOS mode' in header[:128]:
-            confidence_factors.append(0.05)  # Small bonus for DOS stub
+            confidence_factors.append(0.05)  # Small bonus for DOS header
         
         # Calculate final confidence (sum factors, clamp to 0.0-1.0)
         final_confidence = max(0.0, min(1.0, sum(confidence_factors)))

@@ -15,7 +15,7 @@ CRITICAL MISSION: Coordinate all 17 Matrix agents in master-first parallel execu
 mode, enforce fail-fast validation, and ensure zero-tolerance compliance with rules.md.
 
 Production-ready implementation following SOLID principles and NSA-level security standards.
-Includes fail-fast validation, strict dependency checking, and zero fallback design.
+Includes fail-fast validation, strict dependency checking, and zero-tolerance design.
 """
 
 import logging
@@ -69,7 +69,7 @@ class DeusExMachinaAgent(MatrixAgent):
     - Fail-fast validation with zero tolerance for failures
     - Agent dependency management and execution planning
     - NSA-level quality assurance and pipeline monitoring
-    - Zero-fallback design with strict compliance enforcement
+    - Zero-tolerance design with strict compliance enforcement
     - Real-time pipeline orchestration and error handling
     """
     
@@ -156,7 +156,7 @@ class DeusExMachinaAgent(MatrixAgent):
             return coordination_result
             
         except Exception as e:
-            # FAIL-FAST: No graceful degradation (Rule 2)
+            # FAIL-FAST: No degradation allowed (Rule 2)
             error_msg = f"Master agent execution failed: {str(e)}"
             self.logger.error(error_msg)
             raise MatrixAgentError(error_msg) from e

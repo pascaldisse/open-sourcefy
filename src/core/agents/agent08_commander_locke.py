@@ -136,11 +136,14 @@ class Agent8_CommanderLocke(ReconstructionAgent):
         dependency_met = self._load_agent_1_cache_data(context)
         
         if not dependency_met:
-            # Fallback: Check for Agent 1 in agent_results
+            # Check for Agent 1 in agent_results
             agent_results = context.get('agent_results', {})
             if 1 not in agent_results:
-                self.logger.warning("Agent 1 data not found - creating minimal fallback")
-                self._create_fallback_agent_1_data(shared_memory)
+                # RULE 1 COMPLIANCE: Fail fast when dependencies not met
+                raise MatrixAgentError(
+                    "CRITICAL FAILURE: Agent 1 (Sentinel) results not available. "
+                    "Commander Locke requires Sentinel binary analysis to proceed."
+                )
             else:
                 # Use existing agent results
                 result = agent_results[1]
@@ -150,8 +153,11 @@ class Agent8_CommanderLocke(ReconstructionAgent):
                         'data': result.data
                     }
                 else:
-                    self.logger.warning("Agent 1 provided no data - creating minimal fallback")
-                    self._create_fallback_agent_1_data(shared_memory)
+                    # RULE 1 COMPLIANCE: Fail fast when data invalid
+                    raise MatrixAgentError(
+                        "CRITICAL FAILURE: Agent 1 provided invalid or empty data. "
+                        "Commander Locke requires valid Sentinel analysis to proceed."
+                    )
         
         # Ensure we have basic binary analysis data for integration
         if 'analysis_results' not in context['shared_memory'] or 1 not in context['shared_memory']['analysis_results']:
@@ -189,7 +195,7 @@ class Agent8_CommanderLocke(ReconstructionAgent):
             integration_data['imports'] = imports_dict
             self.logger.info(f"Loaded imports from Agent 1 cache: {len(imports_dict)} DLLs")
         
-        # Fallback to agent_results if shared_memory is empty
+        # Check agent_results if shared_memory is empty
         agent_results = context.get('agent_results', {})
         
         # Extract function data from Agent 5 (Neo) if available
@@ -216,7 +222,7 @@ class Agent8_CommanderLocke(ReconstructionAgent):
             integration_data['imports'] = imports
             integration_data['machine_data'] = agent9_data
         
-        # Final fallback: Extract imports directly from Agent 1 in agent_results
+        # Extract imports directly from Agent 1 in agent_results if not loaded from cache
         if not integration_data['imports'] and 1 in agent_results:
             agent1_data = agent_results[1].data if hasattr(agent_results[1], 'data') else {}
             format_analysis = agent1_data.get('format_analysis', {})
@@ -720,34 +726,4 @@ target_include_directories(reconstruction PRIVATE .)
             self.logger.warning(f"Failed to load Agent 1 cache data: {e}")
             return False
 
-    def _create_fallback_agent_1_data(self, shared_memory: Dict[str, Any]) -> None:
-        """Create minimal fallback data for Agent 1 when cache is not available"""
-        fallback_data = {
-            'binary_analyzed': True,
-            'fallback_mode': True,
-            'binary_format': 'PE32+',  # Assume PE format for Windows
-            'architecture': 'x64',     # Assume x64 architecture
-            'analysis_source': 'fallback',
-            'format_analysis': {
-                'imports': [
-                    {'dll': 'KERNEL32.dll', 'functions': ['ExitProcess', 'GetCurrentProcess']},
-                    {'dll': 'USER32.dll', 'functions': ['MessageBoxA', 'MessageBoxW']},
-                    {'dll': 'GDI32.dll', 'functions': ['CreateCompatibleDC', 'DeleteDC']}
-                ],
-                'sections': [
-                    {'name': '.text', 'virtual_address': 0x1000, 'size': 0x10000},
-                    {'name': '.data', 'virtual_address': 0x20000, 'size': 0x1000}
-                ],
-                'functions': []
-            }
-        }
-        
-        shared_memory['analysis_results'][1] = {
-            'status': 'fallback',
-            'data': fallback_data
-        }
-        
-        if 'discovery' not in shared_memory['binary_metadata']:
-            shared_memory['binary_metadata']['discovery'] = fallback_data
-        
-        self.logger.info("Created minimal fallback data for Agent 1 (Sentinel)")
+    # RULE 1 COMPLIANCE: Data creation method removed - fail fast instead

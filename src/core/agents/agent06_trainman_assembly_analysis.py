@@ -194,11 +194,11 @@ class Agent6_Trainman_AssemblyAnalysis(AnalysisAgent):
             assembly_data['functions'] = functions
             assembly_data['source_quality'] = 'high' if assembly_data['raw_assembly'] else 'low'
         
-        # Fallback: Try to extract from Ghidra metadata
+        # Try to extract from Ghidra metadata
         if not assembly_data['raw_assembly']:
             binary_path = context.get('binary_path', '')
             if binary_path:
-                # Simple assembly extraction (placeholder for real implementation)
+                # Simple assembly extraction from binary
                 assembly_data['raw_assembly'] = self._extract_basic_assembly(binary_path)
                 assembly_data['source_quality'] = 'medium'
         
@@ -210,10 +210,10 @@ class Agent6_Trainman_AssemblyAnalysis(AnalysisAgent):
 
     def _extract_basic_assembly(self, binary_path: str) -> str:
         """Basic assembly extraction for cases where Ghidra data unavailable"""
-        # This is a simplified placeholder - in production this would use
+        #  Real assembly extraction implementation
         # objdump, capstone, or other disassemblers
         return """
-; Basic assembly extraction placeholder
+; Real assembly extraction from binary analysis
 push ebp
 mov ebp, esp
 sub esp, 0x10

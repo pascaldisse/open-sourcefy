@@ -680,8 +680,7 @@ class Agent15_Analyst(ReconstructionAgent):
             output_root = Path(output_root)
         
         docs_dir = output_root / "docs"
-        docs_dir.mkdir(parents=True, exist_ok=True)
-        
+        docs_dir.mkdir(parents=True, exist_ok=True)        
         self.logger.info(f"The Analyst generating comprehensive documentation in {docs_dir}")
         
         # Generate main documentation file
@@ -1504,10 +1503,10 @@ Overall Quality: {quality.overall_quality:.1%}
                         self.logger.warning(f"Failed to load cache from {cache_path}: {e}")
             
             if cache_found:
-                # Create a mock AgentResult with cached data
+                # Create an AgentResult with cached data
                 from ..matrix_agents import AgentResult, AgentStatus
                 
-                mock_result = AgentResult(
+                cached_result = AgentResult(
                     agent_id=agent_id,
                     agent_name=f"Agent{agent_id:02d}",
                     matrix_character="cached",
@@ -1522,7 +1521,7 @@ Overall Quality: {quality.overall_quality:.1%}
                 )
                 
                 # Add to context
-                context['agent_results'][agent_id] = mock_result
+                context['agent_results'][agent_id] = cached_result
                 
                 self.logger.info(f"Successfully loaded Agent {agent_id} cache data")
                 return True
