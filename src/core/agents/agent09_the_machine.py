@@ -309,21 +309,52 @@ class Agent9_TheMachine(ReconstructionAgent):
             else:
                 mfc_handled = True
             
-            # PHASE 7: CRITICAL FIX - Compile main binary executable
-            self.logger.info("Phase 7: CRITICAL - Compiling main binary executable...")
-            binary_compilation_result = self._compile_main_binary_executable(context, import_table_data, compilation_result)
+            # PHASE 7: CRITICAL FIX - Compile decompiled C source to launcher.exe
+            self.logger.info("Phase 7: CRITICAL - Compiling decompiled C source to launcher.exe...")
+            
+            # Get decompiled source files from Agent 5 (Neo)
+            compilation_dir = Path(context.get('output_dir', '')) / 'compilation'
+            source_files = [
+                compilation_dir / 'src' / 'main.c'
+            ]
+            
+            # Output executable path
+            output_exe = compilation_dir / 'launcher.exe'
+            
+            # Use new compilation method - NO FALLBACKS
+            try:
+                compilation_success = self._compile_decompiled_source(source_files, output_exe, context)
+                binary_compilation_result = {
+                    'binary_compiled': compilation_success,
+                    'binary_output_path': str(output_exe),
+                    'binary_size_bytes': output_exe.stat().st_size if output_exe.exists() else 0,
+                    'compilation_method': 'direct_c_compilation'
+                }
+            except Exception as e:
+                self.logger.error(f"Decompiled source compilation failed: {e}")
+                # RULE ENFORCEMENT: NO FALLBACKS - FAIL FAST
+                raise MatrixAgentError(f"CRITICAL FAILURE: Cannot compile decompiled source to launcher.exe: {e}")
             
             self.metrics.end_tracking()
             execution_time = self.metrics.execution_time
             
             # CRITICAL FIX: More flexible success criteria to enable dependent agents
-            # Core success: RC compilation and import declarations (enables Agent 15/16)
-            core_success = (compilation_result.rc_compiled and 
-                          compilation_result.import_declarations_generated and 
-                          project_updated and mfc_handled)
+            # RULE ENFORCEMENT: ALL OR NOTHING SUCCESS - NO PARTIAL SUCCESS
+            # Must successfully compile executable to report success
+            binary_compiled = binary_compilation_result.get('binary_compiled', False)
             
-            # Full success: includes binary compilation
-            full_success = (core_success and binary_compilation_result.get('binary_compiled', False))
+            # Verify launcher.exe actually exists
+            expected_exe = Path(context.get('output_dir', '')) / 'compilation' / 'launcher.exe'
+            binary_exists = expected_exe.exists()
+            
+            if not binary_compiled or not binary_exists:
+                self.logger.error(f"CRITICAL FAILURE: No executable created at {expected_exe}")
+                raise MatrixAgentError("CRITICAL FAILURE: Binary compilation failed - no launcher.exe created")
+            
+            # Only report success if ALL components work including executable creation
+            full_success = (compilation_result.rc_compiled and 
+                          compilation_result.import_declarations_generated and 
+                          project_updated and mfc_handled and binary_compiled and binary_exists)
             
             # Debug validation details
             self.logger.info(f"🔍 VALIDATION DEBUG:")
@@ -2526,36 +2557,104 @@ typedef struct FILE FILE;
 
     #  Single VS2003 compilation path - fail fast on errors
 
-    def _create_minimal_pe_executable(self, output_file: Path, context: Dict[str, Any]) -> bool:
-        """Create a proper PE executable by copying and modifying the original binary"""
+    def _compile_decompiled_source(self, source_files: List[Path], output_file: Path, context: Dict[str, Any]) -> bool:
+        """COMPILE DECOMPILED C SOURCE - NO FALLBACK TO ORIGINAL BINARY"""
         try:
-            self.logger.info("🔧 Creating proper PE executable based on original binary structure")
+            self.logger.info("🔧 Compiling decompiled C source to executable")
             
-            # Get the original binary path
-            binary_path = context.get('binary_path')
-            if not binary_path or not Path(binary_path).exists():
-                self.logger.error("Original binary not found for structure copying")
-                return False
+            if not source_files:
+                raise MatrixAgentError("No decompiled source files provided for compilation")
             
-            self.logger.info(f"📋 Copying PE structure from: {binary_path}")
+            # Get compiler from build configuration - STRICT COMPLIANCE WITH Rule 6
+            build_system = self.build_config.get('build_system', {})
+            compiler_path = build_system.get('visual_studio', {}).get('compiler', {}).get('x64')
             
-            # Copy the original binary as base structure
-            with open(binary_path, 'rb') as f:
-                original_data = bytearray(f.read())
+            if not compiler_path or not Path(compiler_path).exists():
+                raise MatrixAgentError(f"CRITICAL FAILURE: x64 Compiler not found: {compiler_path}")
             
-            # Verify it's a valid PE file
-            if len(original_data) < 64 or original_data[:2] != b'MZ':
-                self.logger.error("Invalid PE file - missing DOS header")
-                return False
+            # Get include and library paths from build configuration
+            vs_config = build_system.get('visual_studio', {})
+            includes = vs_config.get('includes', [])
+            libraries_x64 = vs_config.get('libraries', {}).get('x64', [])
             
-            pe_offset = int.from_bytes(original_data[60:64], 'little')
-            if pe_offset >= len(original_data) or original_data[pe_offset:pe_offset+4] != b'PE\x00\x00':
-                self.logger.error("Invalid PE file - missing PE signature")
-                return False
+            # Extract paths for compatibility with existing code
+            vs_include = includes[0] if includes else None
+            sdk_include_ucrt = includes[2] if len(includes) > 2 else None
+            vs_lib = libraries_x64[0] if libraries_x64 else None
+            sdk_lib = "/mnt/c/Program Files (x86)/Windows Kits/10/Lib/10.0.26100.0" if libraries_x64 else None
             
-            self.logger.info("✅ Valid PE structure detected, using as base for reconstruction")
+            # Convert all paths to Windows format for the Windows compiler
+            def to_windows_path(path_str):
+                return str(path_str).replace('/mnt/c', 'C:').replace('/', '\\')
             
-            # Use the original binary as the base - this ensures all PE structures are correct
+            # Prepare compilation command with Windows-style paths from build config
+            compile_cmd = [
+                compiler_path,  # Keep WSL path for executable
+                '/nologo',  # Suppress copyright banner
+                '/W3',      # Warning level 3
+                f'/I{to_windows_path(vs_include)}',              # VC runtime headers (vcruntime.h)
+                f'/I{to_windows_path(sdk_include_ucrt)}',        # Universal CRT
+                f'/I{to_windows_path(includes[3])}',             # Windows SDK UM headers  
+                f'/I{to_windows_path(includes[4])}',             # Windows SDK Shared headers
+                f'/Fe:{to_windows_path(output_file)}',           # Output executable (Windows path)
+                '/TC',      # Treat as C source
+                '/MD',      # Multi-threaded DLL runtime
+            ]
+            
+            # Add source files with Windows-style paths
+            for src_file in source_files:
+                if src_file.exists():
+                    compile_cmd.append(to_windows_path(src_file))
+            
+            # Add linker options and libraries - correct syntax for x64 from build config
+            compile_cmd.extend([
+                '/link',
+                f'/LIBPATH:{to_windows_path(libraries_x64[0])}',     # VC x64 libraries
+                f'/LIBPATH:{to_windows_path(libraries_x64[1])}',     # UCRT x64 libraries
+                f'/LIBPATH:{to_windows_path(libraries_x64[2])}',     # Windows SDK x64 libraries
+                'user32.lib',
+                'kernel32.lib'
+            ])
+            
+            self.logger.info(f"📋 Compiling with command: {' '.join(compile_cmd)}")
+            
+            # Execute compilation - FAIL FAST IF COMPILATION FAILS
+            # Change to Windows-compatible directory to avoid path issues
+            windows_output_dir = str(output_file.parent).replace('/mnt/c', 'C:').replace('/', '\\')
+            
+            self.logger.info(f"🔧 Working directory: {output_file.parent}")
+            self.logger.info(f"🔧 Command to execute: {' '.join(compile_cmd)}")
+            
+            result = subprocess.run(
+                compile_cmd,
+                capture_output=True,
+                text=True,
+                timeout=300,
+                cwd=str(output_file.parent)  # Run from the output directory
+            )
+            
+            self.logger.info(f"🔧 Return code: {result.returncode}")
+            self.logger.info(f"🔧 Stdout: {result.stdout}")
+            self.logger.info(f"🔧 Stderr: {result.stderr}")
+            
+            if result.returncode != 0:
+                error_msg = f"COMPILATION FAILED: {result.stderr}"
+                self.logger.error(error_msg)
+                self.logger.error(f"Return code: {result.returncode}")
+                self.logger.error(f"Stdout: {result.stdout}")
+                self.logger.error(f"Command: {' '.join(compile_cmd)}")
+                raise MatrixAgentError(error_msg)
+            
+            if not output_file.exists():
+                raise MatrixAgentError("Compilation completed but executable not created")
+            
+            self.logger.info("✅ Successfully compiled decompiled C source to executable")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Compilation failed: {e}")
+            # RULE ENFORCEMENT: NO FALLBACKS - FAIL FAST
+            raise MatrixAgentError(f"CRITICAL FAILURE: Cannot compile decompiled source: {e}")
             # This approach guarantees proper Windows executable format with valid headers, 
             # entry points, imports, and resources including icons
             base_executable_data = bytes(original_data)

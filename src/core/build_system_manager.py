@@ -129,40 +129,32 @@ class BuildSystemManager:
             )
     
     def _validate_build_tools(self) -> None:
-        """Validate build tools - strict mode only"""
-        validation_errors = []
+        """Validate build tools - FAIL FAST ON MISSING TOOLS"""
         
-        # Check compilers
+        # RULE ENFORCEMENT: IMMEDIATE FAILURE ON MISSING TOOLS
         if not Path(self.build_config.compiler_x64).exists():
-            validation_errors.append(f"x64 Compiler not found: {self.build_config.compiler_x64}")
+            raise RuntimeError(f"CRITICAL FAILURE: x64 Compiler not found: {self.build_config.compiler_x64}")
         
         if not Path(self.build_config.compiler_x86).exists():
-            validation_errors.append(f"x86 Compiler not found: {self.build_config.compiler_x86}")
+            raise RuntimeError(f"CRITICAL FAILURE: x86 Compiler not found: {self.build_config.compiler_x86}")
         
-        # Check linkers
         if not Path(self.build_config.linker_x64).exists():
-            validation_errors.append(f"x64 Linker not found: {self.build_config.linker_x64}")
+            raise RuntimeError(f"CRITICAL FAILURE: x64 Linker not found: {self.build_config.linker_x64}")
         
-        # Check MSBuild
         if not Path(self.build_config.msbuild_path).exists():
-            validation_errors.append(f"MSBuild not found: {self.build_config.msbuild_path}")
+            raise RuntimeError(f"CRITICAL FAILURE: MSBuild not found: {self.build_config.msbuild_path}")
         
         # Check include directories
         for include_dir in self.build_config.include_dirs:
             if not Path(include_dir).exists():
-                validation_errors.append(f"Include directory not found: {include_dir}")
+                raise RuntimeError(f"CRITICAL FAILURE: Include directory not found: {include_dir}")
         
         # Check library directories
         for lib_dir in self.build_config.library_dirs_x64:
             if not Path(lib_dir).exists():
-                validation_errors.append(f"x64 Library directory not found: {lib_dir}")
+                raise RuntimeError(f"CRITICAL FAILURE: x64 Library directory not found: {lib_dir}")
         
-        if validation_errors:
-            error_msg = "BUILD SYSTEM VALIDATION FAILED:\n" + "\n".join(validation_errors)
-            self.logger.error(error_msg)
-            raise RuntimeError(error_msg)
-        else:
-            self.logger.info("✅ All build tools validated successfully")
+        self.logger.info("✅ All build tools validated successfully")
     
     
     def get_compiler_path(self, architecture: str = "x64") -> str:
